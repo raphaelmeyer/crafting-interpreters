@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "path": ".",
+    },
+  ],
+  "extensions": {
+    "recommendations": [
+      "haskell.haskell",
+      "streetsidesoftware.code-spell-checker"
+    ]
+  },
+  "settings": {
+    "editor.renderWhitespace": "boundary",
+    "editor.formatOnSave": true,
+    "[jsonc][json]": {
+      "editor.defaultFormatter": "vscode.json-language-features"
+    },
+  }
+}
