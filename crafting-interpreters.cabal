@@ -55,6 +55,7 @@ library
     -- Modules exported by the library.
     exposed-modules:
         HLox,
+        Scanner,
         Token
 
     -- Modules included in this library but not exported.
@@ -66,6 +67,7 @@ library
     -- Other library packages from which modules are imported.
     build-depends:
         base,
+        mtl,
         text
 
     -- Directories containing source files.
