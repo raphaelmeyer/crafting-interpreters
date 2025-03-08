@@ -54,7 +54,8 @@ library
 
     -- Modules exported by the library.
     exposed-modules:
-        HLox
+        HLox,
+        Token
 
     -- Modules included in this library but not exported.
     -- other-modules:
