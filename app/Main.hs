@@ -26,7 +26,10 @@ usage = do
 runFile :: String -> IO ()
 runFile f = do
   script <- Text.IO.readFile f
-  HLox.run script
+  result <- HLox.run script
+  case result of
+    Nothing -> pure ()
+    Just _ -> Exit.exitFailure
 
 runPrompt :: IO ()
 runPrompt = do
@@ -35,5 +38,5 @@ runPrompt = do
   done <- System.IO.isEOF
   M.unless done $ do
     line <- Text.IO.getLine
-    HLox.run line
+    _ <- HLox.run line
     runPrompt
