@@ -30,9 +30,19 @@ scanToken = do
   c <- advance
   s <- State.get
   case c of
-    '(' -> pure . Just $ Token.Token Token.LeftParen "" (sLine s)
-    ')' -> pure . Just $ Token.Token Token.RightParen "" (sLine s)
+    '(' -> createToken Token.LeftParen c s
+    ')' -> createToken Token.RightParen c s
+    '{' -> createToken Token.LeftBrace c s
+    '}' -> createToken Token.RightBrace c s
+    ',' -> createToken Token.Comma c s
+    '.' -> createToken Token.Dot c s
+    '-' -> createToken Token.Minus c s
+    '+' -> createToken Token.Plus c s
+    ';' -> createToken Token.SemiColon c s
+    '*' -> createToken Token.Star c s
     _ -> pure Nothing
+  where
+    createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
 
 advance :: State.State Scanner Char.Char
 advance = do
