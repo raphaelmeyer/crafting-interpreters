@@ -51,6 +51,10 @@ scanToken = do
       '+' -> createToken Token.Plus c s
       ';' -> createToken Token.SemiColon c s
       '*' -> createToken Token.Star c s
+      '!' -> operator '=' Token.BangEqual Token.Bang c
+      '=' -> operator '=' Token.EqualEqual Token.Equal c
+      '<' -> operator '=' Token.LessEqual Token.Less c
+      '>' -> operator '=' Token.GreaterEqual Token.Greater c
       _ -> do
         State.modify (addError "Unexpected character.")
         pure Nothing
@@ -73,3 +77,16 @@ advance = do
             }
         )
       pure . Just $ c
+
+operator :: Char.Char -> Token.TokenType -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
+operator expected match miss c = do
+  s <- State.get
+  let source = sSource s
+  if Text.null source
+    then pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
+    else
+      if Text.head source == expected
+        then do
+          State.put (s {sCurrent = sCurrent s + 1, sSource = Text.tail source})
+          pure . Just $ Token.Token match (Text.pack [c, expected]) (sLine s)
+        else pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
