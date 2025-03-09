@@ -29,7 +29,9 @@ runFile f = do
   result <- HLox.run script
   case result of
     Nothing -> pure ()
-    Just _ -> Exit.exitFailure
+    Just errors -> do
+      mapM_ print errors
+      Exit.exitFailure
 
 runPrompt :: IO ()
 runPrompt = do
@@ -38,5 +40,8 @@ runPrompt = do
   done <- System.IO.isEOF
   M.unless done $ do
     line <- Text.IO.getLine
-    _ <- HLox.run line
+    result <- HLox.run line
+    case result of
+      Nothing -> pure ()
+      Just errors -> mapM_ print errors
     runPrompt

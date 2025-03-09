@@ -19,9 +19,12 @@ data Scanner = Scanner
 newScanner :: Text.Text -> Scanner
 newScanner source = Scanner 0 0 source []
 
-scanTokens :: Text.Text -> [Token.Token]
-scanTokens =
-  fst . scanUntil scanToken . newScanner
+scanTokens :: Text.Text -> Either [Error.Error] [Token.Token]
+scanTokens source =
+  let (tokens, s) = scanUntil scanToken . newScanner $ source
+   in case sErrors s of
+        [] -> Right tokens
+        errors -> Left errors
 
 scanUntil :: State.State Scanner (Maybe Token.Token) -> Scanner -> ([Token.Token], Scanner)
 scanUntil m s = case State.runState m s of
