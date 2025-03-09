@@ -1,15 +1,9 @@
 module HLox (run) where
 
 import qualified Data.Text as Text
+import qualified Error
 
-data Error = Error
-  { eLine :: Int,
-    eLocation :: Text.Text,
-    eMessage :: Text.Text
-  }
-  deriving (Eq, Show)
-
-type Result = Maybe Error
+type Result = Maybe Error.Error
 
 success :: Result
 success = Nothing
