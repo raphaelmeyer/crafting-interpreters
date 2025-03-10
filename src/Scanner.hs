@@ -68,9 +68,13 @@ scanToken = do
         if Char.isDigit c
           then
             scanNumber c
-          else do
-            State.put (addError "Unexpected character." s)
-            pure Nothing
+          else
+            if isAlpha c
+              then
+                scanIdentifier c
+              else do
+                State.put (addError "Unexpected character." s)
+                pure Nothing
   where
     createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
     addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
@@ -150,10 +154,10 @@ scanString s
     appendChar c (s', Just str) = (s', Just (Text.cons c str))
 
 scanNumber :: Char.Char -> State.State Scanner (Maybe Token.Token)
-scanNumber d = do
+scanNumber first = do
   s <- State.get
   let (source', current', remaining) = scanInteger (sSource s) (sCurrent s)
-  let number = Text.cons d remaining
+  let number = Text.cons first remaining
   case Read.readMaybe . Text.unpack $ number of
     Nothing -> do
       State.put (s {sSource = source', sCurrent = current', sErrors = Error.Error (sLine s) "Invalid number." : sErrors s})
@@ -195,3 +199,25 @@ scanFraction source current =
   where
     maybeNext = Text.uncons source
     appendDigit c (source', current', num) = (source', current', Text.cons c num)
+
+scanIdentifier :: Char.Char -> State.State Scanner (Maybe Token.Token)
+scanIdentifier first = do
+  s <- State.get
+  let (source', current', remaining) = scanAlphaNumeric (sSource s) (sCurrent s)
+  let identifier = Text.cons first remaining
+  State.put (s {sSource = source', sCurrent = current'})
+  pure . Just $ Token.Token (Token.Identifier identifier) identifier (sLine s)
+
+scanAlphaNumeric :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
+scanAlphaNumeric source current
+  | Text.null source = (source, current, Text.empty)
+  | isAlphaNumeric (Text.head source) = appendChar (Text.head source) (scanAlphaNumeric (Text.tail source) (current + 1))
+  | otherwise = (source, current, Text.empty)
+  where
+    appendChar c (source', current', identifier) = (source', current', Text.cons c identifier)
+
+isAlpha :: Char.Char -> Bool
+isAlpha c = c == '_' || (Char.isLetter c && Char.isAscii c)
+
+isAlphaNumeric :: Char.Char -> Bool
+isAlphaNumeric c = isAlpha c || Char.isDigit c
