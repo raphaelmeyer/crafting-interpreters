@@ -206,7 +206,7 @@ scanIdentifier first = do
   let (source', current', remaining) = scanAlphaNumeric (sSource s) (sCurrent s)
   let identifier = Text.cons first remaining
   State.put (s {sSource = source', sCurrent = current'})
-  pure . Just $ Token.Token (Token.Identifier identifier) identifier (sLine s)
+  pure . Just $ Token.Token (keywordOrIdentifier identifier) identifier (sLine s)
 
 scanAlphaNumeric :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
 scanAlphaNumeric source current
@@ -221,3 +221,24 @@ isAlpha c = c == '_' || (Char.isLetter c && Char.isAscii c)
 
 isAlphaNumeric :: Char.Char -> Bool
 isAlphaNumeric c = isAlpha c || Char.isDigit c
+
+keywordOrIdentifier :: Text.Text -> Token.TokenType
+keywordOrIdentifier identifier =
+  case identifier of
+    "and" -> Token.And
+    "class" -> Token.Class
+    "else" -> Token.Else
+    "false" -> Token.False
+    "for" -> Token.For
+    "fun" -> Token.For
+    "if" -> Token.If
+    "nil" -> Token.Nil
+    "or" -> Token.Or
+    "print" -> Token.Print
+    "return" -> Token.Return
+    "super" -> Token.Super
+    "this" -> Token.This
+    "true" -> Token.True
+    "var" -> Token.Var
+    "while" -> Token.While
+    _ -> Token.Identifier identifier
