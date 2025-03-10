@@ -17,7 +17,7 @@ data Scanner = Scanner
   deriving (Eq, Show)
 
 newScanner :: Text.Text -> Scanner
-newScanner source = Scanner 0 0 source []
+newScanner source = Scanner 0 1 source []
 
 scanTokens :: Text.Text -> Either [Error.Error] [Token.Token]
 scanTokens source =
@@ -56,12 +56,19 @@ scanToken = do
       '<' -> operator '=' Token.LessEqual Token.Less c
       '>' -> operator '=' Token.GreaterEqual Token.Greater c
       '/' -> comment '/' Token.Slash c
+      ' ' -> pure Nothing
+      '\r' -> pure Nothing
+      '\t' -> pure Nothing
+      '\n' -> do
+        State.put (newline s)
+        pure Nothing
       _ -> do
         State.modify (addError "Unexpected character.")
         pure Nothing
   where
     createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
     addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
+    newline s = s {sLine = sLine s + 1}
 
 advance :: State.State Scanner (Maybe Char.Char)
 advance = do
