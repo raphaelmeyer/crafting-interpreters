@@ -55,6 +55,7 @@ scanToken = do
       '=' -> operator '=' Token.EqualEqual Token.Equal c
       '<' -> operator '=' Token.LessEqual Token.Less c
       '>' -> operator '=' Token.GreaterEqual Token.Greater c
+      '/' -> comment '/' Token.Slash c
       _ -> do
         State.modify (addError "Unexpected character.")
         pure Nothing
@@ -90,3 +91,23 @@ operator expected match miss c = do
           State.put (s {sCurrent = sCurrent s + 1, sSource = Text.tail source})
           pure . Just $ Token.Token match (Text.pack [c, expected]) (sLine s)
         else pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
+
+comment :: Char.Char -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
+comment expected miss c = do
+  s <- State.get
+  let source = sSource s
+  if Text.null source
+    then pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
+    else
+      if Text.head source == expected
+        then do
+          let (source', current') = consumeUntil '\n' (Text.tail source) (sCurrent s + 1)
+          State.put (s {sCurrent = current', sSource = source'})
+          pure Nothing
+        else pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
+
+consumeUntil :: Char.Char -> Text.Text -> Int -> (Text.Text, Int)
+consumeUntil c source current
+  | Text.null source = (source, current)
+  | Text.head source == c = (source, current)
+  | otherwise = consumeUntil c (Text.tail source) (current + 1)
