@@ -62,6 +62,7 @@ scanToken = do
       '\n' -> do
         State.put (newline s)
         pure Nothing
+      '"' -> stringLiteral
       _ -> do
         State.put (addError "Unexpected character." s)
         pure Nothing
@@ -118,3 +119,27 @@ consumeUntil c source current
   | Text.null source = (source, current)
   | Text.head source == c = (source, current)
   | otherwise = consumeUntil c (Text.tail source) (current + 1)
+
+stringLiteral :: State.State Scanner (Maybe Token.Token)
+stringLiteral = do
+  s <- State.get
+  let (s', maybeString) = scanString s
+  case maybeString of
+    Just string -> do
+      State.put s'
+      pure . Just $ Token.Token (Token.String string) string (sCurrent s')
+    Nothing -> do
+      State.put (addError "Unterminated string." s')
+      pure Nothing
+  where
+    addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
+
+scanString :: Scanner -> (Scanner, Maybe Text.Text)
+scanString s
+  | Text.null (sSource s) = (s, Nothing)
+  | Text.head (sSource s) == '"' = (s {sCurrent = sCurrent s + 1, sSource = Text.tail (sSource s)}, Just Text.empty)
+  | Text.head (sSource s) == '\n' = appendChar (Text.head (sSource s)) $ scanString (s {sCurrent = sCurrent s + 1, sLine = sLine s + 1, sSource = Text.tail (sSource s)})
+  | otherwise = appendChar (Text.head (sSource s)) $ scanString (s {sCurrent = sCurrent s + 1, sSource = Text.tail (sSource s)})
+  where
+    appendChar _ (s', Nothing) = (s', Nothing)
+    appendChar c (s', Just str) = (s', Just (Text.cons c str))
