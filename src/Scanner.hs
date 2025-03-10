@@ -63,7 +63,7 @@ scanToken = do
         State.put (newline s)
         pure Nothing
       _ -> do
-        State.modify (addError "Unexpected character.")
+        State.put (addError "Unexpected character." s)
         pure Nothing
   where
     createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
