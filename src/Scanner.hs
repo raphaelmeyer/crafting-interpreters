@@ -6,6 +6,7 @@ import qualified Control.Monad.State.Strict as State
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified Error
+import qualified Text.Read as Read
 import qualified Token
 
 data Scanner = Scanner
@@ -64,8 +65,12 @@ scanToken = do
         pure Nothing
       '"' -> stringLiteral
       _ -> do
-        State.put (addError "Unexpected character." s)
-        pure Nothing
+        if Char.isDigit c
+          then
+            scanNumber c
+          else do
+            State.put (addError "Unexpected character." s)
+            pure Nothing
   where
     createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
     addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
@@ -143,3 +148,50 @@ scanString s
   where
     appendChar _ (s', Nothing) = (s', Nothing)
     appendChar c (s', Just str) = (s', Just (Text.cons c str))
+
+scanNumber :: Char.Char -> State.State Scanner (Maybe Token.Token)
+scanNumber d = do
+  s <- State.get
+  let (source', current', remaining) = scanInteger (sSource s) (sCurrent s)
+  let number = Text.cons d remaining
+  case Read.readMaybe . Text.unpack $ number of
+    Nothing -> do
+      State.put (s {sSource = source', sCurrent = current', sErrors = Error.Error (sLine s) "Invalid number." : sErrors s})
+      pure Nothing
+    Just value -> do
+      State.put (s {sSource = source', sCurrent = current'})
+      pure . Just $ Token.Token (Token.Number value) number (sLine s)
+
+scanInteger :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
+scanInteger source current =
+  case maybeNext of
+    Nothing -> (source, current, Text.empty)
+    Just (c, source') ->
+      if c == '.'
+        then
+          if Text.null source'
+            then (source, current, Text.empty)
+            else
+              if Char.isDigit (Text.head source')
+                then
+                  appendDigit (Text.head source) (scanFraction source' (current + 1))
+                else (source, current, Text.empty)
+        else
+          if Char.isDigit c
+            then appendDigit c (scanInteger source' (current + 1))
+            else (source, current, Text.empty)
+  where
+    maybeNext = Text.uncons source
+    appendDigit c (source', current', num) = (source', current', Text.cons c num)
+
+scanFraction :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
+scanFraction source current =
+  case maybeNext of
+    Nothing -> (source, current, Text.empty)
+    Just (c, source') ->
+      if Char.isDigit c
+        then appendDigit c (scanFraction source' (current + 1))
+        else (source, current, Text.empty)
+  where
+    maybeNext = Text.uncons source
+    appendDigit c (source', current', num) = (source', current', Text.cons c num)

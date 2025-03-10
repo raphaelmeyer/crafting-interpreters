@@ -26,7 +26,7 @@ data TokenType
   | LessEqual
   | Identifier Text.Text
   | String Text.Text
-  | Integer Int
+  | Number Double
   | And
   | Class
   | Else
