@@ -52,7 +52,7 @@ scanToken = do
       '=' -> composed c '=' Token.EqualEqual Token.Equal
       '<' -> composed c '=' Token.LessEqual Token.Less
       '>' -> composed c '=' Token.GreaterEqual Token.Greater
-      '/' -> comment '/' Token.Slash c
+      '/' -> comment c
       ' ' -> whitespace
       '\r' -> whitespace
       '\t' -> whitespace
@@ -95,25 +95,19 @@ composed first expected matchToken missToken = do
       s <- State.get
       pure $ makeToken matchToken (Text.pack [first, second]) (sLine s)
 
-comment :: Char.Char -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
-comment expected miss c = do
-  s <- State.get
-  let source = sSource s
-  if Text.null source
-    then pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
-    else
-      if Text.head source == expected
-        then do
-          let (source', current') = consumeUntil '\n' (Text.tail source) (sCurrent s + 1)
-          State.put (s {sCurrent = current', sSource = source'})
-          pure Nothing
-        else pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
-
-consumeUntil :: Char.Char -> Text.Text -> Int -> (Text.Text, Int)
-consumeUntil c source current
-  | Text.null source = (source, current)
-  | Text.head source == c = (source, current)
-  | otherwise = consumeUntil c (Text.tail source) (current + 1)
+comment :: Char.Char -> State.State Scanner (Maybe Token.Token)
+comment first = do
+  m <- match '/'
+  case m of
+    Nothing -> simpleToken first Token.Slash
+    Just _ -> do
+      State.modify $ dropUntil '\n'
+      pure Nothing
+  where
+    dropUntil x s
+      | Text.null (sSource s) = s
+      | Text.head (sSource s) == x = s
+      | otherwise = dropUntil x s {sCurrent = sCurrent s + 1, sSource = Text.tail . sSource $ s}
 
 stringLiteral :: State.State Scanner (Maybe Token.Token)
 stringLiteral = do
