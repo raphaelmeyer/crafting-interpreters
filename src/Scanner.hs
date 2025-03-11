@@ -35,31 +35,28 @@ scanTokens source =
 scanToken :: State.State Scanner (Maybe Token.Token)
 scanToken = do
   maybeC <- advance
-  s <- State.get
   case maybeC of
-    Nothing -> pure . Just $ Token.Token Token.EOF "" (sLine s)
+    Nothing -> eof
     Just c -> case c of
-      '(' -> createToken Token.LeftParen c s
-      ')' -> createToken Token.RightParen c s
-      '{' -> createToken Token.LeftBrace c s
-      '}' -> createToken Token.RightBrace c s
-      ',' -> createToken Token.Comma c s
-      '.' -> createToken Token.Dot c s
-      '-' -> createToken Token.Minus c s
-      '+' -> createToken Token.Plus c s
-      ';' -> createToken Token.SemiColon c s
-      '*' -> createToken Token.Star c s
-      '!' -> operator '=' Token.BangEqual Token.Bang c
-      '=' -> operator '=' Token.EqualEqual Token.Equal c
-      '<' -> operator '=' Token.LessEqual Token.Less c
-      '>' -> operator '=' Token.GreaterEqual Token.Greater c
+      '(' -> simpleToken Token.RightParen c
+      ')' -> simpleToken Token.RightParen c
+      '{' -> simpleToken Token.LeftBrace c
+      '}' -> simpleToken Token.RightBrace c
+      ',' -> simpleToken Token.Comma c
+      '.' -> simpleToken Token.Dot c
+      '-' -> simpleToken Token.Minus c
+      '+' -> simpleToken Token.Plus c
+      ';' -> simpleToken Token.SemiColon c
+      '*' -> simpleToken Token.Star c
+      '!' -> composed '=' Token.BangEqual Token.Bang c
+      '=' -> composed '=' Token.EqualEqual Token.Equal c
+      '<' -> composed '=' Token.LessEqual Token.Less c
+      '>' -> composed '=' Token.GreaterEqual Token.Greater c
       '/' -> comment '/' Token.Slash c
-      ' ' -> pure Nothing
-      '\r' -> pure Nothing
-      '\t' -> pure Nothing
-      '\n' -> do
-        State.put (newline s)
-        pure Nothing
+      ' ' -> whitespace
+      '\r' -> whitespace
+      '\t' -> whitespace
+      '\n' -> newline
       '"' -> stringLiteral
       _ -> do
         if Char.isDigit c
@@ -69,13 +66,7 @@ scanToken = do
             if isAlpha c
               then
                 scanIdentifier c
-              else do
-                State.put (addError "Unexpected character." s)
-                pure Nothing
-  where
-    createToken t c = pure . Just . Token.Token t (Text.singleton c) . sLine
-    addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
-    newline s = s {sLine = sLine s + 1}
+              else addError "Unexpected character."
 
 advance :: State.State Scanner (Maybe Char.Char)
 advance = do
@@ -93,8 +84,29 @@ advance = do
         )
       pure . Just $ c
 
-operator :: Char.Char -> Token.TokenType -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
-operator expected match miss c = do
+makeToken :: Token.TokenType -> Text.Text -> Int -> Maybe Token.Token
+makeToken token lexeme line = Just $ Token.Token token lexeme line
+
+whitespace :: State.State Scanner (Maybe Token.Token)
+whitespace = pure Nothing
+
+newline :: State.State Scanner (Maybe Token.Token)
+newline = do
+  State.modify (\s -> s {sLine = sLine s + 1})
+  pure Nothing
+
+eof :: State.State Scanner (Maybe Token.Token)
+eof = do
+  s <- State.get
+  pure $ makeToken Token.EOF "" (sLine s)
+
+simpleToken :: Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
+simpleToken t c = do
+  s <- State.get
+  pure $ makeToken t (Text.singleton c) (sLine s)
+
+composed :: Char.Char -> Token.TokenType -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
+composed expected match miss c = do
   s <- State.get
   let source = sSource s
   if Text.null source
@@ -130,15 +142,10 @@ stringLiteral :: State.State Scanner (Maybe Token.Token)
 stringLiteral = do
   s <- State.get
   let (s', maybeString) = scanString s
+  State.put s'
   case maybeString of
-    Just string -> do
-      State.put s'
-      pure . Just $ Token.Token (Token.String string) string (sCurrent s')
-    Nothing -> do
-      State.put (addError "Unterminated string." s')
-      pure Nothing
-  where
-    addError e s = s {sErrors = Error.Error (sLine s) e : sErrors s}
+    Just string -> pure . Just $ Token.Token (Token.String string) string (sCurrent s')
+    Nothing -> addError "Unterminated string."
 
 scanString :: Scanner -> (Scanner, Maybe Text.Text)
 scanString s
@@ -239,6 +246,11 @@ keywordOrIdentifier identifier =
     "var" -> Token.Var
     "while" -> Token.While
     _ -> Token.Identifier identifier
+
+addError :: Text.Text -> State.State Scanner (Maybe Token.Token)
+addError e = do
+  State.modify (\s -> s {sErrors = Error.Error (sLine s) e : sErrors s})
+  pure Nothing
 
 runStateWhile :: (Maybe a -> Bool) -> State.State s (Maybe a) -> s -> ([Maybe a], s)
 runStateWhile continue m s =
