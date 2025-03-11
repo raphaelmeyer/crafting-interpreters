@@ -38,20 +38,20 @@ scanToken = do
   case maybeC of
     Nothing -> eof
     Just c -> case c of
-      '(' -> simpleToken Token.RightParen c
-      ')' -> simpleToken Token.RightParen c
-      '{' -> simpleToken Token.LeftBrace c
-      '}' -> simpleToken Token.RightBrace c
-      ',' -> simpleToken Token.Comma c
-      '.' -> simpleToken Token.Dot c
-      '-' -> simpleToken Token.Minus c
-      '+' -> simpleToken Token.Plus c
-      ';' -> simpleToken Token.SemiColon c
-      '*' -> simpleToken Token.Star c
-      '!' -> composed '=' Token.BangEqual Token.Bang c
-      '=' -> composed '=' Token.EqualEqual Token.Equal c
-      '<' -> composed '=' Token.LessEqual Token.Less c
-      '>' -> composed '=' Token.GreaterEqual Token.Greater c
+      '(' -> simpleToken c Token.RightParen
+      ')' -> simpleToken c Token.RightParen
+      '{' -> simpleToken c Token.LeftBrace
+      '}' -> simpleToken c Token.RightBrace
+      ',' -> simpleToken c Token.Comma
+      '.' -> simpleToken c Token.Dot
+      '-' -> simpleToken c Token.Minus
+      '+' -> simpleToken c Token.Plus
+      ';' -> simpleToken c Token.SemiColon
+      '*' -> simpleToken c Token.Star
+      '!' -> composed c '=' Token.BangEqual Token.Bang
+      '=' -> composed c '=' Token.EqualEqual Token.Equal
+      '<' -> composed c '=' Token.LessEqual Token.Less
+      '>' -> composed c '=' Token.GreaterEqual Token.Greater
       '/' -> comment '/' Token.Slash c
       ' ' -> whitespace
       '\r' -> whitespace
@@ -68,25 +68,6 @@ scanToken = do
                 scanIdentifier c
               else addError "Unexpected character."
 
-advance :: State.State Scanner (Maybe Char.Char)
-advance = do
-  s <- State.get
-  let source = sSource s
-  if Text.null source
-    then pure Nothing
-    else do
-      let c = Text.head (sSource s)
-      State.put
-        ( s
-            { sCurrent = sCurrent s + 1,
-              sSource = Text.tail . sSource $ s
-            }
-        )
-      pure . Just $ c
-
-makeToken :: Token.TokenType -> Text.Text -> Int -> Maybe Token.Token
-makeToken token lexeme line = Just $ Token.Token token lexeme line
-
 whitespace :: State.State Scanner (Maybe Token.Token)
 whitespace = pure Nothing
 
@@ -100,23 +81,19 @@ eof = do
   s <- State.get
   pure $ makeToken Token.EOF "" (sLine s)
 
-simpleToken :: Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
-simpleToken t c = do
+simpleToken :: Char.Char -> Token.TokenType -> State.State Scanner (Maybe Token.Token)
+simpleToken c t = do
   s <- State.get
   pure $ makeToken t (Text.singleton c) (sLine s)
 
-composed :: Char.Char -> Token.TokenType -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
-composed expected match miss c = do
-  s <- State.get
-  let source = sSource s
-  if Text.null source
-    then pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
-    else
-      if Text.head source == expected
-        then do
-          State.put (s {sCurrent = sCurrent s + 1, sSource = Text.tail source})
-          pure . Just $ Token.Token match (Text.pack [c, expected]) (sLine s)
-        else pure . Just $ Token.Token miss (Text.singleton c) (sLine s)
+composed :: Char.Char -> Char.Char -> Token.TokenType -> Token.TokenType -> State.State Scanner (Maybe Token.Token)
+composed first expected matchToken missToken = do
+  m <- match expected
+  case m of
+    Nothing -> simpleToken first missToken
+    Just second -> do
+      s <- State.get
+      pure $ makeToken matchToken (Text.pack [first, second]) (sLine s)
 
 comment :: Char.Char -> Token.TokenType -> Char.Char -> State.State Scanner (Maybe Token.Token)
 comment expected miss c = do
@@ -246,6 +223,37 @@ keywordOrIdentifier identifier =
     "var" -> Token.Var
     "while" -> Token.While
     _ -> Token.Identifier identifier
+
+advance :: State.State Scanner (Maybe Char.Char)
+advance = do
+  s <- State.get
+  let source = sSource s
+  if Text.null source
+    then pure Nothing
+    else do
+      advance'
+      pure . Just $ Text.head source
+
+match :: Char.Char -> State.State Scanner (Maybe Char.Char)
+match m = do
+  s <- State.get
+  let source = sSource s
+  if Text.null source
+    then pure Nothing
+    else do
+      let c = Text.head source
+      if c == m
+        then do
+          advance'
+          pure . Just $ c
+        else
+          pure Nothing
+
+advance' :: State.State Scanner ()
+advance' = State.modify (\s -> s {sCurrent = sCurrent s + 1, sSource = Text.tail . sSource $ s})
+
+makeToken :: Token.TokenType -> Text.Text -> Int -> Maybe Token.Token
+makeToken token lexeme line = Just $ Token.Token token lexeme line
 
 addError :: Text.Text -> State.State Scanner (Maybe Token.Token)
 addError e = do
