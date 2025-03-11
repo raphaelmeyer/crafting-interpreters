@@ -4,6 +4,7 @@ module Scanner (scanTokens) where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Char as Char
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Error
 import qualified Text.Read as Read
@@ -17,23 +18,19 @@ data Scanner = Scanner
   }
   deriving (Eq, Show)
 
-newScanner :: Text.Text -> Scanner
-newScanner source = Scanner 0 1 source []
+initScanner :: Text.Text -> Scanner
+initScanner source = Scanner 0 1 source []
 
 scanTokens :: Text.Text -> Either [Error.Error] [Token.Token]
 scanTokens source =
-  let (tokens, s) = scanUntil scanToken . newScanner $ source
-   in case sErrors s of
-        [] -> Right tokens
-        errors -> Left errors
-
-scanUntil :: State.State Scanner (Maybe Token.Token) -> Scanner -> ([Token.Token], Scanner)
-scanUntil m s = case State.runState m s of
-  (Nothing, s') -> scanUntil m s'
-  (Just t@(Token.Token Token.EOF _ _), s') -> ([t], s')
-  (Just token, s') -> add token (scanUntil m s')
-    where
-      add t (ts, final) = (t : ts, final)
+  case sErrors scanner of
+    [] -> Right . Maybe.catMaybes $ tokens
+    errors -> Left errors
+  where
+    (tokens, scanner) = scanToEnd (initScanner source)
+    scanToEnd = runStateWhile notEnd scanToken
+    notEnd (Just (Token.Token Token.EOF _ _)) = False
+    notEnd _ = True
 
 scanToken :: State.State Scanner (Maybe Token.Token)
 scanToken = do
@@ -242,3 +239,12 @@ keywordOrIdentifier identifier =
     "var" -> Token.Var
     "while" -> Token.While
     _ -> Token.Identifier identifier
+
+runStateWhile :: (Maybe a -> Bool) -> State.State s (Maybe a) -> s -> ([Maybe a], s)
+runStateWhile continue m s =
+  if continue result then addFst result (runStateWhile continue m s') else ([result], s')
+  where
+    (result, s') = State.runState m s
+
+addFst :: a -> ([a], b) -> ([a], b)
+addFst x (xs, y) = (x : xs, y)
