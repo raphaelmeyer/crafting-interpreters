@@ -111,22 +111,23 @@ comment first = do
 
 stringLiteral :: State.State Scanner (Maybe Token.Token)
 stringLiteral = do
-  s <- State.get
-  let (s', maybeString) = scanString s
-  State.put s'
+  maybeString <- State.state scanString
   case maybeString of
-    Just string -> pure . Just $ Token.Token (Token.String string) string (sCurrent s')
+    Just string -> do
+      s <- State.get
+      pure $ makeToken (Token.String string) string (sLine s)
     Nothing -> addError "Unterminated string."
 
-scanString :: Scanner -> (Scanner, Maybe Text.Text)
+scanString :: Scanner -> (Maybe Text.Text, Scanner)
 scanString s
-  | Text.null (sSource s) = (s, Nothing)
-  | Text.head (sSource s) == '"' = (s {sCurrent = sCurrent s + 1, sSource = Text.tail (sSource s)}, Just Text.empty)
-  | Text.head (sSource s) == '\n' = appendChar (Text.head (sSource s)) $ scanString (s {sCurrent = sCurrent s + 1, sLine = sLine s + 1, sSource = Text.tail (sSource s)})
-  | otherwise = appendChar (Text.head (sSource s)) $ scanString (s {sCurrent = sCurrent s + 1, sSource = Text.tail (sSource s)})
+  | Text.null source = (Nothing, s)
+  | Text.head source == '"' = (Just Text.empty, skip s)
+  | Text.head source == '\n' = addChar . scanString . nextLine . skip $ s
+  | otherwise = addChar . scanString . skip $ s
   where
-    appendChar _ (s', Nothing) = (s', Nothing)
-    appendChar c (s', Just str) = (s', Just (Text.cons c str))
+    source = sSource s
+    addChar (Nothing, s') = (Nothing, s')
+    addChar (Just str, s') = (Just $ Text.cons (Text.head source) str, s')
 
 scanNumber :: Char.Char -> State.State Scanner (Maybe Token.Token)
 scanNumber first = do
@@ -225,7 +226,7 @@ advance = do
   if Text.null source
     then pure Nothing
     else do
-      advance'
+      State.modify skip
       pure . Just $ Text.head source
 
 match :: Char.Char -> State.State Scanner (Maybe Char.Char)
@@ -238,13 +239,10 @@ match m = do
       let c = Text.head source
       if c == m
         then do
-          advance'
+          State.modify skip
           pure . Just $ c
         else
           pure Nothing
-
-advance' :: State.State Scanner ()
-advance' = State.modify (\s -> s {sCurrent = sCurrent s + 1, sSource = Text.tail . sSource $ s})
 
 makeToken :: Token.TokenType -> Text.Text -> Int -> Maybe Token.Token
 makeToken token lexeme line = Just $ Token.Token token lexeme line
@@ -253,6 +251,12 @@ addError :: Text.Text -> State.State Scanner (Maybe Token.Token)
 addError e = do
   State.modify (\s -> s {sErrors = Error.Error (sLine s) e : sErrors s})
   pure Nothing
+
+skip :: Scanner -> Scanner
+skip s = s {sCurrent = sCurrent s + 1, sSource = Text.tail . sSource $ s}
+
+nextLine :: Scanner -> Scanner
+nextLine s = s {sLine = sLine s + 1}
 
 runStateWhile :: (Maybe a -> Bool) -> State.State s (Maybe a) -> s -> ([Maybe a], s)
 runStateWhile continue m s =
