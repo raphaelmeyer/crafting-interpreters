@@ -77,23 +77,17 @@ newline = do
   pure Nothing
 
 eof :: State.State Scanner (Maybe Token.Token)
-eof = do
-  s <- State.get
-  pure $ makeToken Token.EOF "" (sLine s)
+eof = makeToken Token.EOF "" . sLine <$> State.get
 
 simpleToken :: Char.Char -> Token.TokenType -> State.State Scanner (Maybe Token.Token)
-simpleToken c t = do
-  s <- State.get
-  pure $ makeToken t (Text.singleton c) (sLine s)
+simpleToken c t = makeToken t (Text.singleton c) . sLine <$> State.get
 
 composed :: Char.Char -> Char.Char -> Token.TokenType -> Token.TokenType -> State.State Scanner (Maybe Token.Token)
 composed first expected matchToken missToken = do
   m <- match expected
   case m of
     Nothing -> simpleToken first missToken
-    Just second -> do
-      s <- State.get
-      pure $ makeToken matchToken (Text.pack [first, second]) (sLine s)
+    Just second -> makeToken matchToken (Text.pack [first, second]) . sLine <$> State.get
 
 comment :: Char.Char -> State.State Scanner (Maybe Token.Token)
 comment first = do
@@ -113,9 +107,7 @@ stringLiteral :: State.State Scanner (Maybe Token.Token)
 stringLiteral = do
   maybeString <- State.state scanString
   case maybeString of
-    Just string -> do
-      s <- State.get
-      pure $ makeToken (Token.String string) string (sLine s)
+    Just string -> makeToken (Token.String string) string . sLine <$> State.get
     Nothing -> addError "Unterminated string."
 
 scanString :: Scanner -> (Maybe Text.Text, Scanner)
