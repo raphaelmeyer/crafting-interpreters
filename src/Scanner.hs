@@ -58,15 +58,10 @@ scanToken = do
       '\t' -> whitespace
       '\n' -> newline
       '"' -> stringLiteral
-      _ -> do
-        if Char.isDigit c
-          then
-            scanNumber c
-          else
-            if isAlpha c
-              then
-                scanIdentifier c
-              else addError "Unexpected character."
+      _ -> case letter c of
+        Digit -> number c
+        Alpha -> identifier c
+        _ -> addError "Unexpected character."
 
 whitespace :: State.State Scanner (Maybe Token.Token)
 whitespace = pure Nothing
@@ -121,18 +116,18 @@ scanString s
     addChar (Nothing, s') = (Nothing, s')
     addChar (Just str, s') = (Just $ Text.cons (Text.head source) str, s')
 
-scanNumber :: Char.Char -> State.State Scanner (Maybe Token.Token)
-scanNumber first = do
+number :: Char.Char -> State.State Scanner (Maybe Token.Token)
+number first = do
   s <- State.get
   let (source', current', remaining) = scanInteger (sSource s) (sCurrent s)
-  let number = Text.cons first remaining
-  case Read.readMaybe . Text.unpack $ number of
+  let num = Text.cons first remaining
+  case Read.readMaybe . Text.unpack $ num of
     Nothing -> do
       State.put (s {sSource = source', sCurrent = current', sErrors = Error.Error (sLine s) "Invalid number." : sErrors s})
       pure Nothing
     Just value -> do
       State.put (s {sSource = source', sCurrent = current'})
-      pure . Just $ Token.Token (Token.Number value) number (sLine s)
+      pure . Just $ Token.Token (Token.Number value) num (sLine s)
 
 scanInteger :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
 scanInteger source current =
@@ -168,13 +163,13 @@ scanFraction source current =
     maybeNext = Text.uncons source
     appendDigit c (source', current', num) = (source', current', Text.cons c num)
 
-scanIdentifier :: Char.Char -> State.State Scanner (Maybe Token.Token)
-scanIdentifier first = do
+identifier :: Char.Char -> State.State Scanner (Maybe Token.Token)
+identifier first = do
   s <- State.get
   let (source', current', remaining) = scanAlphaNumeric (sSource s) (sCurrent s)
-  let identifier = Text.cons first remaining
+  let ident = Text.cons first remaining
   State.put (s {sSource = source', sCurrent = current'})
-  pure . Just $ Token.Token (keywordOrIdentifier identifier) identifier (sLine s)
+  pure . Just $ Token.Token (checkKeyword ident) ident (sLine s)
 
 scanAlphaNumeric :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
 scanAlphaNumeric source current
@@ -182,17 +177,11 @@ scanAlphaNumeric source current
   | isAlphaNumeric (Text.head source) = appendChar (Text.head source) (scanAlphaNumeric (Text.tail source) (current + 1))
   | otherwise = (source, current, Text.empty)
   where
-    appendChar c (source', current', identifier) = (source', current', Text.cons c identifier)
+    appendChar c (source', current', ident) = (source', current', Text.cons c ident)
 
-isAlpha :: Char.Char -> Bool
-isAlpha c = c == '_' || (Char.isLetter c && Char.isAscii c)
-
-isAlphaNumeric :: Char.Char -> Bool
-isAlphaNumeric c = isAlpha c || Char.isDigit c
-
-keywordOrIdentifier :: Text.Text -> Token.TokenType
-keywordOrIdentifier identifier =
-  case identifier of
+checkKeyword :: Text.Text -> Token.TokenType
+checkKeyword ident =
+  case ident of
     "and" -> Token.And
     "class" -> Token.Class
     "else" -> Token.Else
@@ -209,7 +198,7 @@ keywordOrIdentifier identifier =
     "true" -> Token.True
     "var" -> Token.Var
     "while" -> Token.While
-    _ -> Token.Identifier identifier
+    _ -> Token.Identifier ident
 
 advance :: State.State Scanner (Maybe Char.Char)
 advance = do
@@ -258,3 +247,17 @@ runStateWhile continue m s =
 
 addFst :: a -> ([a], b) -> ([a], b)
 addFst x (xs, y) = (x : xs, y)
+
+data AlphaNumeric = Alpha | Digit | Other
+
+letter :: Char.Char -> AlphaNumeric
+letter c
+  | isAlpha c = Alpha
+  | Char.isDigit c = Digit
+  | otherwise = Other
+
+isAlpha :: Char.Char -> Bool
+isAlpha c = c == '_' || (Char.isLetter c && Char.isAscii c)
+
+isAlphaNumeric :: Char.Char -> Bool
+isAlphaNumeric c = isAlpha c || Char.isDigit c
