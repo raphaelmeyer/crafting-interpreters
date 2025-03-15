@@ -118,50 +118,40 @@ scanString s
 
 number :: Char.Char -> State.State Scanner (Maybe Token.Token)
 number first = do
-  s <- State.get
-  let (source', current', remaining) = scanInteger (sSource s) (sCurrent s)
+  remaining <- scanNumber
   let num = Text.cons first remaining
   case Read.readMaybe . Text.unpack $ num of
-    Nothing -> do
-      State.put (s {sSource = source', sCurrent = current', sErrors = Error.Error (sLine s) "Invalid number." : sErrors s})
-      pure Nothing
     Just value -> do
-      State.put (s {sSource = source', sCurrent = current'})
-      pure . Just $ Token.Token (Token.Number value) num (sLine s)
+      makeToken (Token.Number value) num . sLine <$> State.get
+    Nothing -> addError (Text.append "Invalid number: " num)
 
-scanInteger :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
-scanInteger source current =
-  case maybeNext of
-    Nothing -> (source, current, Text.empty)
-    Just (c, source') ->
-      if c == '.'
-        then
-          if Text.null source'
-            then (source, current, Text.empty)
-            else
-              if Char.isDigit (Text.head source')
-                then
-                  appendDigit (Text.head source) (scanFraction source' (current + 1))
-                else (source, current, Text.empty)
-        else
-          if Char.isDigit c
-            then appendDigit c (scanInteger source' (current + 1))
-            else (source, current, Text.empty)
-  where
-    maybeNext = Text.uncons source
-    appendDigit c (source', current', num) = (source', current', Text.cons c num)
+scanNumber :: State.State Scanner Text.Text
+scanNumber = do
+  integer <- State.state scanInteger
+  hasFraction <- State.gets checkFraction
+  if hasFraction
+    then do
+      State.modify skip
+      fraction <- State.state scanInteger
+      pure $ Text.append integer . Text.cons '.' $ fraction
+    else pure integer
 
-scanFraction :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
-scanFraction source current =
-  case maybeNext of
-    Nothing -> (source, current, Text.empty)
-    Just (c, source') ->
-      if Char.isDigit c
-        then appendDigit c (scanFraction source' (current + 1))
-        else (source, current, Text.empty)
+scanInteger :: Scanner -> (Text.Text, Scanner)
+scanInteger s
+  | Text.null source = (Text.empty, s)
+  | Char.isDigit . Text.head $ source = addChar . scanInteger . skip $ s
+  | otherwise = (Text.empty, s)
   where
-    maybeNext = Text.uncons source
-    appendDigit c (source', current', num) = (source', current', Text.cons c num)
+    source = sSource s
+    addChar (integer, s') = (Text.cons (Text.head source) integer, s')
+
+checkFraction :: Scanner -> Bool
+checkFraction s =
+  case Text.uncons . sSource $ s of
+    Just ('.', source') -> case Text.uncons source' of
+      Just (d, _) -> Char.isDigit d
+      _ -> False
+    _ -> False
 
 identifier :: Char.Char -> State.State Scanner (Maybe Token.Token)
 identifier first = do
