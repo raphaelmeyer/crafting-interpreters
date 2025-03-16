@@ -155,19 +155,18 @@ checkFraction s =
 
 identifier :: Char.Char -> State.State Scanner (Maybe Token.Token)
 identifier first = do
-  s <- State.get
-  let (source', current', remaining) = scanAlphaNumeric (sSource s) (sCurrent s)
+  remaining <- State.state scanAlphaNumeric
   let ident = Text.cons first remaining
-  State.put (s {sSource = source', sCurrent = current'})
-  pure . Just $ Token.Token (checkKeyword ident) ident (sLine s)
+  makeToken (checkKeyword ident) ident . sLine <$> State.get
 
-scanAlphaNumeric :: Text.Text -> Int -> (Text.Text, Int, Text.Text)
-scanAlphaNumeric source current
-  | Text.null source = (source, current, Text.empty)
-  | isAlphaNumeric (Text.head source) = appendChar (Text.head source) (scanAlphaNumeric (Text.tail source) (current + 1))
-  | otherwise = (source, current, Text.empty)
+scanAlphaNumeric :: Scanner -> (Text.Text, Scanner)
+scanAlphaNumeric s
+  | Text.null source = (Text.empty, s)
+  | isAlphaNumeric (Text.head source) = addChar . scanAlphaNumeric . skip $ s
+  | otherwise = (Text.empty, s)
   where
-    appendChar c (source', current', ident) = (source', current', Text.cons c ident)
+    source = sSource s
+    addChar (ident, s') = (Text.cons (Text.head source) ident, s')
 
 checkKeyword :: Text.Text -> Token.TokenType
 checkKeyword ident =
