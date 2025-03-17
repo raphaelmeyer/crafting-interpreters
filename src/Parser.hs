@@ -104,7 +104,19 @@ factorOp t
   | otherwise = Nothing
 
 unary :: State.State Parser Expr.Expr
-unary = primary
+unary = do
+  maybeOp <- State.state $ match unaryOp
+  case maybeOp of
+    Just op -> do
+      expr <- unary
+      pure $ Expr.Unary expr op
+    Nothing -> primary
+
+unaryOp :: Token.Token -> Maybe Expr.UnaryOp
+unaryOp t
+  | Token.tType t == Token.Bang = Just Expr.Not
+  | Token.tType t == Token.Minus = Just Expr.Neg
+  | otherwise = Nothing
 
 primary :: State.State Parser Expr.Expr
 primary = do
