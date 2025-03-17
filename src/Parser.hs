@@ -1,7 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Parser (parse) where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.List as List
+import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
 import qualified Token
@@ -15,8 +18,12 @@ data Parser = Parser
 initParser :: [Token.Token] -> Parser
 initParser tokens = Parser tokens []
 
-parse :: [Token.Token] -> Expr.Expr
-parse tokens = fst $ State.runState expression (initParser tokens)
+parse :: [Token.Token] -> Either [Error.Error] Expr.Expr
+parse tokens = case pErrors parser of
+  [] -> Right expr
+  errors -> Left errors
+  where
+    (expr, parser) = State.runState expression (initParser tokens)
 
 expression :: State.State Parser Expr.Expr
 expression = equality
@@ -142,7 +149,7 @@ grouping = do
       closeParen <- State.state $ match rightParen
       case closeParen of
         Just _ -> pure $ Expr.Grouping expr
-        Nothing -> undefined
+        Nothing -> reportError "Expect ')' after expression."
     Nothing -> undefined
 
 leftParen :: Token.Token -> Maybe ()
@@ -162,3 +169,17 @@ match check p = do
       Just result -> (Just result, p {pTokens = ts})
       Nothing -> (Nothing, p)
     Nothing -> (Nothing, p)
+
+reportError :: Text.Text -> State.State Parser Expr.Expr
+reportError e = do
+  p <- State.get
+  case List.uncons . pTokens $ p of
+    Just (t, ts) -> do
+      State.modify (\p' -> p' {pTokens = ts, pErrors = createError e t : pErrors p})
+      expression
+    Nothing -> undefined
+
+createError :: Text.Text -> Token.Token -> Error.Error
+createError e t = Error.Error (Token.tLine t) message
+  where
+    message = Text.concat ["At ", Token.tLexeme t, ": ", e]

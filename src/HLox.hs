@@ -13,6 +13,8 @@ run source = do
     Left errors -> pure $ Just errors
     Right tokens -> do
       mapM_ print tokens
-      let expr = Parser.parse tokens
-      print expr
-      pure Nothing
+      case Parser.parse tokens of
+        Left errors -> pure $ Just errors
+        Right expr -> do
+          print expr
+          pure Nothing
