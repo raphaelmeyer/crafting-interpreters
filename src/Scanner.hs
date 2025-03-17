@@ -38,7 +38,7 @@ scanToken = do
   case maybeC of
     Nothing -> eof
     Just c -> case c of
-      '(' -> simpleToken c Token.RightParen
+      '(' -> simpleToken c Token.LeftParen
       ')' -> simpleToken c Token.RightParen
       '{' -> simpleToken c Token.LeftBrace
       '}' -> simpleToken c Token.RightBrace

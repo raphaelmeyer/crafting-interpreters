@@ -120,12 +120,40 @@ unaryOp t
 
 primary :: State.State Parser Expr.Expr
 primary = do
-  s <- State.get
-  case pTokens s of
-    (Token.Token (Token.Number n) _ _) : _ -> do
-      State.modify skip
-      pure . Expr.Literal $ Expr.Number n
-    _ -> undefined
+  maybeLiteral <- State.state $ match literal
+  case maybeLiteral of
+    Just l -> pure $ Expr.Literal l
+    Nothing -> grouping
+
+literal :: Token.Token -> Maybe Expr.LiteralValue
+literal (Token.Token Token.False _ _) = Just $ Expr.Boolean False
+literal (Token.Token Token.True _ _) = Just $ Expr.Boolean True
+literal (Token.Token Token.Nil _ _) = Just $ Expr.Nil
+literal (Token.Token (Token.Number n) _ _) = Just $ Expr.Number n
+literal (Token.Token (Token.String s) _ _) = Just $ Expr.String s
+literal _ = Nothing
+
+grouping :: State.State Parser Expr.Expr
+grouping = do
+  openParen <- State.state $ match leftParen
+  case openParen of
+    Just _ -> do
+      expr <- expression
+      closeParen <- State.state $ match rightParen
+      case closeParen of
+        Just _ -> pure $ Expr.Grouping expr
+        Nothing -> undefined
+    Nothing -> undefined
+
+leftParen :: Token.Token -> Maybe ()
+leftParen t
+  | Token.tType t == Token.LeftParen = Just ()
+  | otherwise = Nothing
+
+rightParen :: Token.Token -> Maybe ()
+rightParen t
+  | Token.tType t == Token.RightParen = Just ()
+  | otherwise = Nothing
 
 match :: (Token.Token -> Maybe a) -> Parser -> (Maybe a, Parser)
 match check p = do
@@ -134,6 +162,3 @@ match check p = do
       Just result -> (Just result, p {pTokens = ts})
       Nothing -> (Nothing, p)
     Nothing -> (Nothing, p)
-
-skip :: Parser -> Parser
-skip p = if null . pTokens $ p then p else p {pTokens = tail . pTokens $ p}
