@@ -1,6 +1,7 @@
 module Parser (parse) where
 
 import qualified Control.Monad.State.Strict as State
+import qualified Data.List as List
 import qualified Error
 import qualified Expr
 import qualified Token
@@ -27,16 +28,18 @@ equality = do
 
 whileEquality :: Expr.Expr -> State.State Parser Expr.Expr
 whileEquality expr = do
-  token <- match [Token.BangEqual, Token.EqualEqual]
-  case token of
-    Just t -> do
+  maybeOp <- State.state $ match equalityOp
+  case maybeOp of
+    Just op -> do
       right <- comparison
-      whileEquality $ Expr.Binary expr right (mapToken . Token.tType $ t)
+      whileEquality $ Expr.Binary expr right op
     Nothing -> pure expr
-  where
-    mapToken Token.BangEqual = Expr.NotEqual
-    mapToken Token.EqualEqual = Expr.Equal
-    mapToken _ = undefined
+
+equalityOp :: Token.Token -> Maybe Expr.BinaryOp
+equalityOp t
+  | Token.tType t == Token.EqualEqual = Just Expr.Equal
+  | Token.tType t == Token.BangEqual = Just Expr.NotEqual
+  | otherwise = Nothing
 
 comparison :: State.State Parser Expr.Expr
 comparison = term
@@ -55,25 +58,17 @@ primary = do
   s <- State.get
   case pTokens s of
     (Token.Token (Token.Number n) _ _) : _ -> do
-      _ <- advance
+      State.modify skip
       pure . Expr.Literal $ Expr.Number n
     _ -> undefined
 
-match :: [Token.TokenType] -> State.State Parser (Maybe Token.Token)
-match expected = do
-  s <- State.get
-  case pTokens s of
-    [] -> pure Nothing
-    (t : _) ->
-      if Token.tType t `elem` expected
-        then do advance
-        else pure Nothing
+match :: (Token.Token -> Maybe a) -> Parser -> (Maybe a, Parser)
+match check p = do
+  case List.uncons . pTokens $ p of
+    Just (t, ts) -> case check t of
+      Just result -> (Just result, p {pTokens = ts})
+      Nothing -> (Nothing, p)
+    Nothing -> (Nothing, p)
 
-advance :: State.State Parser (Maybe Token.Token)
-advance = do
-  s <- State.get
-  case pTokens s of
-    [] -> pure Nothing
-    t : ts -> do
-      State.put s {pTokens = ts}
-      pure $ Just t
+skip :: Parser -> Parser
+skip p = if null . pTokens $ p then p else p {pTokens = tail . pTokens $ p}
