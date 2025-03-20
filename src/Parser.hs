@@ -18,6 +18,7 @@ data Parser = Parser
 initParser :: [Token.Token] -> Parser
 initParser tokens = Parser tokens []
 
+-- revisit 6.3.3 later and properly return and recover from errors
 parse :: [Token.Token] -> Either [Error.Error] Expr.Expr
 parse tokens = case pErrors parser of
   [] -> Right expr
@@ -150,7 +151,7 @@ grouping = do
       case closeParen of
         Just _ -> pure $ Expr.Grouping expr
         Nothing -> reportError "Expect ')' after expression."
-    Nothing -> undefined
+    Nothing -> reportError "Expect expression."
 
 leftParen :: Token.Token -> Maybe ()
 leftParen t
@@ -172,14 +173,13 @@ match check p = do
 
 reportError :: Text.Text -> State.State Parser Expr.Expr
 reportError e = do
-  p <- State.get
-  case List.uncons . pTokens $ p of
-    Just (t, ts) -> do
-      State.modify (\p' -> p' {pTokens = ts, pErrors = createError e t : pErrors p})
-      expression
-    Nothing -> undefined
+  State.modify (addError e)
+  undefined
 
-createError :: Text.Text -> Token.Token -> Error.Error
-createError e t = Error.Error (Token.tLine t) message
+addError :: Text.Text -> Parser -> Parser
+addError e p =
+  p {pErrors = newError : pErrors p}
   where
-    message = Text.concat ["At ", Token.tLexeme t, ": ", e]
+    newError = case List.uncons . pTokens $ p of
+      Just (t, _) -> Error.Error (Token.tLine t) (Text.concat ["At ", Token.tLexeme t, ": ", e])
+      Nothing -> Error.Error 0 e
