@@ -58,6 +58,7 @@ library
         Error,
         Expr,
         Interpreter,
+        Lox,
         Parser,
         Scanner,
         Token

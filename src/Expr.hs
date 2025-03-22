@@ -1,19 +1,12 @@
 module Expr where
 
-import qualified Data.Text as Text
+import qualified Lox
 
 data Expr
   = Binary {binaryLeft :: Expr, binaryRight :: Expr, binaryOp :: BinaryOp}
   | Grouping {groupExpr :: Expr}
-  | Literal {literal :: LiteralValue}
+  | Literal Lox.Value
   | Unary {unaryExpr :: Expr, unaryOp :: UnaryOp}
-  deriving (Eq, Show)
-
-data LiteralValue
-  = Number Double
-  | String Text.Text
-  | Boolean Bool
-  | Nil
   deriving (Eq, Show)
 
 data UnaryOp = Neg | Not deriving (Eq, Show)

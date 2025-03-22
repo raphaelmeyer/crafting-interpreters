@@ -7,6 +7,7 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
+import qualified Lox
 import qualified Token
 
 data Parser = Parser
@@ -133,12 +134,12 @@ primary = do
     Just l -> pure $ Expr.Literal l
     Nothing -> grouping
 
-literal :: Token.Token -> Maybe Expr.LiteralValue
-literal (Token.Token Token.False _ _) = Just $ Expr.Boolean False
-literal (Token.Token Token.True _ _) = Just $ Expr.Boolean True
-literal (Token.Token Token.Nil _ _) = Just $ Expr.Nil
-literal (Token.Token (Token.Number n) _ _) = Just $ Expr.Number n
-literal (Token.Token (Token.String s) _ _) = Just $ Expr.String s
+literal :: Token.Token -> Maybe Lox.Value
+literal (Token.Token Token.False _ _) = Just $ Lox.Boolean False
+literal (Token.Token Token.True _ _) = Just $ Lox.Boolean True
+literal (Token.Token Token.Nil _ _) = Just $ Lox.Nil
+literal (Token.Token (Token.Number n) _ _) = Just $ Lox.Number n
+literal (Token.Token (Token.String s) _ _) = Just $ Lox.String s
 literal _ = Nothing
 
 grouping :: State.State Parser Expr.Expr
