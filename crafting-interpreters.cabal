@@ -57,6 +57,7 @@ library
         HLox,
         Error,
         Expr,
+        Interpreter,
         Parser,
         Scanner,
         Token
