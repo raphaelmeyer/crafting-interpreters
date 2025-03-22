@@ -4,7 +4,7 @@ import qualified Lox
 
 data Expr
   = Binary {binaryLeft :: Expr, binaryRight :: Expr, binaryOp :: BinaryOp}
-  | Grouping {groupExpr :: Expr}
+  | Grouping Expr
   | Literal Lox.Value
   | Unary {unaryExpr :: Expr, unaryOp :: UnaryOp}
   deriving (Eq, Show)
