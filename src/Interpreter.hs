@@ -19,17 +19,18 @@ evalUnary Expr.Not v = Lox.Boolean . not . truthy $ v
 evalUnary _ _ = Lox.Nil
 
 evalBinary :: Expr.BinaryOp -> Lox.Value -> Lox.Value -> Lox.Value
-evalBinary Expr.Minus (Lox.Number a) (Lox.Number b) = Lox.Number (a - b)
-evalBinary Expr.Mult (Lox.Number a) (Lox.Number b) = Lox.Number (a * b)
-evalBinary Expr.Div (Lox.Number a) (Lox.Number b) = Lox.Number (a / b)
-evalBinary Expr.Plus (Lox.Number a) (Lox.Number b) = Lox.Number (a + b)
-evalBinary Expr.Plus (Lox.String a) (Lox.String b) = Lox.String (Text.append a b)
-evalBinary Expr.Greater (Lox.Number a) (Lox.Number b) = Lox.Boolean (a > b)
-evalBinary Expr.GreaterEqual (Lox.Number a) (Lox.Number b) = Lox.Boolean (a >= b)
-evalBinary Expr.Less (Lox.Number a) (Lox.Number b) = Lox.Boolean (a < b)
-evalBinary Expr.LessEqual (Lox.Number a) (Lox.Number b) = Lox.Boolean (a <= b)
 evalBinary Expr.Equal a b = Lox.Boolean (a == b)
 evalBinary Expr.NotEqual a b = Lox.Boolean (a /= b)
+evalBinary Expr.Plus (Lox.String a) (Lox.String b) = Lox.String (Text.append a b)
+evalBinary op (Lox.Number a) (Lox.Number b) = case op of
+  Expr.Plus -> Lox.Number (a + b)
+  Expr.Minus -> Lox.Number (a - b)
+  Expr.Mult -> Lox.Number (a * b)
+  Expr.Div -> Lox.Number (a / b)
+  Expr.Greater -> Lox.Boolean (a > b)
+  Expr.GreaterEqual -> Lox.Boolean (a >= b)
+  Expr.Less -> Lox.Boolean (a < b)
+  Expr.LessEqual -> Lox.Boolean (a <= b)
 evalBinary _ _ _ = Lox.Nil
 
 truthy :: Lox.Value -> Bool
