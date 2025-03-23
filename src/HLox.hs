@@ -13,10 +13,8 @@ run source = do
   case Scanner.scanTokens source of
     Left errors -> pure $ Just errors
     Right tokens -> do
-      -- mapM_ print tokens
       case Parser.parse tokens of
         Left errors -> pure $ Just errors
         Right expr -> do
-          -- print expr
           print . Interpreter.interpret $ expr
           pure Nothing

@@ -1,37 +1,47 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Interpreter (interpret) where
 
 import qualified Data.Text as Text
+import qualified Error
 import qualified Expr
 import qualified Lox
 
-interpret :: Expr.Expr -> Lox.Value
+type Result = Either Error.Error Lox.Value
+
+interpret :: Expr.Expr -> Result
 interpret = evaluate
 
-evaluate :: Expr.Expr -> Lox.Value
-evaluate (Expr.Literal l) = l
+evaluate :: Expr.Expr -> Result
+evaluate (Expr.Literal l) = Right l
 evaluate (Expr.Grouping g) = evaluate g
-evaluate (Expr.Unary r op) = evalUnary op . evaluate $ r
-evaluate (Expr.Binary l r op) = evalBinary op (evaluate l) (evaluate r)
+evaluate (Expr.Unary r op) = evaluate r >>= evalUnary op
+evaluate (Expr.Binary l r op) = do
+  left <- evaluate l
+  right <- evaluate r
+  evalBinary op left right
 
-evalUnary :: Expr.UnaryOp -> Lox.Value -> Lox.Value
-evalUnary Expr.Neg (Lox.Number n) = Lox.Number (-n)
-evalUnary Expr.Not v = Lox.Boolean . not . truthy $ v
-evalUnary _ _ = Lox.Nil
+evalUnary :: Expr.UnaryOp -> Lox.Value -> Result
+evalUnary Expr.Neg (Lox.Number n) = Right $ Lox.Number (-n)
+evalUnary Expr.Not v = Right . Lox.Boolean . not . truthy $ v
+evalUnary Expr.Neg _ = Left $ Error.Error 0 "Operand must be a number."
 
-evalBinary :: Expr.BinaryOp -> Lox.Value -> Lox.Value -> Lox.Value
-evalBinary Expr.Equal a b = Lox.Boolean (a == b)
-evalBinary Expr.NotEqual a b = Lox.Boolean (a /= b)
-evalBinary Expr.Plus (Lox.String a) (Lox.String b) = Lox.String (Text.append a b)
-evalBinary op (Lox.Number a) (Lox.Number b) = case op of
-  Expr.Plus -> Lox.Number (a + b)
-  Expr.Minus -> Lox.Number (a - b)
-  Expr.Mult -> Lox.Number (a * b)
-  Expr.Div -> Lox.Number (a / b)
-  Expr.Greater -> Lox.Boolean (a > b)
-  Expr.GreaterEqual -> Lox.Boolean (a >= b)
-  Expr.Less -> Lox.Boolean (a < b)
-  Expr.LessEqual -> Lox.Boolean (a <= b)
-evalBinary _ _ _ = Lox.Nil
+evalBinary :: Expr.BinaryOp -> Lox.Value -> Lox.Value -> Result
+evalBinary Expr.Equal a b = Right $ Lox.Boolean (a == b)
+evalBinary Expr.NotEqual a b = Right $ Lox.Boolean (a /= b)
+evalBinary Expr.Plus (Lox.String a) (Lox.String b) = Right $ Lox.String (Text.append a b)
+evalBinary op (Lox.Number a) (Lox.Number b) =
+  Right $ case op of
+    Expr.Plus -> Lox.Number (a + b)
+    Expr.Minus -> Lox.Number (a - b)
+    Expr.Mult -> Lox.Number (a * b)
+    Expr.Div -> Lox.Number (a / b)
+    Expr.Greater -> Lox.Boolean (a > b)
+    Expr.GreaterEqual -> Lox.Boolean (a >= b)
+    Expr.Less -> Lox.Boolean (a < b)
+    Expr.LessEqual -> Lox.Boolean (a <= b)
+evalBinary Expr.Plus _ _ = Left $ Error.Error 0 "Operands must be two numbers or two strings."
+evalBinary _ _ _ = Left $ Error.Error 0 "Operands must be numbers."
 
 truthy :: Lox.Value -> Bool
 truthy Lox.Nil = False
