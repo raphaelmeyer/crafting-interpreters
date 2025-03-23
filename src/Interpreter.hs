@@ -4,5 +4,9 @@ import qualified Expr
 import qualified Lox
 
 interpret :: Expr.Expr -> Lox.Value
-interpret (Expr.Literal l) = l
-interpret _ = undefined
+interpret = evaluate
+
+evaluate :: Expr.Expr -> Lox.Value
+evaluate (Expr.Literal l) = l
+evaluate (Expr.Grouping g) = evaluate g
+evaluate _ = undefined
