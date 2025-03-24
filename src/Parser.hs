@@ -2,6 +2,7 @@
 
 module Parser (parse) where
 
+import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Data.List as List
 import qualified Data.Text as Text
@@ -10,32 +11,29 @@ import qualified Expr
 import qualified Lox
 import qualified Token
 
-data Parser = Parser
-  { pTokens :: [Token.Token],
-    pErrors :: [Error.Error]
-  }
-  deriving (Eq, Show)
+newtype ParserState = ParserState {pTokens :: [Token.Token]} deriving (Eq, Show)
 
-initParser :: [Token.Token] -> Parser
-initParser tokens = Parser tokens []
+type Parser = Except.ExceptT Error.Error (State.State ParserState) Expr.Expr
 
--- revisit 6.3.3 later and properly return and recover from errors
 parse :: [Token.Token] -> Lox.Result Expr.Expr
-parse tokens = case pErrors parser of
-  [] -> Right expr
-  errors -> Left errors
+parse tokens = case result of
+  Right expr -> Right expr
+  Left err -> Left [err]
   where
-    (expr, parser) = State.runState expression (initParser tokens)
+    (result, _) = flip State.runState (initParser tokens) . Except.runExceptT $ expression
 
-expression :: State.State Parser Expr.Expr
+initParser :: [Token.Token] -> ParserState
+initParser = ParserState
+
+expression :: Parser
 expression = equality
 
-equality :: State.State Parser Expr.Expr
+equality :: Parser
 equality = do
   expr <- comparison
   whileEquality expr
 
-whileEquality :: Expr.Expr -> State.State Parser Expr.Expr
+whileEquality :: Expr.Expr -> Parser
 whileEquality expr = do
   maybeOp <- State.state $ match equalityOp
   case maybeOp of
@@ -50,12 +48,12 @@ equalityOp t
   | Token.tType t == Token.BangEqual = Just Expr.NotEqual
   | otherwise = Nothing
 
-comparison :: State.State Parser Expr.Expr
+comparison :: Parser
 comparison = do
   expr <- term
   whileComparison expr
 
-whileComparison :: Expr.Expr -> State.State Parser Expr.Expr
+whileComparison :: Expr.Expr -> Parser
 whileComparison expr = do
   maybeOp <- State.state $ match comparisonOp
   case maybeOp of
@@ -72,12 +70,12 @@ comparisonOp t
   | Token.tType t == Token.LessEqual = Just Expr.LessEqual
   | otherwise = Nothing
 
-term :: State.State Parser Expr.Expr
+term :: Parser
 term = do
   expr <- factor
   whileTerm expr
 
-whileTerm :: Expr.Expr -> State.State Parser Expr.Expr
+whileTerm :: Expr.Expr -> Parser
 whileTerm expr = do
   maybeOp <- State.state $ match termOp
   case maybeOp of
@@ -92,12 +90,12 @@ termOp t
   | Token.tType t == Token.Plus = Just Expr.Plus
   | otherwise = Nothing
 
-factor :: State.State Parser Expr.Expr
+factor :: Parser
 factor = do
   expr <- unary
   whileFactor expr
 
-whileFactor :: Expr.Expr -> State.State Parser Expr.Expr
+whileFactor :: Expr.Expr -> Parser
 whileFactor expr = do
   maybeOp <- State.state $ match factorOp
   case maybeOp of
@@ -112,7 +110,7 @@ factorOp t
   | Token.tType t == Token.Star = Just Expr.Mult
   | otherwise = Nothing
 
-unary :: State.State Parser Expr.Expr
+unary :: Parser
 unary = do
   maybeOp <- State.state $ match unaryOp
   case maybeOp of
@@ -127,7 +125,7 @@ unaryOp t
   | Token.tType t == Token.Minus = Just Expr.Neg
   | otherwise = Nothing
 
-primary :: State.State Parser Expr.Expr
+primary :: Parser
 primary = do
   maybeLiteral <- State.state $ match literal
   case maybeLiteral of
@@ -142,7 +140,7 @@ literal (Token.Token (Token.Number n) _ _) = Just $ Lox.Number n
 literal (Token.Token (Token.String s) _ _) = Just $ Lox.String s
 literal _ = Nothing
 
-grouping :: State.State Parser Expr.Expr
+grouping :: Parser
 grouping = do
   openParen <- State.state $ match leftParen
   case openParen of
@@ -164,7 +162,7 @@ rightParen t
   | Token.tType t == Token.RightParen = Just ()
   | otherwise = Nothing
 
-match :: (Token.Token -> Maybe a) -> Parser -> (Maybe a, Parser)
+match :: (Token.Token -> Maybe a) -> ParserState -> (Maybe a, ParserState)
 match check p = do
   case List.uncons . pTokens $ p of
     Just (t, ts) -> case check t of
@@ -172,15 +170,11 @@ match check p = do
       Nothing -> (Nothing, p)
     Nothing -> (Nothing, p)
 
-reportError :: Text.Text -> State.State Parser Expr.Expr
+reportError :: Text.Text -> Parser
 reportError e = do
-  State.modify (addError e)
-  undefined
-
-addError :: Text.Text -> Parser -> Parser
-addError e p =
-  p {pErrors = newError : pErrors p}
+  p <- State.get
+  Except.throwError . newError $ p
   where
-    newError = case List.uncons . pTokens $ p of
+    newError p = case List.uncons . pTokens $ p of
       Just (t, _) -> Error.Error (Token.tLine t) (Text.concat ["At ", Token.tLexeme t, ": ", e])
       Nothing -> Error.Error 0 e
