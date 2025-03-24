@@ -1,6 +1,9 @@
 module Lox where
 
 import qualified Data.Text as Text
+import qualified Error
+
+type Result a = Either [Error.Error] a
 
 data Value
   = Number Double

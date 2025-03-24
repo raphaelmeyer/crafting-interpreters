@@ -20,7 +20,7 @@ initParser :: [Token.Token] -> Parser
 initParser tokens = Parser tokens []
 
 -- revisit 6.3.3 later and properly return and recover from errors
-parse :: [Token.Token] -> Either [Error.Error] Expr.Expr
+parse :: [Token.Token] -> Lox.Result Expr.Expr
 parse tokens = case pErrors parser of
   [] -> Right expr
   errors -> Left errors

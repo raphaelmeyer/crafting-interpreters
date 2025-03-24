@@ -7,6 +7,7 @@ import qualified Data.Char as Char
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Error
+import qualified Lox
 import qualified Text.Read as Read
 import qualified Token
 
@@ -18,10 +19,7 @@ data Scanner = Scanner
   }
   deriving (Eq, Show)
 
-initScanner :: Text.Text -> Scanner
-initScanner source = Scanner 0 1 source []
-
-scanTokens :: Text.Text -> Either [Error.Error] [Token.Token]
+scanTokens :: Text.Text -> Lox.Result [Token.Token]
 scanTokens source =
   case sErrors scanner of
     [] -> Right . Maybe.catMaybes $ tokens
@@ -31,6 +29,9 @@ scanTokens source =
     scanToEnd = runStateWhile notEnd scanToken
     notEnd (Just (Token.Token Token.EOF _ _)) = False
     notEnd _ = True
+
+initScanner :: Text.Text -> Scanner
+initScanner source = Scanner 0 1 source []
 
 scanToken :: State.State Scanner (Maybe Token.Token)
 scanToken = do

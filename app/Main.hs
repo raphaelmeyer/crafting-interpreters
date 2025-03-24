@@ -26,10 +26,9 @@ usage = do
 runFile :: String -> IO ()
 runFile f = do
   script <- Text.IO.readFile f
-  result <- HLox.run script
-  case result of
-    Nothing -> pure ()
-    Just errors -> do
+  case HLox.run script of
+    Right result -> print result
+    Left errors -> do
       mapM_ print errors
       Exit.exitFailure
 
@@ -40,8 +39,7 @@ runPrompt = do
   done <- System.IO.isEOF
   M.unless done $ do
     line <- Text.IO.getLine
-    result <- HLox.run line
-    case result of
-      Nothing -> pure ()
-      Just errors -> mapM_ print errors
+    case HLox.run line of
+      Right result -> print result
+      Left errors -> mapM_ print errors
     runPrompt

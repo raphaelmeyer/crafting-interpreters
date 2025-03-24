@@ -7,7 +7,7 @@ import qualified Error
 import qualified Expr
 import qualified Lox
 
-type Result = Either Error.Error Lox.Value
+type Result = Lox.Result Lox.Value
 
 interpret :: Expr.Expr -> Result
 interpret = evaluate
@@ -24,7 +24,7 @@ evaluate (Expr.Binary l r op) = do
 evalUnary :: Expr.UnaryOp -> Lox.Value -> Result
 evalUnary Expr.Neg (Lox.Number n) = Right $ Lox.Number (-n)
 evalUnary Expr.Not v = Right . Lox.Boolean . not . truthy $ v
-evalUnary Expr.Neg _ = Left $ Error.Error 0 "Operand must be a number."
+evalUnary Expr.Neg _ = Left [Error.Error 0 "Operand must be a number."]
 
 evalBinary :: Expr.BinaryOp -> Lox.Value -> Lox.Value -> Result
 evalBinary Expr.Equal a b = Right $ Lox.Boolean (a == b)
@@ -40,8 +40,8 @@ evalBinary op (Lox.Number a) (Lox.Number b) =
     Expr.GreaterEqual -> Lox.Boolean (a >= b)
     Expr.Less -> Lox.Boolean (a < b)
     Expr.LessEqual -> Lox.Boolean (a <= b)
-evalBinary Expr.Plus _ _ = Left $ Error.Error 0 "Operands must be two numbers or two strings."
-evalBinary _ _ _ = Left $ Error.Error 0 "Operands must be numbers."
+evalBinary Expr.Plus _ _ = Left [Error.Error 0 "Operands must be two numbers or two strings."]
+evalBinary _ _ _ = Left [Error.Error 0 "Operands must be numbers."]
 
 truthy :: Lox.Value -> Bool
 truthy Lox.Nil = False
