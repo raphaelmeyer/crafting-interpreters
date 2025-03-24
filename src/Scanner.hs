@@ -26,9 +26,7 @@ scanTokens source =
     errors -> Left errors
   where
     (tokens, scanner) = scanToEnd (initScanner source)
-    scanToEnd = runStateWhile notEnd scanToken
-    notEnd (Just (Token.Token Token.EOF _ _)) = False
-    notEnd _ = True
+    scanToEnd = runStateWhile (not . atEnd) scanToken
 
 initScanner :: Text.Text -> Scanner
 initScanner source = Scanner 0 1 source []
@@ -234,6 +232,10 @@ runStateWhile continue m s =
   if continue result then addFst result (runStateWhile continue m s') else ([result], s')
   where
     (result, s') = State.runState m s
+
+atEnd :: Maybe Token.Token -> Bool
+atEnd (Just (Token.Token Token.EOF _ _)) = True
+atEnd _ = False
 
 addFst :: a -> ([a], b) -> ([a], b)
 addFst x (xs, y) = (x : xs, y)
