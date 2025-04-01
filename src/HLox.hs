@@ -9,5 +9,5 @@ import qualified Scanner
 run :: Text.Text -> Lox.Result Lox.Value
 run source = do
   tokens <- Scanner.scanTokens source
-  expr <- Parser.parse tokens
-  Interpreter.interpret expr
+  stmts <- Parser.parse tokens
+  Interpreter.interpret stmts

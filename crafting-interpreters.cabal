@@ -23,6 +23,7 @@ library
         Lox,
         Parser,
         Scanner,
+        Stmt,
         Token
 
     build-depends:

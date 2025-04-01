@@ -6,11 +6,15 @@ import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
 import qualified Lox
+import qualified Stmt
 
 type Result = Lox.Result Lox.Value
 
-interpret :: Expr.Expr -> Result
-interpret = evaluate
+interpret :: [Stmt.Stmt] -> Result
+interpret [Stmt.Expression expr] = evaluate expr
+interpret [Stmt.Print expr] = evaluate expr
+interpret (_ : ss) = interpret ss
+interpret [] = Right Lox.Nil
 
 evaluate :: Expr.Expr -> Result
 evaluate (Expr.Literal l) = Right l

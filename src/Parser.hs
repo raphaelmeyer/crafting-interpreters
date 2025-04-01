@@ -9,31 +9,69 @@ import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
 import qualified Lox
+import qualified Stmt
 import qualified Token
 
 newtype ParserState = ParserState {pTokens :: [Token.Token]} deriving (Eq, Show)
 
-type Parser = Except.ExceptT Error.Error (State.State ParserState) Expr.Expr
+type Parser a = Except.ExceptT Error.Error (State.State ParserState) a
 
-parse :: [Token.Token] -> Lox.Result Expr.Expr
+type ExprParser = Parser Expr.Expr
+
+type StmtParser = Parser Stmt.Stmt
+
+parse :: [Token.Token] -> Lox.Result [Stmt.Stmt]
 parse tokens = case result of
   Right expr -> Right expr
   Left err -> Left [err]
   where
-    (result, _) = flip State.runState (initParser tokens) . Except.runExceptT $ expression
+    (result, _) = flip State.runState (initParser tokens) . Except.runExceptT $ program
 
 initParser :: [Token.Token] -> ParserState
 initParser = ParserState
 
-expression :: Parser
+program :: Parser [Stmt.Stmt]
+program = do
+  atEnd <- State.gets isAtEnd
+  if atEnd
+    then pure []
+    else do
+      stmt <- statement
+      stmts <- program
+      pure $ stmt : stmts
+
+statement :: StmtParser
+statement = do
+  maybePrint <- State.state $ match isPrint
+  case maybePrint of
+    Just _ -> printStatement
+    Nothing -> expressionStatement
+
+printStatement :: StmtParser
+printStatement = do
+  expr <- expression
+  semi <- State.state $ match isSemicolon
+  case semi of
+    Just _ -> pure $ Stmt.Print expr
+    Nothing -> reportError "Expect ';' after expression."
+
+expressionStatement :: StmtParser
+expressionStatement = do
+  expr <- expression
+  semi <- State.state $ match isSemicolon
+  case semi of
+    Just _ -> pure $ Stmt.Expression expr
+    Nothing -> reportError "Expect ';' after expression."
+
+expression :: ExprParser
 expression = equality
 
-equality :: Parser
+equality :: ExprParser
 equality = do
   expr <- comparison
   whileEquality expr
 
-whileEquality :: Expr.Expr -> Parser
+whileEquality :: Expr.Expr -> ExprParser
 whileEquality expr = do
   maybeOp <- State.state $ match equalityOp
   case maybeOp of
@@ -48,12 +86,12 @@ equalityOp t
   | Token.tType t == Token.BangEqual = Just Expr.NotEqual
   | otherwise = Nothing
 
-comparison :: Parser
+comparison :: ExprParser
 comparison = do
   expr <- term
   whileComparison expr
 
-whileComparison :: Expr.Expr -> Parser
+whileComparison :: Expr.Expr -> ExprParser
 whileComparison expr = do
   maybeOp <- State.state $ match comparisonOp
   case maybeOp of
@@ -70,12 +108,12 @@ comparisonOp t
   | Token.tType t == Token.LessEqual = Just Expr.LessEqual
   | otherwise = Nothing
 
-term :: Parser
+term :: ExprParser
 term = do
   expr <- factor
   whileTerm expr
 
-whileTerm :: Expr.Expr -> Parser
+whileTerm :: Expr.Expr -> ExprParser
 whileTerm expr = do
   maybeOp <- State.state $ match termOp
   case maybeOp of
@@ -90,12 +128,12 @@ termOp t
   | Token.tType t == Token.Plus = Just Expr.Plus
   | otherwise = Nothing
 
-factor :: Parser
+factor :: ExprParser
 factor = do
   expr <- unary
   whileFactor expr
 
-whileFactor :: Expr.Expr -> Parser
+whileFactor :: Expr.Expr -> ExprParser
 whileFactor expr = do
   maybeOp <- State.state $ match factorOp
   case maybeOp of
@@ -110,7 +148,7 @@ factorOp t
   | Token.tType t == Token.Star = Just Expr.Mult
   | otherwise = Nothing
 
-unary :: Parser
+unary :: ExprParser
 unary = do
   maybeOp <- State.state $ match unaryOp
   case maybeOp of
@@ -125,7 +163,7 @@ unaryOp t
   | Token.tType t == Token.Minus = Just Expr.Neg
   | otherwise = Nothing
 
-primary :: Parser
+primary :: ExprParser
 primary = do
   maybeLiteral <- State.state $ match literal
   case maybeLiteral of
@@ -135,12 +173,12 @@ primary = do
 literal :: Token.Token -> Maybe Lox.Value
 literal (Token.Token Token.False _ _) = Just $ Lox.Boolean False
 literal (Token.Token Token.True _ _) = Just $ Lox.Boolean True
-literal (Token.Token Token.Nil _ _) = Just $ Lox.Nil
+literal (Token.Token Token.Nil _ _) = Just Lox.Nil
 literal (Token.Token (Token.Number n) _ _) = Just $ Lox.Number n
 literal (Token.Token (Token.String s) _ _) = Just $ Lox.String s
 literal _ = Nothing
 
-grouping :: Parser
+grouping :: ExprParser
 grouping = do
   openParen <- State.state $ match leftParen
   case openParen of
@@ -162,15 +200,30 @@ rightParen t
   | Token.tType t == Token.RightParen = Just ()
   | otherwise = Nothing
 
+isPrint :: Token.Token -> Maybe ()
+isPrint t
+  | Token.tType t == Token.Print = Just ()
+  | otherwise = Nothing
+
+isSemicolon :: Token.Token -> Maybe ()
+isSemicolon t
+  | Token.tType t == Token.SemiColon = Just ()
+  | otherwise = Nothing
+
 match :: (Token.Token -> Maybe a) -> ParserState -> (Maybe a, ParserState)
-match check p = do
+match check p =
   case List.uncons . pTokens $ p of
     Just (t, ts) -> case check t of
       Just result -> (Just result, p {pTokens = ts})
       Nothing -> (Nothing, p)
     Nothing -> (Nothing, p)
 
-reportError :: Text.Text -> Parser
+isAtEnd :: ParserState -> Bool
+isAtEnd p = case List.uncons . pTokens $ p of
+  Just (t, _) -> Token.tType t == Token.EOF
+  Nothing -> True
+
+reportError :: Text.Text -> Parser a
 reportError e = do
   p <- State.get
   Except.throwError . newError $ p
