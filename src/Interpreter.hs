@@ -2,6 +2,7 @@
 
 module Interpreter (interpret) where
 
+import qualified Control.Monad.Except as Except
 import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
@@ -10,11 +11,17 @@ import qualified Stmt
 
 type Result = Lox.Result Lox.Value
 
-interpret :: [Stmt.Stmt] -> Result
-interpret [Stmt.Expression expr] = evaluate expr
-interpret [Stmt.Print expr] = evaluate expr
-interpret (_ : ss) = interpret ss
-interpret [] = Right Lox.Nil
+interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
+interpret (Stmt.Expression expr : stmts) =
+  Except.runExceptT $ do
+    _ <- Except.ExceptT . pure $ evaluate expr
+    Except.ExceptT $ interpret stmts
+interpret (Stmt.Print expr : stmts) =
+  Except.runExceptT $ do
+    result <- Except.ExceptT . pure $ evaluate expr
+    Except.liftIO $ print result
+    Except.ExceptT $ interpret stmts
+interpret [] = pure $ Right ()
 
 evaluate :: Expr.Expr -> Result
 evaluate (Expr.Literal l) = Right l
