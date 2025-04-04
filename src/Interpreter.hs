@@ -21,6 +21,7 @@ interpret (Stmt.Print expr : stmts) =
     Right result -> do
       print result
       interpret stmts
+interpret (Stmt.Variable _ _ : stmts) = interpret stmts
 interpret [] = pure $ Right ()
 
 evaluate :: Expr.Expr -> Result
@@ -31,6 +32,7 @@ evaluate (Expr.Binary l r op) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right
+evaluate (Expr.Variable _) = Right $ Lox.Nil
 
 evalUnary :: Expr.UnaryOp -> Lox.Value -> Result
 evalUnary Expr.Neg (Lox.Number n) = Right $ Lox.Number (-n)

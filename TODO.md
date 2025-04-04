@@ -10,3 +10,4 @@ Some notes or ideas what maybe could be improved.
   state to `interpret` we'll already of stack of three
 - directory structure, split files and put into subdirectories
   - e.g. Interpreter/Statement.hs, Interpreter/Expression.hs...
+- decide if Variable.Stmt should have (Maybe Expr) or just use literal Nil for no assignment

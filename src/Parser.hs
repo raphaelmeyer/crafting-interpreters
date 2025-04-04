@@ -36,9 +36,25 @@ program = do
   if atEnd
     then pure []
     else do
-      stmt <- statement
+      stmt <- declaration
       stmts <- program
       pure $ stmt : stmts
+
+declaration :: StmtParser
+-- TODO synchronize on parse error
+declaration = do
+  isVariable <- matchToken Token.Var
+  if isVariable
+    then variableDeclaration
+    else statement
+
+variableDeclaration :: StmtParser
+variableDeclaration = do
+  name <- expect identifier "Expect variable name."
+  isAssign <- matchToken Token.Equal
+  value <- if isAssign then Just <$> expression else pure Nothing
+  expectToken Token.SemiColon "Expect ';' after variable declaration"
+  pure $ Stmt.Variable name value
 
 statement :: StmtParser
 statement = do
@@ -168,7 +184,11 @@ primary = do
   maybeLiteral <- State.state $ match literal
   case maybeLiteral of
     Just l -> pure $ Expr.Literal l
-    Nothing -> grouping
+    Nothing -> do
+      maybeIdentifier <- State.state $ match identifier
+      case maybeIdentifier of
+        Just name -> pure $ Expr.Variable name
+        Nothing -> grouping
 
 literal :: Token.Token -> Maybe Lox.Value
 literal (Token.Token Token.False _ _) = Just $ Lox.Boolean False
@@ -190,6 +210,10 @@ grouping = do
         Nothing -> reportError "Expect ')' after expression."
     Nothing -> reportError "Expect expression."
 
+identifier :: Token.Token -> Maybe Text.Text
+identifier (Token.Token (Token.Identifier name) _ _) = Just name
+identifier _ = Nothing
+
 leftParen :: Token.Token -> Maybe ()
 leftParen t
   | Token.tType t == Token.LeftParen = Just ()
@@ -210,6 +234,18 @@ isSemicolon t
   | Token.tType t == Token.SemiColon = Just ()
   | otherwise = Nothing
 
+matchToken :: Token.TokenType -> Parser Bool
+matchToken expected = do
+  p <- State.get
+  case List.uncons . pTokens $ p of
+    Just (t, ts) ->
+      if Token.tType t == expected
+        then do
+          State.put p {pTokens = ts}
+          pure True
+        else pure False
+    Nothing -> pure False
+
 match :: (Token.Token -> Maybe a) -> ParserState -> (Maybe a, ParserState)
 match check p =
   case List.uncons . pTokens $ p of
@@ -217,6 +253,27 @@ match check p =
       Just result -> (Just result, p {pTokens = ts})
       Nothing -> (Nothing, p)
     Nothing -> (Nothing, p)
+
+expectToken :: Token.TokenType -> Text.Text -> Parser ()
+expectToken expected errMessage = do
+  p <- State.get
+  case List.uncons . pTokens $ p of
+    Just (t, ts) ->
+      if Token.tType t == expected
+        then State.put p {pTokens = ts}
+        else reportError errMessage
+    Nothing -> reportError errMessage
+
+expect :: (Token.Token -> Maybe a) -> Text.Text -> Parser a
+expect check msg = do
+  p <- State.get
+  case List.uncons . pTokens $ p of
+    Just (t, ts) -> case check t of
+      Just result -> do
+        State.put p {pTokens = ts}
+        pure result
+      Nothing -> reportError msg
+    Nothing -> reportError msg
 
 isAtEnd :: ParserState -> Bool
 isAtEnd p = case List.uncons . pTokens $ p of
