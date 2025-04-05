@@ -58,26 +58,22 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  maybePrint <- State.state $ match isPrint
-  case maybePrint of
-    Just _ -> printStatement
-    Nothing -> expressionStatement
+  isPrint <- matchToken Token.Print
+  if isPrint
+    then printStatement
+    else expressionStatement
 
 printStatement :: StmtParser
 printStatement = do
   expr <- expression
-  semi <- State.state $ match isSemicolon
-  case semi of
-    Just _ -> pure $ Stmt.Print expr
-    Nothing -> reportError "Expect ';' after expression."
+  expectToken Token.SemiColon "Expect ';' after expression."
+  pure $ Stmt.Print expr
 
 expressionStatement :: StmtParser
 expressionStatement = do
   expr <- expression
-  semi <- State.state $ match isSemicolon
-  case semi of
-    Just _ -> pure $ Stmt.Expression expr
-    Nothing -> reportError "Expect ';' after expression."
+  expectToken Token.SemiColon "Expect ';' after expression."
+  pure $ Stmt.Expression expr
 
 expression :: ExprParser
 expression = equality
@@ -89,7 +85,7 @@ equality = do
 
 whileEquality :: Expr.Expr -> ExprParser
 whileEquality expr = do
-  maybeOp <- State.state $ match equalityOp
+  maybeOp <- match equalityOp
   case maybeOp of
     Just op -> do
       right <- comparison
@@ -109,7 +105,7 @@ comparison = do
 
 whileComparison :: Expr.Expr -> ExprParser
 whileComparison expr = do
-  maybeOp <- State.state $ match comparisonOp
+  maybeOp <- match comparisonOp
   case maybeOp of
     Just op -> do
       right <- term
@@ -131,7 +127,7 @@ term = do
 
 whileTerm :: Expr.Expr -> ExprParser
 whileTerm expr = do
-  maybeOp <- State.state $ match termOp
+  maybeOp <- match termOp
   case maybeOp of
     Just op -> do
       right <- factor
@@ -151,7 +147,7 @@ factor = do
 
 whileFactor :: Expr.Expr -> ExprParser
 whileFactor expr = do
-  maybeOp <- State.state $ match factorOp
+  maybeOp <- match factorOp
   case maybeOp of
     Just op -> do
       right <- unary
@@ -166,7 +162,7 @@ factorOp t
 
 unary :: ExprParser
 unary = do
-  maybeOp <- State.state $ match unaryOp
+  maybeOp <- match unaryOp
   case maybeOp of
     Just op -> do
       expr <- unary
@@ -181,99 +177,75 @@ unaryOp t
 
 primary :: ExprParser
 primary = do
-  maybeLiteral <- State.state $ match literal
+  maybeLiteral <- match literal
   case maybeLiteral of
     Just l -> pure $ Expr.Literal l
     Nothing -> do
-      maybeIdentifier <- State.state $ match identifier
+      maybeIdentifier <- match identifier
       case maybeIdentifier of
         Just name -> pure $ Expr.Variable name
         Nothing -> grouping
 
-literal :: Token.Token -> Maybe Lox.Value
-literal (Token.Token Token.False _ _) = Just $ Lox.Boolean False
-literal (Token.Token Token.True _ _) = Just $ Lox.Boolean True
-literal (Token.Token Token.Nil _ _) = Just Lox.Nil
-literal (Token.Token (Token.Number n) _ _) = Just $ Lox.Number n
-literal (Token.Token (Token.String s) _ _) = Just $ Lox.String s
-literal _ = Nothing
-
 grouping :: ExprParser
 grouping = do
-  openParen <- State.state $ match leftParen
-  case openParen of
-    Just _ -> do
-      expr <- expression
-      closeParen <- State.state $ match rightParen
-      case closeParen of
-        Just _ -> pure $ Expr.Grouping expr
-        Nothing -> reportError "Expect ')' after expression."
-    Nothing -> reportError "Expect expression."
+  expectToken Token.LeftParen "Expect expression."
+  expr <- expression
+  expectToken Token.RightParen "Expect ')' after expression."
+  pure $ Expr.Grouping expr
+
+literal :: Token.Token -> Maybe Lox.Value
+literal t = case Token.tType t of
+  Token.False -> Just $ Lox.Boolean False
+  Token.True -> Just $ Lox.Boolean True
+  Token.Nil -> Just Lox.Nil
+  (Token.Number n) -> Just $ Lox.Number n
+  (Token.String s) -> Just $ Lox.String s
+  _ -> Nothing
 
 identifier :: Token.Token -> Maybe Text.Text
 identifier (Token.Token (Token.Identifier name) _ _) = Just name
 identifier _ = Nothing
 
-leftParen :: Token.Token -> Maybe ()
-leftParen t
-  | Token.tType t == Token.LeftParen = Just ()
-  | otherwise = Nothing
+isToken :: Token.TokenType -> Token.Token -> Maybe ()
+isToken tType token =
+  if tType == Token.tType token
+    then Just ()
+    else Nothing
 
-rightParen :: Token.Token -> Maybe ()
-rightParen t
-  | Token.tType t == Token.RightParen = Just ()
-  | otherwise = Nothing
-
-isPrint :: Token.Token -> Maybe ()
-isPrint t
-  | Token.tType t == Token.Print = Just ()
-  | otherwise = Nothing
-
-isSemicolon :: Token.Token -> Maybe ()
-isSemicolon t
-  | Token.tType t == Token.SemiColon = Just ()
-  | otherwise = Nothing
-
-matchToken :: Token.TokenType -> Parser Bool
-matchToken expected = do
-  p <- State.get
-  case List.uncons . pTokens $ p of
-    Just (t, ts) ->
-      if Token.tType t == expected
-        then do
-          State.put p {pTokens = ts}
-          pure True
-        else pure False
-    Nothing -> pure False
-
-match :: (Token.Token -> Maybe a) -> ParserState -> (Maybe a, ParserState)
-match check p =
-  case List.uncons . pTokens $ p of
-    Just (t, ts) -> case check t of
-      Just result -> (Just result, p {pTokens = ts})
-      Nothing -> (Nothing, p)
-    Nothing -> (Nothing, p)
-
-expectToken :: Token.TokenType -> Text.Text -> Parser ()
-expectToken expected errMessage = do
-  p <- State.get
-  case List.uncons . pTokens $ p of
-    Just (t, ts) ->
-      if Token.tType t == expected
-        then State.put p {pTokens = ts}
-        else reportError errMessage
-    Nothing -> reportError errMessage
+match :: (Token.Token -> Maybe a) -> Parser (Maybe a)
+match = advance
 
 expect :: (Token.Token -> Maybe a) -> Text.Text -> Parser a
 expect check msg = do
-  p <- State.get
-  case List.uncons . pTokens $ p of
+  m <- advance check
+  case m of
+    Just result -> pure result
+    Nothing -> reportError msg
+
+matchToken :: Token.TokenType -> Parser Bool
+matchToken expected = do
+  m <- advance $ isToken expected
+  pure $ case m of
+    Just _ -> True
+    Nothing -> False
+
+expectToken :: Token.TokenType -> Text.Text -> Parser ()
+expectToken expected msg = do
+  m <- advance $ isToken expected
+  case m of
+    Just _ -> pure ()
+    Nothing -> reportError msg
+
+advance :: (Token.Token -> Maybe a) -> Parser (Maybe a)
+advance check = do
+  next <- List.uncons . pTokens <$> State.get
+  case next of
     Just (t, ts) -> case check t of
       Just result -> do
-        State.put p {pTokens = ts}
-        pure result
-      Nothing -> reportError msg
-    Nothing -> reportError msg
+        State.modify $ \p -> p {pTokens = ts}
+        pure $ Just result
+      Nothing -> pure Nothing
+    Nothing -> pure Nothing
 
 isAtEnd :: ParserState -> Bool
 isAtEnd p = case List.uncons . pTokens $ p of
