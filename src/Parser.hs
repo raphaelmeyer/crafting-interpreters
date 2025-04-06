@@ -21,27 +21,36 @@ type ExprParser = Parser Expr.Expr
 type StmtParser = Parser Stmt.Stmt
 
 parse :: [Token.Token] -> Lox.Result [Stmt.Stmt]
-parse tokens = case result of
-  Right expr -> Right expr
-  Left err -> Left [err]
-  where
-    (result, _) = flip State.runState (initParser tokens) . Except.runExceptT $ program
+parse tokens = State.evalState program (initParser tokens)
 
 initParser :: [Token.Token] -> ParserState
 initParser = ParserState
 
-program :: Parser [Stmt.Stmt]
+program :: State.State ParserState (Lox.Result [Stmt.Stmt])
 program = do
   atEnd <- State.gets isAtEnd
   if atEnd
-    then pure []
+    then pure $ Right []
     else do
-      stmt <- declaration
-      stmts <- program
-      pure $ stmt : stmts
+      result <- Except.runExceptT declaration
+      case result of
+        Right stmt -> do
+          addStmt stmt <$> program
+        Left err -> do
+          synchronize
+          addError err <$> program
+
+addStmt :: Stmt.Stmt -> Lox.Result [Stmt.Stmt] -> Lox.Result [Stmt.Stmt]
+addStmt stmt result = case result of
+  Right stmts -> Right $ stmt : stmts
+  Left errs -> Left errs
+
+addError :: Error.Error -> Lox.Result [Stmt.Stmt] -> Lox.Result [Stmt.Stmt]
+addError err result = case result of
+  Right _ -> Left [err]
+  Left errs -> Left $ err : errs
 
 declaration :: StmtParser
--- TODO synchronize on parse error
 declaration = do
   isVariable <- matchToken Token.Var
   if isVariable
@@ -260,3 +269,23 @@ reportError e = do
     newError p = case List.uncons . pTokens $ p of
       Just (t, _) -> Error.Error (Token.tLine t) (Text.concat ["At ", Token.tLexeme t, ": ", e])
       Nothing -> Error.Error 0 e
+
+synchronize :: State.State ParserState ()
+synchronize = do
+  State.modify $ \p -> p {pTokens = sync $ pTokens p}
+  where
+    sync = dropWhile isSemiColon . dropWhile (not . syncPoint)
+    isSemiColon = (== Token.SemiColon) . Token.tType
+
+syncPoint :: Token.Token -> Bool
+syncPoint t = case Token.tType t of
+  Token.SemiColon -> True
+  Token.Class -> True
+  Token.Fun -> True
+  Token.Var -> True
+  Token.For -> True
+  Token.If -> True
+  Token.While -> True
+  Token.Print -> True
+  Token.Return -> True
+  _ -> False
