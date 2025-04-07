@@ -61,8 +61,8 @@ variableDeclaration :: StmtParser
 variableDeclaration = do
   name <- expect identifier "Expect variable name."
   isAssign <- matchToken Token.Equal
-  value <- if isAssign then Just <$> expression else pure Nothing
-  expectToken Token.SemiColon "Expect ';' after variable declaration"
+  value <- if isAssign then expression else pure $ Expr.Literal Lox.Nil
+  expectToken Token.SemiColon "Expect ';' after variable declaration."
   pure $ Stmt.Variable name value
 
 statement :: StmtParser

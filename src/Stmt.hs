@@ -6,5 +6,5 @@ import qualified Expr
 data Stmt
   = Expression Expr.Expr
   | Print Expr.Expr
-  | Variable Text.Text (Maybe Expr.Expr)
+  | Variable Text.Text Expr.Expr
   deriving (Eq, Show)
