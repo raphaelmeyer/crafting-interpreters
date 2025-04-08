@@ -2,6 +2,7 @@
 
 Some notes or ideas what maybe could be improved.
 
+- split errors into runtime, parser and scanner errors
 - add tests
 - clean up return types for `scanTokens`, `parse` and `interpret`
 - better understand monad stacks and how to prevent them, because when we add
