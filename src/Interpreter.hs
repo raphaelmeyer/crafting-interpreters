@@ -43,6 +43,10 @@ evaluate (Expr.Binary l r op) = do
   right <- evaluate r
   evalBinary op left right
 evaluate (Expr.Variable name) = Env.get name
+evaluate (Expr.Assign name expr) = do
+  value <- evaluate expr
+  Env.assign name value
+  pure value
 
 evalUnary :: (Monad m) => Expr.UnaryOp -> Lox.Value -> Interpreter m
 evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)

@@ -9,6 +9,7 @@ data Expr
   | Literal Lox.Value
   | Unary {unaryExpr :: Expr, unaryOp :: UnaryOp}
   | Variable Text.Text
+  | Assign {assignName :: Text.Text, assignExpr :: Expr}
   deriving (Eq, Show)
 
 data UnaryOp = Neg | Not deriving (Eq, Show)

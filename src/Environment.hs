@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Environment (Environment, empty, define, get) where
+module Environment (Environment, assign, define, empty, get) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -26,3 +26,10 @@ get name = do
 define :: (Monad m) => Text.Text -> Lox.Value -> Environment m ()
 define name value = do
   State.modify $ Map.insert name value
+
+assign :: (Monad m) => Text.Text -> Lox.Value -> Except.ExceptT Error.Error (Environment m) ()
+assign name value = do
+  env <- State.get
+  case Map.lookup name env of
+    Just _ -> State.modify $ Map.insert name value
+    Nothing -> Except.throwError . Error.Error 0 $ Text.concat ["Undefined variable '", name, "'."]

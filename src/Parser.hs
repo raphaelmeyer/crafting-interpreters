@@ -85,7 +85,19 @@ expressionStatement = do
   pure $ Stmt.Expression expr
 
 expression :: ExprParser
-expression = equality
+expression = assignment
+
+assignment :: ExprParser
+assignment = do
+  expr <- equality
+  isAssign <- matchToken Token.Equal
+  if isAssign
+    then do
+      value <- assignment
+      case expr of
+        (Expr.Variable name) -> pure $ Expr.Assign name value
+        _ -> reportError "Invalid assignment target."
+    else pure expr
 
 equality :: ExprParser
 equality = do
