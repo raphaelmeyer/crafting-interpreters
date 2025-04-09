@@ -2,7 +2,7 @@
 
 Some notes or ideas what maybe could be improved.
 
-- fix semicolon handling in synchronize
+- check if environment gets simpler if Values is replaced with list as in []
 - split errors into runtime, parser and scanner errors
 - add tests
 - clean up return types for `scanTokens`, `parse` and `interpret`

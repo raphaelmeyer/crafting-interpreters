@@ -305,9 +305,13 @@ reportError e = do
 
 synchronize :: State.State ParserState ()
 synchronize = do
-  State.modify $ \p -> p {pTokens = sync $ pTokens p}
+  p <- State.get
+  case List.uncons . pTokens $ p of
+    Just (t, ts) -> do
+      State.put p {pTokens = if isSemiColon t then ts else sync (t : ts)}
+    Nothing -> pure ()
   where
-    sync = dropWhile isSemiColon . dropWhile (not . syncPoint)
+    sync = dropWhile (not . syncPoint)
     isSemiColon = (== Token.SemiColon) . Token.tType
 
 syncPoint :: Token.Token -> Bool
