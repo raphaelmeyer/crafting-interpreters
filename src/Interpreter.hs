@@ -32,10 +32,16 @@ statement (Stmt.Variable name expr : stmts) = do
   value <- evaluate expr
   Except.lift $ Env.define name value
   statement stmts
-statement (foo : stmts) = do
-  Except.liftIO $ print foo
+statement (Stmt.Block block : stmts) = do
+  executeBlock block
   statement stmts
 statement [] = pure ()
+
+executeBlock :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
+executeBlock stmts = do
+  Except.lift $ Env.push
+  statement stmts
+  Env.pop
 
 evaluate :: (Monad m) => Expr.Expr -> Interpreter m
 evaluate (Expr.Literal l) = pure l
