@@ -23,7 +23,7 @@ get name = do
   env <- State.get
   case get' name env of
     Just value -> pure value
-    Nothing -> Except.throwError . Error.Error 0 $ Text.concat ["Undefined variable '", name, "'."]
+    Nothing -> reportError $ Text.concat ["Undefined variable '", name, "'."]
 
 define :: (Monad m) => Text.Text -> Lox.Value -> Environment m ()
 define name value = do
@@ -37,7 +37,7 @@ assign name value = do
   env <- State.get
   case assign' name value env of
     Just assigned -> State.put assigned
-    Nothing -> Except.throwError . Error.Error 0 $ Text.concat ["Undefined variable '", name, "'."]
+    Nothing -> reportError $ Text.concat ["Undefined variable '", name, "'."]
 
 push :: (Monad m) => Environment m ()
 push = do
@@ -49,7 +49,7 @@ pop = do
   env <- State.get
   case env of
     Local _ parent -> State.put parent
-    Global _ -> Except.throwError . Error.Error 0 $ "Can not pop global environment."
+    Global _ -> reportError "Can not pop global environment."
 
 get' :: Text.Text -> Values -> Maybe Lox.Value
 get' name env = case env of
@@ -67,3 +67,6 @@ assign' name value (Local scope parent) = case Map.lookup name scope of
   Nothing -> case assign' name value parent of
     Just assigned -> Just $ Local scope assigned
     Nothing -> Nothing
+
+reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) a
+reportError = Except.throwError . Error.RuntimeError

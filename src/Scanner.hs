@@ -218,7 +218,7 @@ makeToken token lexeme line = Just $ Token.Token token lexeme line
 
 addError :: Text.Text -> State.State Scanner (Maybe Token.Token)
 addError e = do
-  State.modify (\s -> s {sErrors = Error.Error (sLine s) e : sErrors s})
+  State.modify (\s -> s {sErrors = Error.ScanError (sLine s) e : sErrors s})
   pure Nothing
 
 skip :: Scanner -> Scanner

@@ -3,7 +3,6 @@
 Some notes or ideas what maybe could be improved.
 
 - check if environment gets simpler if Values is replaced with list as in []
-- split errors into runtime, parser and scanner errors
 - add tests
 - clean up return types for `scanTokens`, `parse` and `interpret`
 - directory structure, split files and put into subdirectories

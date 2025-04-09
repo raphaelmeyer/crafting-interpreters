@@ -300,8 +300,8 @@ reportError e = do
   Except.throwError . newError $ p
   where
     newError p = case List.uncons . pTokens $ p of
-      Just (t, _) -> Error.Error (Token.tLine t) (Text.concat ["At ", Token.tLexeme t, ": ", e])
-      Nothing -> Error.Error 0 e
+      Just (t, _) -> Error.ParseError (Token.tLine t) (Token.tLexeme t) e
+      Nothing -> Error.ParseError 0 "EOF" e
 
 synchronize :: State.State ParserState ()
 synchronize = do
