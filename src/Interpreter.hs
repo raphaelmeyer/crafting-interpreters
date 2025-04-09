@@ -32,6 +32,9 @@ statement (Stmt.Variable name expr : stmts) = do
   value <- evaluate expr
   Except.lift $ Env.define name value
   statement stmts
+statement (foo : stmts) = do
+  Except.liftIO $ print foo
+  statement stmts
 statement [] = pure ()
 
 evaluate :: (Monad m) => Expr.Expr -> Interpreter m

@@ -7,4 +7,5 @@ data Stmt
   = Expression Expr.Expr
   | Print Expr.Expr
   | Variable Text.Text Expr.Expr
+  | Block [Stmt]
   deriving (Eq, Show)

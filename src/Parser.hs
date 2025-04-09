@@ -70,7 +70,11 @@ statement = do
   isPrint <- matchToken Token.Print
   if isPrint
     then printStatement
-    else expressionStatement
+    else do
+      isBlock <- matchToken Token.LeftBrace
+      if isBlock
+        then block
+        else expressionStatement
 
 printStatement :: StmtParser
 printStatement = do
@@ -83,6 +87,23 @@ expressionStatement = do
   expr <- expression
   expectToken Token.SemiColon "Expect ';' after expression."
   pure $ Stmt.Expression expr
+
+block :: StmtParser
+block = Stmt.Block <$> whileBlock
+
+whileBlock :: Parser [Stmt.Stmt]
+whileBlock = do
+  isClosing <- matchToken Token.RightBrace
+  if isClosing
+    then pure []
+    else do
+      atEnd <- State.gets isAtEnd
+      if atEnd
+        then reportError "Expect '}' after block."
+        else do
+          stmt <- declaration
+          stmts <- whileBlock
+          pure $ stmt : stmts
 
 expression :: ExprParser
 expression = assignment
