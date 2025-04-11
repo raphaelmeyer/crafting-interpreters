@@ -67,14 +67,31 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  isPrint <- matchToken Token.Print
-  if isPrint
-    then printStatement
+  isIf <- matchToken Token.If
+  if isIf
+    then ifStatement
     else do
-      isBlock <- matchToken Token.LeftBrace
-      if isBlock
-        then block
-        else expressionStatement
+      isPrint <- matchToken Token.Print
+      if isPrint
+        then printStatement
+        else do
+          isBlock <- matchToken Token.LeftBrace
+          if isBlock
+            then block
+            else expressionStatement
+
+ifStatement :: StmtParser
+ifStatement = do
+  expectToken Token.LeftParen "Expect '(' after 'if'."
+  condition <- expression
+  expectToken Token.RightParen "Expect ')' after if condition."
+  thenStmt <- statement
+  isElse <- matchToken Token.Else
+  elseStmt <-
+    if isElse
+      then Just <$> statement
+      else pure Nothing
+  pure $ Stmt.If condition thenStmt elseStmt
 
 printStatement :: StmtParser
 printStatement = do

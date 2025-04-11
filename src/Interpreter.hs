@@ -2,6 +2,7 @@
 
 module Interpreter (interpret) where
 
+import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Text as Text
@@ -15,32 +16,40 @@ type Interpreter m = Except.ExceptT Error.Error (Env.Environment m) Lox.Value
 
 interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
 interpret stmts = do
-  result <- State.evalStateT (Except.runExceptT $ statement stmts) Env.empty
+  result <- State.evalStateT (Except.runExceptT $ execute stmts) Env.empty
   case result of
     Left err -> pure $ Left [err]
     Right _ -> pure $ Right ()
 
-statement :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
-statement (Stmt.Expression expr : stmts) = do
-  _ <- evaluate expr
-  statement stmts
-statement (Stmt.Print expr : stmts) = do
+execute :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
+execute (stmt : stmts) = do
+  statement stmt
+  execute stmts
+execute [] = pure ()
+
+statement :: Stmt.Stmt -> Except.ExceptT Error.Error (Env.Environment IO) ()
+statement (Stmt.Expression expr) = do
+  Monad.void $ evaluate expr
+statement (Stmt.Print expr) = do
   value <- evaluate expr
   Except.liftIO $ print value
-  statement stmts
-statement (Stmt.Variable name expr : stmts) = do
+statement (Stmt.Variable name expr) = do
   value <- evaluate expr
   Except.lift $ Env.define name value
-  statement stmts
-statement (Stmt.Block block : stmts) = do
+statement (Stmt.Block block) = do
   executeBlock block
-  statement stmts
-statement [] = pure ()
+statement (Stmt.If condition thenStmt elseStmt) = do
+  isTrue <- truthy <$> evaluate condition
+  if isTrue
+    then statement thenStmt
+    else case elseStmt of
+      Just stmt -> statement stmt
+      Nothing -> pure ()
 
 executeBlock :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
 executeBlock stmts = do
   Except.lift $ Env.push
-  statement stmts
+  execute stmts
   Env.pop
 
 evaluate :: (Monad m) => Expr.Expr -> Interpreter m

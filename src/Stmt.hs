@@ -8,4 +8,9 @@ data Stmt
   | Print Expr.Expr
   | Variable Text.Text Expr.Expr
   | Block [Stmt]
+  | If
+      { ifCondition :: Expr.Expr,
+        thenStmt :: Stmt,
+        elseStmt :: Maybe Stmt
+      }
   deriving (Eq, Show)
