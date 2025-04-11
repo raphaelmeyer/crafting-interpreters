@@ -22,10 +22,7 @@ interpret stmts = do
     Right _ -> pure $ Right ()
 
 execute :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
-execute (stmt : stmts) = do
-  statement stmt
-  execute stmts
-execute [] = pure ()
+execute = Monad.mapM_ statement
 
 statement :: Stmt.Stmt -> Except.ExceptT Error.Error (Env.Environment IO) ()
 statement (Stmt.Expression expr) = do
@@ -42,9 +39,7 @@ statement (Stmt.If condition thenStmt elseStmt) = do
   isTrue <- truthy <$> evaluate condition
   if isTrue
     then statement thenStmt
-    else case elseStmt of
-      Just stmt -> statement stmt
-      Nothing -> pure ()
+    else Monad.mapM_ statement elseStmt
 
 executeBlock :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
 executeBlock stmts = do
