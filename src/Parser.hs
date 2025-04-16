@@ -67,22 +67,13 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  isIf <- matchToken Token.If
-  if isIf
-    then ifStatement
-    else do
-      isPrint <- matchToken Token.Print
-      if isPrint
-        then printStatement
-        else do
-          isWhile <- matchToken Token.While
-          if isWhile
-            then whileStatement
-            else do
-              isBlock <- matchToken Token.LeftBrace
-              if isBlock
-                then block
-                else expressionStatement
+  token <- match . anyOf $ [Token.If, Token.Print, Token.While, Token.LeftBrace]
+  case token of
+    Just Token.If -> ifStatement
+    Just Token.Print -> printStatement
+    Just Token.While -> whileStatement
+    Just Token.LeftBrace -> block
+    _ -> expressionStatement
 
 ifStatement :: StmtParser
 ifStatement = do
@@ -308,6 +299,14 @@ isToken tType token =
   if tType == Token.tType token
     then Just ()
     else Nothing
+
+anyOf :: [Token.TokenType] -> Token.Token -> Maybe Token.TokenType
+anyOf expected token =
+  if tType `elem` expected
+    then Just tType
+    else Nothing
+  where
+    tType = Token.tType token
 
 match :: (Token.Token -> Maybe a) -> Parser (Maybe a)
 match = advance
