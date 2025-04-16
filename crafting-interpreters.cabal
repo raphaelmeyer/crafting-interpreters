@@ -28,7 +28,7 @@ library
         Token
 
     build-depends:
-        base,
+        base == 4.18.3.0,
         containers,
         mtl,
         text

@@ -4,7 +4,9 @@ module Interpreter (interpret) where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
+import qualified Control.Monad.IO.Class as IOClass
 import qualified Control.Monad.State.Strict as State
+import qualified Control.Monad.Trans as Trans
 import qualified Data.Text as Text
 import qualified Environment as Env
 import qualified Error
@@ -29,10 +31,10 @@ statement (Stmt.Expression expr) = do
   Monad.void $ evaluate expr
 statement (Stmt.Print expr) = do
   value <- evaluate expr
-  Except.liftIO $ print value
+  IOClass.liftIO $ print value
 statement (Stmt.Variable name expr) = do
   value <- evaluate expr
-  Except.lift $ Env.define name value
+  Trans.lift $ Env.define name value
 statement (Stmt.Block block) = do
   executeBlock block
 statement (Stmt.If condition thenStmt elseStmt) = do
@@ -43,7 +45,7 @@ statement (Stmt.If condition thenStmt elseStmt) = do
 
 executeBlock :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
 executeBlock stmts = do
-  Except.lift $ Env.push
+  Trans.lift $ Env.push
   execute stmts
   Env.pop
 
