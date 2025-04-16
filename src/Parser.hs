@@ -75,10 +75,14 @@ statement = do
       if isPrint
         then printStatement
         else do
-          isBlock <- matchToken Token.LeftBrace
-          if isBlock
-            then block
-            else expressionStatement
+          isWhile <- matchToken Token.While
+          if isWhile
+            then whileStatement
+            else do
+              isBlock <- matchToken Token.LeftBrace
+              if isBlock
+                then block
+                else expressionStatement
 
 ifStatement :: StmtParser
 ifStatement = do
@@ -98,6 +102,13 @@ printStatement = do
   expr <- expression
   expectToken Token.SemiColon "Expect ';' after expression."
   pure $ Stmt.Print expr
+
+whileStatement :: StmtParser
+whileStatement = do
+  expectToken Token.LeftParen "Expect '(' after 'while'."
+  condition <- expression
+  expectToken Token.RightParen "Expect ')' after condition."
+  Stmt.While condition <$> statement
 
 expressionStatement :: StmtParser
 expressionStatement = do

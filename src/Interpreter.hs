@@ -42,6 +42,11 @@ statement (Stmt.If condition thenStmt elseStmt) = do
   if isTrue
     then statement thenStmt
     else Monad.mapM_ statement elseStmt
+statement stmt@(Stmt.While condition body) = do
+  isTrue <- truthy <$> evaluate condition
+  Monad.when isTrue $ do
+    statement body
+    statement stmt
 
 executeBlock :: [Stmt.Stmt] -> Except.ExceptT Error.Error (Env.Environment IO) ()
 executeBlock stmts = do
