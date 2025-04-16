@@ -127,7 +127,7 @@ expression = assignment
 
 assignment :: ExprParser
 assignment = do
-  expr <- equality
+  expr <- logicalOr
   isAssign <- matchToken Token.Equal
   if isAssign
     then do
@@ -135,6 +135,34 @@ assignment = do
       case expr of
         (Expr.Variable name) -> pure $ Expr.Assign name value
         _ -> reportError "Invalid assignment target."
+    else pure expr
+
+logicalOr :: ExprParser
+logicalOr = do
+  expr <- logicalAnd
+  whileLogicalOr expr
+
+whileLogicalOr :: Expr.Expr -> ExprParser
+whileLogicalOr expr = do
+  isOr <- matchToken Token.Or
+  if isOr
+    then do
+      right <- logicalAnd
+      whileLogicalOr $ Expr.Logical expr right Expr.Or
+    else pure expr
+
+logicalAnd :: ExprParser
+logicalAnd = do
+  expr <- equality
+  whileLogicalAnd expr
+
+whileLogicalAnd :: Expr.Expr -> ExprParser
+whileLogicalAnd expr = do
+  isAnd <- matchToken Token.And
+  if isAnd
+    then do
+      right <- equality
+      whileLogicalAnd $ Expr.Logical expr right Expr.And
     else pure expr
 
 equality :: ExprParser

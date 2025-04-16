@@ -62,6 +62,7 @@ evaluate (Expr.Assign name expr) = do
   value <- evaluate expr
   Env.assign name value
   pure value
+evaluate (Expr.Logical l r op) = evalLogical op l r
 
 evalUnary :: (Monad m) => Expr.UnaryOp -> Lox.Value -> Interpreter m
 evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)
@@ -84,6 +85,14 @@ evalBinary op (Lox.Number a) (Lox.Number b) =
     Expr.LessEqual -> Lox.Boolean (a <= b)
 evalBinary Expr.Plus _ _ = reportError "Operands must be two numbers or two strings."
 evalBinary _ _ _ = reportError "Operands must be numbers."
+
+evalLogical :: (Monad m) => Expr.LogicalOp -> Expr.Expr -> Expr.Expr -> Interpreter m
+evalLogical Expr.Or l r = do
+  a <- evaluate l
+  if truthy a then pure a else evaluate r
+evalLogical Expr.And l r = do
+  a <- evaluate l
+  if truthy a then evaluate r else pure a
 
 truthy :: Lox.Value -> Bool
 truthy Lox.Nil = False
