@@ -67,13 +67,51 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  token <- match . anyOf $ [Token.If, Token.Print, Token.While, Token.LeftBrace]
+  token <- match . anyOf $ [Token.For, Token.If, Token.Print, Token.While, Token.LeftBrace]
   case token of
+    Just Token.For -> forStatement
     Just Token.If -> ifStatement
     Just Token.Print -> printStatement
     Just Token.While -> whileStatement
     Just Token.LeftBrace -> block
     _ -> expressionStatement
+
+forStatement :: StmtParser
+forStatement = do
+  expectToken Token.LeftParen "Expect '(' after 'for'."
+  emptyInitializer <- matchToken Token.SemiColon
+  initializer <-
+    if emptyInitializer
+      then
+        pure Nothing
+      else do
+        isVar <- matchToken Token.Var
+        if isVar then Just <$> variableDeclaration else Just <$> expressionStatement
+  emptyCondition <- matchToken Token.SemiColon
+  condition <-
+    if emptyCondition
+      then pure $ Expr.Literal (Lox.Boolean True)
+      else do
+        c <- expression
+        expectToken Token.SemiColon "Expect ';' after loop condition."
+        pure c
+  emptyIncrement <- matchToken Token.RightParen
+  increment <-
+    if emptyIncrement
+      then pure Nothing
+      else do
+        i <- expression
+        expectToken Token.RightParen "Expect ')' after for clauses."
+        pure $ Just i
+  body <- statement
+
+  let body' = case increment of
+        Just incr -> Stmt.Block [body, Stmt.Expression incr]
+        Nothing -> body
+  let body'' = Stmt.While condition body'
+  pure $ case initializer of
+    Just i -> Stmt.Block [i, body'']
+    Nothing -> body''
 
 ifStatement :: StmtParser
 ifStatement = do
