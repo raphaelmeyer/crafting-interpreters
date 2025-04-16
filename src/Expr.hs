@@ -5,11 +5,11 @@ import qualified Lox
 
 data Expr
   = Assign {assignName :: Text.Text, assignExpr :: Expr}
-  | Binary {binaryLeft :: Expr, binaryRight :: Expr, binaryOp :: BinaryOp}
+  | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
   | Grouping Expr
   | Literal Lox.Value
-  | Logical {logicalLeft :: Expr, logicalRight :: Expr, logicalOp :: LogicalOp}
-  | Unary {unaryExpr :: Expr, unaryOp :: UnaryOp}
+  | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
+  | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
   | Variable Text.Text
   deriving (Eq, Show)
 

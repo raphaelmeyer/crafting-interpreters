@@ -52,8 +52,8 @@ executeBlock stmts = do
 evaluate :: (Monad m) => Expr.Expr -> Interpreter m
 evaluate (Expr.Literal l) = pure l
 evaluate (Expr.Grouping g) = evaluate g
-evaluate (Expr.Unary r op) = evaluate r >>= evalUnary op
-evaluate (Expr.Binary l r op) = do
+evaluate (Expr.Unary op r) = evaluate r >>= evalUnary op
+evaluate (Expr.Binary op l r) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right
@@ -62,7 +62,7 @@ evaluate (Expr.Assign name expr) = do
   value <- evaluate expr
   Env.assign name value
   pure value
-evaluate (Expr.Logical l r op) = evalLogical op l r
+evaluate (Expr.Logical op l r) = evalLogical op l r
 
 evalUnary :: (Monad m) => Expr.UnaryOp -> Lox.Value -> Interpreter m
 evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)

@@ -148,7 +148,7 @@ whileLogicalOr expr = do
   if isOr
     then do
       right <- logicalAnd
-      whileLogicalOr $ Expr.Logical expr right Expr.Or
+      whileLogicalOr $ Expr.Logical Expr.Or expr right
     else pure expr
 
 logicalAnd :: ExprParser
@@ -162,7 +162,7 @@ whileLogicalAnd expr = do
   if isAnd
     then do
       right <- equality
-      whileLogicalAnd $ Expr.Logical expr right Expr.And
+      whileLogicalAnd $ Expr.Logical Expr.And expr right
     else pure expr
 
 equality :: ExprParser
@@ -176,7 +176,7 @@ whileEquality expr = do
   case maybeOp of
     Just op -> do
       right <- comparison
-      whileEquality $ Expr.Binary expr right op
+      whileEquality $ Expr.Binary op expr right
     Nothing -> pure expr
 
 equalityOp :: Token.Token -> Maybe Expr.BinaryOp
@@ -196,7 +196,7 @@ whileComparison expr = do
   case maybeOp of
     Just op -> do
       right <- term
-      whileComparison $ Expr.Binary expr right op
+      whileComparison $ Expr.Binary op expr right
     Nothing -> pure expr
 
 comparisonOp :: Token.Token -> Maybe Expr.BinaryOp
@@ -218,7 +218,7 @@ whileTerm expr = do
   case maybeOp of
     Just op -> do
       right <- factor
-      whileTerm $ Expr.Binary expr right op
+      whileTerm $ Expr.Binary op expr right
     Nothing -> pure expr
 
 termOp :: Token.Token -> Maybe Expr.BinaryOp
@@ -238,7 +238,7 @@ whileFactor expr = do
   case maybeOp of
     Just op -> do
       right <- unary
-      whileFactor $ Expr.Binary expr right op
+      whileFactor $ Expr.Binary op expr right
     Nothing -> pure expr
 
 factorOp :: Token.Token -> Maybe Expr.BinaryOp
@@ -252,8 +252,7 @@ unary = do
   maybeOp <- match unaryOp
   case maybeOp of
     Just op -> do
-      expr <- unary
-      pure $ Expr.Unary expr op
+      Expr.Unary op <$> unary
     Nothing -> primary
 
 unaryOp :: Token.Token -> Maybe Expr.UnaryOp
