@@ -79,39 +79,46 @@ statement = do
 forStatement :: StmtParser
 forStatement = do
   expectToken Token.LeftParen "Expect '(' after 'for'."
-  emptyInitializer <- matchToken Token.SemiColon
-  initializer <-
-    if emptyInitializer
-      then
-        pure Nothing
-      else do
-        isVar <- matchToken Token.Var
-        if isVar then Just <$> variableDeclaration else Just <$> expressionStatement
-  emptyCondition <- matchToken Token.SemiColon
-  condition <-
-    if emptyCondition
-      then pure $ Expr.Literal (Lox.Boolean True)
-      else do
-        c <- expression
-        expectToken Token.SemiColon "Expect ';' after loop condition."
-        pure c
-  emptyIncrement <- matchToken Token.RightParen
-  increment <-
-    if emptyIncrement
-      then pure Nothing
-      else do
-        i <- expression
-        expectToken Token.RightParen "Expect ')' after for clauses."
-        pure $ Just i
-  body <- statement
+  initializer <- forInitializer
+  condition <- forCondition
+  increment <- forIncrement
+  wrapInitializer initializer . wrapCondition condition . wrapIncrement increment <$> statement
+  where
+    wrapIncrement maybeIncrement body = case maybeIncrement of
+      Just increment -> Stmt.Block [body, Stmt.Expression increment]
+      Nothing -> body
+    wrapCondition = Stmt.While
+    wrapInitializer maybeInitializer body = case maybeInitializer of
+      Just initializer -> Stmt.Block [initializer, body]
+      Nothing -> body
 
-  let body' = case increment of
-        Just incr -> Stmt.Block [body, Stmt.Expression incr]
-        Nothing -> body
-  let body'' = Stmt.While condition body'
-  pure $ case initializer of
-    Just i -> Stmt.Block [i, body'']
-    Nothing -> body''
+forInitializer :: Parser (Maybe Stmt.Stmt)
+forInitializer = do
+  token <- match . anyOf $ [Token.SemiColon, Token.Var]
+  case token of
+    Just Token.SemiColon -> pure Nothing
+    Just Token.Var -> Just <$> variableDeclaration
+    _ -> Just <$> expressionStatement
+
+forCondition :: ExprParser
+forCondition = do
+  noCondition <- matchToken Token.SemiColon
+  if noCondition
+    then pure $ Expr.Literal (Lox.Boolean True)
+    else do
+      condition <- expression
+      expectToken Token.SemiColon "Expect ';' after loop condition."
+      pure condition
+
+forIncrement :: Parser (Maybe Expr.Expr)
+forIncrement = do
+  noIncrement <- matchToken Token.RightParen
+  if noIncrement
+    then pure Nothing
+    else do
+      increment <- expression
+      expectToken Token.RightParen "Expect ')' after for clauses."
+      pure $ Just increment
 
 ifStatement :: StmtParser
 ifStatement = do
