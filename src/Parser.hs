@@ -300,13 +300,50 @@ unary = do
   case maybeOp of
     Just op -> do
       Expr.Unary op <$> unary
-    Nothing -> primary
+    Nothing -> call
 
 unaryOp :: Token.Token -> Maybe Expr.UnaryOp
 unaryOp t
   | Token.tType t == Token.Bang = Just Expr.Not
   | Token.tType t == Token.Minus = Just Expr.Neg
   | otherwise = Nothing
+
+call :: ExprParser
+call = do
+  expr <- primary
+  whileCall expr
+
+whileCall :: Expr.Expr -> ExprParser
+whileCall expr = do
+  isParen <- matchToken Token.LeftParen
+  if isParen
+    then do
+      args <- arguments
+      if length args > 255
+        then reportError "Can't have more than 255 arguments."
+        else whileCall $ Expr.Call expr args
+    else pure expr
+
+arguments :: Parser [Expr.Expr]
+arguments = do
+  isEmpty <- matchToken Token.RightParen
+  if isEmpty
+    then pure []
+    else do
+      args <- whileArguments
+      expectToken Token.RightParen "Expect ')' after arguments."
+      pure args
+
+whileArguments :: Parser [Expr.Expr]
+whileArguments = do
+  arg <- expression
+  isComma <- matchToken Token.Comma
+  if isComma
+    then do
+      args <- whileArguments
+      pure (arg : args)
+    else do
+      pure [arg]
 
 primary :: ExprParser
 primary = do

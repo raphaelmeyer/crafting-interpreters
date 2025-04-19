@@ -68,6 +68,7 @@ evaluate (Expr.Assign name expr) = do
   Env.assign name value
   pure value
 evaluate (Expr.Logical op l r) = evalLogical op l r
+evaluate (Expr.Call {}) = pure Lox.Nil
 
 evalUnary :: (Monad m) => Expr.UnaryOp -> Lox.Value -> Interpreter m
 evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)

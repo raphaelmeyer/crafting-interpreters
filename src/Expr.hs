@@ -6,6 +6,7 @@ import qualified Lox
 data Expr
   = Assign {assignName :: Text.Text, assignExpr :: Expr}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
+  | Call {callCallee :: Expr, callArguments :: [Expr]}
   | Grouping Expr
   | Literal Lox.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}

@@ -16,5 +16,8 @@
     "[jsonc][json]": {
       "editor.defaultFormatter": "vscode.json-language-features"
     },
+    "[haskell]": {
+      "editor.inlayHints.enabled": "offUnlessPressed"
+    }
   }
 }
