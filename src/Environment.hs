@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Environment (Environment, assign, define, empty, get, pop, push) where
+module Environment (Environment, assign, define, get, make, pop, push) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -15,8 +15,8 @@ data Values = Global Scope | Local Scope Values
 
 type Environment = State.StateT Values
 
-empty :: Values
-empty = Global Map.empty
+make :: Values
+make = Global $ Map.insert "clock" (Lox.Callable Lox.Clock) Map.empty
 
 get :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) Lox.Value
 get name = do
