@@ -68,7 +68,10 @@ evaluate (Expr.Assign name expr) = do
   Env.assign name value
   pure value
 evaluate (Expr.Logical op l r) = evalLogical op l r
-evaluate (Expr.Call {}) = pure Lox.Nil
+evaluate (Expr.Call calleeExpr args) = do
+  callee <- evaluate calleeExpr
+  argValues <- mapM evaluate args
+  invoke callee argValues
 
 evalUnary :: (Monad m) => Expr.UnaryOp -> Lox.Value -> Interpreter m
 evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)
@@ -99,6 +102,20 @@ evalLogical Expr.Or l r = do
 evalLogical Expr.And l r = do
   a <- evaluate l
   if truthy a then evaluate r else pure a
+
+invoke :: (Monad m) => Lox.Value -> [Lox.Value] -> Interpreter m
+invoke _ args = do
+  let arity = 0
+  Monad.when (arity /= length args) $
+    reportError $
+      Text.concat
+        [ "Expected ",
+          Text.pack . show $ arity,
+          " arguments but got ",
+          Text.pack . show . length $ args,
+          "."
+        ]
+  reportError "Can only call functions and classes."
 
 truthy :: Lox.Value -> Bool
 truthy Lox.Nil = False
