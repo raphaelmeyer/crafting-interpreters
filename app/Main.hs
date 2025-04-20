@@ -13,27 +13,29 @@ main :: IO ()
 main = do
   args <- Environment.getArgs
   case args of
-    [f] -> runFile f
-    [] -> runPrompt
+    ["-d", f] -> runFile HLox.PrintStmts f
+    ["-d"] -> runPrompt HLox.PrintStmts
+    [f] -> runFile HLox.Silent f
+    [] -> runPrompt HLox.Silent
     _ -> usage
 
 usage :: IO ()
 usage = do
   name <- Environment.getProgName
-  System.IO.hPutStrLn System.IO.stderr $ "Usage: " ++ name ++ " [script]"
+  System.IO.hPutStrLn System.IO.stderr $ "Usage: " ++ name ++ " (-d) [script]"
   Exit.exitFailure
 
-runFile :: String -> IO ()
-runFile f = do
+runFile :: HLox.Debug -> String -> IO ()
+runFile debug f = do
   script <- Text.IO.readFile f
-  HLox.run script
+  HLox.run debug script
 
-runPrompt :: IO ()
-runPrompt = do
+runPrompt :: HLox.Debug -> IO ()
+runPrompt debug = do
   Text.IO.putStr "> "
   System.IO.hFlush System.IO.stdout
   done <- System.IO.isEOF
   M.unless done $ do
     line <- Text.IO.getLine
-    HLox.run line
-    runPrompt
+    HLox.run debug line
+    runPrompt debug
