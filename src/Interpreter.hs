@@ -49,7 +49,8 @@ statement stmt@(Stmt.While condition body) = do
   Monad.when isTrue $ do
     statement body
     statement stmt
-statement (Stmt.Function {}) = pure ()
+statement (Stmt.Function name params body) = do
+  Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function params body)
 
 executeBlock :: [Stmt.Stmt] -> Interpreter ()
 executeBlock stmts = do
@@ -126,6 +127,7 @@ invoke (Runtime.Callable declaration) args = do
         ]
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
+    Runtime.Function _ _ -> pure Runtime.Nil
 invoke _ _ = reportError "Can only call functions and classes."
 
 truthy :: Runtime.Value -> Bool
