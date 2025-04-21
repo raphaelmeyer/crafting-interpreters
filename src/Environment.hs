@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Environment (Environment, assign, define, get, make, pop, push) where
+module Environment (Environment, assign, define, get, globals, make, pop, push) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -17,6 +17,9 @@ type Environment = State.StateT Values
 
 make :: Values
 make = Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
+
+globals :: (Monad m) => Environment m Values
+globals = globals' <$> State.get
 
 get :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) Runtime.Value
 get name = do
@@ -50,6 +53,11 @@ pop = do
   case env of
     Local _ parent -> State.put parent
     Global _ -> reportError "Can not pop global environment."
+
+globals' :: Values -> Values
+globals' env = case env of
+  Global scope -> Global scope
+  Local _ parent -> globals' parent
 
 get' :: Text.Text -> Values -> Maybe Runtime.Value
 get' name env = case env of
