@@ -52,10 +52,42 @@ addError err result = case result of
 
 declaration :: StmtParser
 declaration = do
-  isVariable <- matchToken Token.Var
-  if isVariable
-    then variableDeclaration
-    else statement
+  token <- match . anyOf $ [Token.Fun, Token.Var]
+  case token of
+    Just Token.Fun -> function
+    Just Token.Var -> variableDeclaration
+    _ -> statement
+
+function :: StmtParser
+function = do
+  name <- expect identifier "Expect function name."
+  expectToken Token.LeftParen "Expect '(' after function name."
+  params <- parameters
+  if length params > 255
+    then reportError "Can't have more than 255 parameters."
+    else do
+      expectToken Token.LeftBrace "Expect '{' before function body."
+      Stmt.Function name params <$> whileBlock
+
+parameters :: Parser [Text.Text]
+parameters = do
+  isEmpty <- matchToken Token.RightParen
+  if isEmpty
+    then pure []
+    else do
+      params <- whileParameters
+      expectToken Token.RightParen "Expect ')' after parameters."
+      pure params
+
+whileParameters :: Parser [Text.Text]
+whileParameters = do
+  param <- expect identifier "Expect parameter name."
+  isComma <- matchToken Token.Comma
+  if isComma
+    then do
+      params <- whileParameters
+      pure $ param : params
+    else pure [param]
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
@@ -341,9 +373,8 @@ whileArguments = do
   if isComma
     then do
       args <- whileArguments
-      pure (arg : args)
-    else do
-      pure [arg]
+      pure $ arg : args
+    else pure [arg]
 
 primary :: ExprParser
 primary = do

@@ -175,7 +175,7 @@ checkKeyword ident =
     "else" -> Token.Else
     "false" -> Token.False
     "for" -> Token.For
-    "fun" -> Token.For
+    "fun" -> Token.Fun
     "if" -> Token.If
     "nil" -> Token.Nil
     "or" -> Token.Or

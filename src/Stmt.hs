@@ -6,6 +6,11 @@ import qualified Expr
 data Stmt
   = Block [Stmt]
   | Expression Expr.Expr
+  | Function
+      { funName :: Text.Text,
+        funParameters :: [Text.Text],
+        funBody :: [Stmt]
+      }
   | If
       { ifCondition :: Expr.Expr,
         thenStmt :: Stmt,

@@ -49,6 +49,7 @@ statement stmt@(Stmt.While condition body) = do
   Monad.when isTrue $ do
     statement body
     statement stmt
+statement (Stmt.Function {}) = pure ()
 
 executeBlock :: [Stmt.Stmt] -> Interpreter' ()
 executeBlock stmts = do
