@@ -51,6 +51,9 @@ statement stmt@(Stmt.While condition body) = do
     statement stmt
 statement (Stmt.Function name params body) = do
   Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function params body)
+statement (Stmt.Return value) = do
+  _ <- evaluate value
+  pure ()
 
 executeBlock :: [Stmt.Stmt] -> Interpreter ()
 executeBlock stmts = do

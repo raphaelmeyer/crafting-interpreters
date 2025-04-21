@@ -17,6 +17,7 @@ data Stmt
         elseStmt :: Maybe Stmt
       }
   | Print Expr.Expr
+  | Return Expr.Expr
   | Variable Text.Text Expr.Expr
   | While Expr.Expr Stmt
   deriving (Eq, Show)

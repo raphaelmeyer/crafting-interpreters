@@ -100,11 +100,12 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  token <- match . anyOf $ [Token.For, Token.If, Token.Print, Token.While, Token.LeftBrace]
+  token <- match . anyOf $ [Token.For, Token.If, Token.Print, Token.Return, Token.While, Token.LeftBrace]
   case token of
     Just Token.For -> forStatement
     Just Token.If -> ifStatement
     Just Token.Print -> printStatement
+    Just Token.Return -> returnStatement
     Just Token.While -> whileStatement
     Just Token.LeftBrace -> block
     _ -> expressionStatement
@@ -171,6 +172,16 @@ printStatement = do
   expr <- expression
   expectToken Token.SemiColon "Expect ';' after expression."
   pure $ Stmt.Print expr
+
+returnStatement :: StmtParser
+returnStatement = do
+  isEmpty <- matchToken Token.SemiColon
+  if isEmpty
+    then pure . Stmt.Return . Expr.Literal $ Literal.Nil
+    else do
+      value <- expression
+      expectToken Token.SemiColon "Expect ';' after return value."
+      pure $ Stmt.Return value
 
 whileStatement :: StmtParser
 whileStatement = do
