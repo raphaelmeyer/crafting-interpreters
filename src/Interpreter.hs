@@ -115,6 +115,18 @@ literal (Literal.String s) = Runtime.String s
 
 invoke :: Runtime.Value -> [Runtime.Value] -> Interpreter Runtime.Value
 invoke (Runtime.Callable declaration) args = do
+  checkArity declaration args
+  case declaration of
+    Runtime.Clock -> Trans.liftIO Native.clock
+    Runtime.Function params body -> do
+      withGlobals $ do
+        bindParameters $ zip params args
+        executeBlock body
+      pure Runtime.Nil
+invoke _ _ = reportError "Can only call functions and classes."
+
+checkArity :: Runtime.Declaration -> [a] -> Interpreter ()
+checkArity declaration args = do
   let arity = Runtime.arity declaration
   Monad.when (arity /= length args) $
     reportError $
@@ -125,12 +137,10 @@ invoke (Runtime.Callable declaration) args = do
           Text.pack . show . length $ args,
           "."
         ]
-  case declaration of
-    Runtime.Clock -> Trans.liftIO Native.clock
-    Runtime.Function _ body -> do
-      withGlobals $ executeBlock body
-      pure Runtime.Nil
-invoke _ _ = reportError "Can only call functions and classes."
+
+bindParameters :: [(Text.Text, Runtime.Value)] -> Interpreter ()
+bindParameters = do
+  mapM_ (\(name, value) -> Trans.lift $ Env.define name value)
 
 withGlobals :: Interpreter a -> Interpreter a
 withGlobals action = do
