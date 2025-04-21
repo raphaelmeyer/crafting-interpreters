@@ -7,32 +7,32 @@ import qualified Control.Monad.State.Strict as State
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Error
-import qualified Lox
+import qualified Runtime
 
-type Scope = Map.Map Text.Text Lox.Value
+type Scope = Map.Map Text.Text Runtime.Value
 
 data Values = Global Scope | Local Scope Values
 
 type Environment = State.StateT Values
 
 make :: Values
-make = Global $ Map.insert "clock" (Lox.Callable Lox.Clock) Map.empty
+make = Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
 
-get :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) Lox.Value
+get :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) Runtime.Value
 get name = do
   env <- State.get
   case get' name env of
     Just value -> pure value
     Nothing -> reportError $ Text.concat ["Undefined variable '", name, "'."]
 
-define :: (Monad m) => Text.Text -> Lox.Value -> Environment m ()
+define :: (Monad m) => Text.Text -> Runtime.Value -> Environment m ()
 define name value = do
   env <- State.get
   State.put $ case env of
     Global scope -> Global $ Map.insert name value scope
     Local scope parent -> Local (Map.insert name value scope) parent
 
-assign :: (Monad m) => Text.Text -> Lox.Value -> Except.ExceptT Error.Error (Environment m) ()
+assign :: (Monad m) => Text.Text -> Runtime.Value -> Except.ExceptT Error.Error (Environment m) ()
 assign name value = do
   env <- State.get
   case assign' name value env of
@@ -51,14 +51,14 @@ pop = do
     Local _ parent -> State.put parent
     Global _ -> reportError "Can not pop global environment."
 
-get' :: Text.Text -> Values -> Maybe Lox.Value
+get' :: Text.Text -> Values -> Maybe Runtime.Value
 get' name env = case env of
   Global scope -> Map.lookup name scope
   Local scope parent -> case Map.lookup name scope of
     Just value -> Just value
     Nothing -> get' name parent
 
-assign' :: Text.Text -> Lox.Value -> Values -> Maybe Values
+assign' :: Text.Text -> Runtime.Value -> Values -> Maybe Values
 assign' name value (Global scope) = case Map.lookup name scope of
   Just _ -> Just . Global $ Map.insert name value scope
   Nothing -> Nothing

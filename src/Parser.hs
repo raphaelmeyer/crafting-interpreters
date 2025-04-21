@@ -8,6 +8,7 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
+import qualified Literal
 import qualified Lox
 import qualified Stmt
 import qualified Token
@@ -93,7 +94,7 @@ variableDeclaration :: StmtParser
 variableDeclaration = do
   name <- expect identifier "Expect variable name."
   isAssign <- matchToken Token.Equal
-  value <- if isAssign then expression else pure $ Expr.Literal Lox.Nil
+  value <- if isAssign then expression else pure $ Expr.Literal Literal.Nil
   expectToken Token.SemiColon "Expect ';' after variable declaration."
   pure $ Stmt.Variable name value
 
@@ -136,7 +137,7 @@ forCondition :: ExprParser
 forCondition = do
   noCondition <- matchToken Token.SemiColon
   if noCondition
-    then pure $ Expr.Literal (Lox.Boolean True)
+    then pure $ Expr.Literal (Literal.Boolean True)
     else do
       condition <- expression
       expectToken Token.SemiColon "Expect ';' after loop condition."
@@ -394,13 +395,13 @@ grouping = do
   expectToken Token.RightParen "Expect ')' after expression."
   pure $ Expr.Grouping expr
 
-literal :: Token.Token -> Maybe Lox.Value
+literal :: Token.Token -> Maybe Literal.Value
 literal t = case Token.tType t of
-  Token.False -> Just $ Lox.Boolean False
-  Token.True -> Just $ Lox.Boolean True
-  Token.Nil -> Just Lox.Nil
-  (Token.Number n) -> Just $ Lox.Number n
-  (Token.String s) -> Just $ Lox.String s
+  Token.False -> Just $ Literal.Boolean False
+  Token.True -> Just $ Literal.Boolean True
+  Token.Nil -> Just Literal.Nil
+  (Token.Number n) -> Just $ Literal.Number n
+  (Token.String s) -> Just $ Literal.String s
   _ -> Nothing
 
 identifier :: Token.Token -> Maybe Text.Text

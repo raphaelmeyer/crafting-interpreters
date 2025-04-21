@@ -10,13 +10,13 @@ import qualified Data.Text as Text
 import qualified Environment as Env
 import qualified Error
 import qualified Expr
+import qualified Literal
 import qualified Lox
 import qualified Native
+import qualified Runtime
 import qualified Stmt
 
-type Interpreter' a = Except.ExceptT Error.Error (Env.Environment IO) a
-
-type Interpreter = Interpreter' Lox.Value
+type Interpreter a = Except.ExceptT Error.Error (Env.Environment IO) a
 
 interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
 interpret stmts = do
@@ -25,10 +25,10 @@ interpret stmts = do
     Left err -> pure $ Left [err]
     Right _ -> pure $ Right ()
 
-execute :: [Stmt.Stmt] -> Interpreter' ()
+execute :: [Stmt.Stmt] -> Interpreter ()
 execute = Monad.mapM_ statement
 
-statement :: Stmt.Stmt -> Interpreter' ()
+statement :: Stmt.Stmt -> Interpreter ()
 statement (Stmt.Expression expr) = do
   Monad.void $ evaluate expr
 statement (Stmt.Print expr) = do
@@ -51,14 +51,14 @@ statement stmt@(Stmt.While condition body) = do
     statement stmt
 statement (Stmt.Function {}) = pure ()
 
-executeBlock :: [Stmt.Stmt] -> Interpreter' ()
+executeBlock :: [Stmt.Stmt] -> Interpreter ()
 executeBlock stmts = do
   Trans.lift Env.push
   execute stmts
   Env.pop
 
-evaluate :: Expr.Expr -> Interpreter
-evaluate (Expr.Literal l) = pure l
+evaluate :: Expr.Expr -> Interpreter Runtime.Value
+evaluate (Expr.Literal l) = pure $ literal l
 evaluate (Expr.Grouping g) = evaluate g
 evaluate (Expr.Unary op r) = evaluate r >>= evalUnary op
 evaluate (Expr.Binary op l r) = do
@@ -76,29 +76,29 @@ evaluate (Expr.Call calleeExpr args) = do
   argValues <- mapM evaluate args
   invoke callee argValues
 
-evalUnary :: Expr.UnaryOp -> Lox.Value -> Interpreter
-evalUnary Expr.Neg (Lox.Number n) = pure $ Lox.Number (-n)
-evalUnary Expr.Not v = pure . Lox.Boolean . not . truthy $ v
+evalUnary :: Expr.UnaryOp -> Runtime.Value -> Interpreter Runtime.Value
+evalUnary Expr.Neg (Runtime.Number n) = pure $ Runtime.Number (-n)
+evalUnary Expr.Not v = pure . Runtime.Boolean . not . truthy $ v
 evalUnary Expr.Neg _ = reportError "Operand must be a number."
 
-evalBinary :: Expr.BinaryOp -> Lox.Value -> Lox.Value -> Interpreter
-evalBinary Expr.Equal a b = pure $ Lox.Boolean (a == b)
-evalBinary Expr.NotEqual a b = pure $ Lox.Boolean (a /= b)
-evalBinary Expr.Plus (Lox.String a) (Lox.String b) = pure $ Lox.String (Text.append a b)
-evalBinary op (Lox.Number a) (Lox.Number b) =
+evalBinary :: Expr.BinaryOp -> Runtime.Value -> Runtime.Value -> Interpreter Runtime.Value
+evalBinary Expr.Equal a b = pure $ Runtime.Boolean (a == b)
+evalBinary Expr.NotEqual a b = pure $ Runtime.Boolean (a /= b)
+evalBinary Expr.Plus (Runtime.String a) (Runtime.String b) = pure $ Runtime.String (Text.append a b)
+evalBinary op (Runtime.Number a) (Runtime.Number b) =
   pure $ case op of
-    Expr.Plus -> Lox.Number (a + b)
-    Expr.Minus -> Lox.Number (a - b)
-    Expr.Mult -> Lox.Number (a * b)
-    Expr.Div -> Lox.Number (a / b)
-    Expr.Greater -> Lox.Boolean (a > b)
-    Expr.GreaterEqual -> Lox.Boolean (a >= b)
-    Expr.Less -> Lox.Boolean (a < b)
-    Expr.LessEqual -> Lox.Boolean (a <= b)
+    Expr.Plus -> Runtime.Number (a + b)
+    Expr.Minus -> Runtime.Number (a - b)
+    Expr.Mult -> Runtime.Number (a * b)
+    Expr.Div -> Runtime.Number (a / b)
+    Expr.Greater -> Runtime.Boolean (a > b)
+    Expr.GreaterEqual -> Runtime.Boolean (a >= b)
+    Expr.Less -> Runtime.Boolean (a < b)
+    Expr.LessEqual -> Runtime.Boolean (a <= b)
 evalBinary Expr.Plus _ _ = reportError "Operands must be two numbers or two strings."
 evalBinary _ _ _ = reportError "Operands must be numbers."
 
-evalLogical :: Expr.LogicalOp -> Expr.Expr -> Expr.Expr -> Interpreter
+evalLogical :: Expr.LogicalOp -> Expr.Expr -> Expr.Expr -> Interpreter Runtime.Value
 evalLogical Expr.Or l r = do
   a <- evaluate l
   if truthy a then pure a else evaluate r
@@ -106,9 +106,15 @@ evalLogical Expr.And l r = do
   a <- evaluate l
   if truthy a then evaluate r else pure a
 
-invoke :: Lox.Value -> [Lox.Value] -> Interpreter
-invoke (Lox.Callable declaration) args = do
-  let arity = Lox.arity declaration
+literal :: Literal.Value -> Runtime.Value
+literal Literal.Nil = Runtime.Nil
+literal (Literal.Boolean b) = Runtime.Boolean b
+literal (Literal.Number n) = Runtime.Number n
+literal (Literal.String s) = Runtime.String s
+
+invoke :: Runtime.Value -> [Runtime.Value] -> Interpreter Runtime.Value
+invoke (Runtime.Callable declaration) args = do
+  let arity = Runtime.arity declaration
   Monad.when (arity /= length args) $
     reportError $
       Text.concat
@@ -119,12 +125,12 @@ invoke (Lox.Callable declaration) args = do
           "."
         ]
   case declaration of
-    Lox.Clock -> Trans.liftIO Native.clock
+    Runtime.Clock -> Trans.liftIO Native.clock
 invoke _ _ = reportError "Can only call functions and classes."
 
-truthy :: Lox.Value -> Bool
-truthy Lox.Nil = False
-truthy (Lox.Boolean b) = b
+truthy :: Runtime.Value -> Bool
+truthy Runtime.Nil = False
+truthy (Runtime.Boolean b) = b
 truthy _ = True
 
 reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error m a

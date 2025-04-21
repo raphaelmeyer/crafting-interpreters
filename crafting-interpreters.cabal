@@ -21,9 +21,11 @@ library
         Error,
         Expr,
         Interpreter,
+        Literal,
         Lox,
         Native,
         Parser,
+        Runtime,
         Scanner,
         Stmt,
         Token
