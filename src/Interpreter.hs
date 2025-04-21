@@ -18,6 +18,8 @@ import qualified Stmt
 
 type Interpreter a = Except.ExceptT Error.Error (Env.Environment IO) a
 
+data Result = Continue | Return Runtime.Value
+
 interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
 interpret stmts = do
   result <- State.evalStateT (Except.runExceptT $ execute stmts) Env.make
@@ -25,41 +27,57 @@ interpret stmts = do
     Left err -> pure $ Left [err]
     Right _ -> pure $ Right ()
 
-execute :: [Stmt.Stmt] -> Interpreter ()
-execute = Monad.mapM_ statement
+execute :: [Stmt.Stmt] -> Interpreter Result
+execute [] = pure Continue
+execute (stmt : stmts) = do
+  result <- statement stmt
+  case result of
+    Continue -> execute stmts
+    Return value -> pure $ Return value
 
-statement :: Stmt.Stmt -> Interpreter ()
+statement :: Stmt.Stmt -> Interpreter Result
 statement (Stmt.Expression expr) = do
   Monad.void $ evaluate expr
+  pure Continue
 statement (Stmt.Print expr) = do
   value <- evaluate expr
   Trans.liftIO $ print value
+  pure Continue
 statement (Stmt.Variable name expr) = do
   value <- evaluate expr
   Trans.lift $ Env.define name value
+  pure Continue
 statement (Stmt.Block block) = do
   executeBlock block
 statement (Stmt.If condition thenStmt elseStmt) = do
   isTrue <- truthy <$> evaluate condition
   if isTrue
     then statement thenStmt
-    else Monad.mapM_ statement elseStmt
+    else do
+      case elseStmt of
+        Just stmt -> statement stmt
+        Nothing -> pure Continue
 statement stmt@(Stmt.While condition body) = do
   isTrue <- truthy <$> evaluate condition
-  Monad.when isTrue $ do
-    statement body
-    statement stmt
+  if isTrue
+    then do
+      result <- statement body
+      case result of
+        Continue -> statement stmt
+        Return value -> pure $ Return value
+    else pure Continue
 statement (Stmt.Function name params body) = do
   Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function params body)
-statement (Stmt.Return value) = do
-  _ <- evaluate value
-  pure ()
+  pure Continue
+statement (Stmt.Return expr) = do
+  Return <$> evaluate expr
 
-executeBlock :: [Stmt.Stmt] -> Interpreter ()
+executeBlock :: [Stmt.Stmt] -> Interpreter Result
 executeBlock stmts = do
   Trans.lift Env.push
-  execute stmts
+  result <- execute stmts
   Env.pop
+  pure result
 
 evaluate :: Expr.Expr -> Interpreter Runtime.Value
 evaluate (Expr.Literal l) = pure $ literal l
@@ -122,10 +140,12 @@ invoke (Runtime.Callable declaration) args = do
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
     Runtime.Function params body -> do
-      withGlobals $ do
+      result <- withGlobals $ do
         bindParameters $ zip params args
         executeBlock body
-      pure Runtime.Nil
+      case result of
+        Continue -> pure Runtime.Nil
+        Return value -> pure value
 invoke _ _ = reportError "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Interpreter ()
