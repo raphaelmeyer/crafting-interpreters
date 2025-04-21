@@ -128,13 +128,18 @@ invoke (Runtime.Callable declaration) args = do
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
     Runtime.Function _ body -> do
-      globals <- Trans.lift Env.globals
-      current <- State.get
-      State.put globals
-      executeBlock body
-      State.put current
-      pure $ Runtime.Nil
+      withGlobals $ executeBlock body
+      pure Runtime.Nil
 invoke _ _ = reportError "Can only call functions and classes."
+
+withGlobals :: Interpreter a -> Interpreter a
+withGlobals action = do
+  globals <- Trans.lift Env.globals
+  original <- State.get
+  State.put globals
+  result <- action
+  State.put original
+  pure result
 
 truthy :: Runtime.Value -> Bool
 truthy Runtime.Nil = False
