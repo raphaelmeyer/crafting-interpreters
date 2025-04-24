@@ -487,7 +487,7 @@ synchronize = do
   p <- State.get
   case List.uncons . pTokens $ p of
     Just (t, ts) -> do
-      State.put p {pTokens = if isSemiColon t then ts else sync (t : ts)}
+      State.put p {pTokens = if isSemiColon t then ts else sync ts}
     Nothing -> pure ()
   where
     sync = dropWhile (not . syncPoint)
