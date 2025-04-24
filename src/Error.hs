@@ -13,22 +13,28 @@ data Error
         eMessage :: Text.Text
       }
   | RuntimeError
-      { eMessage :: Text.Text
+      { eLine :: Int,
+        eMessage :: Text.Text
       }
   deriving (Eq)
 
 instance Show Error where
   show err = case err of
-    ScanError line m ->
-      "Scan Error in line "
+    ScanError line message ->
+      "Scanner [line "
         ++ show line
-        ++ ": "
-        ++ Text.unpack m
-    ParseError line lexeme m ->
-      "Parse Error in line "
+        ++ "] Error: "
+        ++ Text.unpack message
+    ParseError line lexeme message ->
+      "Parser [line "
         ++ show line
-        ++ ": at '"
+        ++ "] Error at '"
         ++ Text.unpack lexeme
-        ++ "' "
-        ++ Text.unpack m
-    RuntimeError m -> "Runtime Error: " ++ Text.unpack m
+        ++ "': "
+        ++ Text.unpack message
+    RuntimeError line message ->
+      "Runtime Error: "
+        ++ Text.unpack message
+        ++ "\n[line "
+        ++ show line
+        ++ "]"

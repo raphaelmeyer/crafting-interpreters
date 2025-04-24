@@ -77,4 +77,4 @@ assign' name value (Local scope parent) = case Map.lookup name scope of
     Nothing -> Nothing
 
 reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) a
-reportError = Except.throwError . Error.RuntimeError
+reportError = Except.throwError . Error.RuntimeError 0

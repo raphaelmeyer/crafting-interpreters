@@ -7,6 +7,7 @@ import qualified Data.Text as Text
 import qualified Interpreter
 import qualified Parser
 import qualified Scanner
+import qualified System.IO as System
 
 data Debug = PrintStmts | Silent deriving (Eq, Show)
 
@@ -18,7 +19,10 @@ run debug source = do
     Monad.when (debug == PrintStmts) $ IOClass.liftIO $ mapM_ printStmt stmts
     Except.ExceptT $ Interpreter.interpret stmts
   case result of
-    Left err -> mapM_ print err
+    Left err -> mapM_ printError err
     Right _ -> pure ()
   where
     printStmt stmt = putStrLn $ "[STMT] " ++ show stmt
+
+printError :: (Show a) => a -> IO ()
+printError = System.hPrint System.stderr

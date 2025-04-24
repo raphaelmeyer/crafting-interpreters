@@ -181,7 +181,7 @@ truthy (Runtime.Boolean b) = b
 truthy _ = True
 
 reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error m a
-reportError = Except.throwError . Error.RuntimeError
+reportError = Except.throwError . Error.RuntimeError 0
 
 toString :: Runtime.Value -> String
 toString (Runtime.Boolean b) = if b then "true" else "false"
