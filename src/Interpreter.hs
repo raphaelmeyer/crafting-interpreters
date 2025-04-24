@@ -13,6 +13,7 @@ import qualified Expr
 import qualified Literal
 import qualified Lox
 import qualified Native
+import qualified Numeric
 import qualified Runtime
 import qualified Stmt
 
@@ -41,7 +42,7 @@ statement (Stmt.Expression expr) = do
   pure Continue
 statement (Stmt.Print expr) = do
   value <- evaluate expr
-  Trans.liftIO $ print value
+  Trans.liftIO $ (putStrLn . toString) value
   pure Continue
 statement (Stmt.Variable name expr) = do
   value <- evaluate expr
@@ -181,3 +182,10 @@ truthy _ = True
 
 reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error m a
 reportError = Except.throwError . Error.RuntimeError
+
+toString :: Runtime.Value -> String
+toString (Runtime.Boolean b) = if b then "true" else "false"
+toString Runtime.Nil = "nil"
+toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
+toString (Runtime.String s) = Text.unpack s
+toString (Runtime.Callable _) = "<Function Object>"
