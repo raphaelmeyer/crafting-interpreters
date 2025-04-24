@@ -4,14 +4,16 @@ import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.IO.Class as IOClass
 import qualified Data.Text as Text
+import qualified Error
 import qualified Interpreter
 import qualified Parser
 import qualified Scanner
+import qualified System.Exit as Exit
 import qualified System.IO as System
 
 data Debug = PrintStmts | Silent deriving (Eq, Show)
 
-run :: Debug -> Text.Text -> IO ()
+run :: Debug -> Text.Text -> IO Exit.ExitCode
 run debug source = do
   result <- Except.runExceptT $ do
     tokens <- Except.ExceptT . pure $ Scanner.scanTokens source
@@ -19,10 +21,15 @@ run debug source = do
     Monad.when (debug == PrintStmts) $ IOClass.liftIO $ mapM_ printStmt stmts
     Except.ExceptT $ Interpreter.interpret stmts
   case result of
-    Left err -> mapM_ printError err
-    Right _ -> pure ()
+    Left err -> exitCode err <$ mapM_ printError err
+    Right _ -> pure Exit.ExitSuccess
   where
     printStmt stmt = putStrLn $ "[STMT] " ++ show stmt
 
 printError :: (Show a) => a -> IO ()
 printError = System.hPrint System.stderr
+
+exitCode :: [Error.Error] -> Exit.ExitCode
+exitCode (Error.RuntimeError {} : _) = Exit.ExitFailure 70
+exitCode (_ : _) = Exit.ExitFailure 65
+exitCode [] = Exit.ExitFailure 1
