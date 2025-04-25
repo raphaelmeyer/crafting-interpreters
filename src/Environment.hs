@@ -21,12 +21,12 @@ make = Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
 globals :: (Monad m) => Environment m Values
 globals = globals' <$> State.get
 
-get :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) Runtime.Value
-get name = do
+get :: (Monad m) => (Text.Text, Int) -> Except.ExceptT Error.Error (Environment m) Runtime.Value
+get (name, loc) = do
   env <- State.get
   case get' name env of
     Just value -> pure value
-    Nothing -> reportError $ Text.concat ["Undefined variable '", name, "'."]
+    Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
 define :: (Monad m) => Text.Text -> Runtime.Value -> Environment m ()
 define name value = do
@@ -35,12 +35,12 @@ define name value = do
     Global scope -> Global $ Map.insert name value scope
     Local scope parent -> Local (Map.insert name value scope) parent
 
-assign :: (Monad m) => Text.Text -> Runtime.Value -> Except.ExceptT Error.Error (Environment m) ()
-assign name value = do
+assign :: (Monad m) => (Text.Text, Int) -> Runtime.Value -> Except.ExceptT Error.Error (Environment m) ()
+assign (name, loc) value = do
   env <- State.get
   case assign' name value env of
     Just assigned -> State.put assigned
-    Nothing -> reportError $ Text.concat ["Undefined variable '", name, "'."]
+    Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
 push :: (Monad m) => Environment m ()
 push = do
@@ -52,7 +52,7 @@ pop = do
   env <- State.get
   case env of
     Local _ parent -> State.put parent
-    Global _ -> reportError "Can not pop global environment."
+    Global _ -> reportError 0 "Can not pop global environment."
 
 globals' :: Values -> Values
 globals' env = case env of
@@ -76,5 +76,5 @@ assign' name value (Local scope parent) = case Map.lookup name scope of
     Just assigned -> Just $ Local scope assigned
     Nothing -> Nothing
 
-reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error (Environment m) a
-reportError = Except.throwError . Error.RuntimeError 0
+reportError :: (Monad m) => Int -> Text.Text -> Except.ExceptT Error.Error (Environment m) a
+reportError loc = Except.throwError . Error.RuntimeError loc

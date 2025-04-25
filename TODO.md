@@ -2,7 +2,9 @@
 
 Some notes or ideas what maybe could be improved.
 
-- add location (source) information to statements for error reporting
+- move Expr.VariableName to new identifier module and use in environment etc
+- move location to extra module ? ^^^ ???
+- add missing location information
 - test against test suite from book
 - clean up return types for `scanTokens`, `parse` and `interpret`
 - directory structure, split files and put into subdirectories

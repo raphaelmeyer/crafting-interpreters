@@ -61,7 +61,7 @@ declaration = do
 
 function :: StmtParser
 function = do
-  name <- expect identifier "Expect function name."
+  (name, _) <- expect identifier "Expect function name."
   expectToken Token.LeftParen "Expect '(' after function name."
   params <- parameters
   if length params > 255
@@ -82,7 +82,7 @@ parameters = do
 
 whileParameters :: Parser [Text.Text]
 whileParameters = do
-  param <- expect identifier "Expect parameter name."
+  (param, _) <- expect identifier "Expect parameter name."
   isComma <- matchToken Token.Comma
   if isComma
     then do
@@ -92,7 +92,7 @@ whileParameters = do
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
-  name <- expect identifier "Expect variable name."
+  (name, _) <- expect identifier "Expect variable name."
   isAssign <- matchToken Token.Equal
   value <- if isAssign then expression else pure $ Expr.Literal Literal.Nil
   expectToken Token.SemiColon "Expect ';' after variable declaration."
@@ -224,7 +224,7 @@ assignment = do
     then do
       value <- assignment
       case expr of
-        (Expr.Variable name) -> pure $ Expr.Assign name value
+        (Expr.Variable variable) -> pure $ Expr.Assign variable value
         _ -> reportError "Invalid assignment target."
     else pure expr
 
@@ -235,12 +235,12 @@ logicalOr = do
 
 whileLogicalOr :: Expr.Expr -> ExprParser
 whileLogicalOr expr = do
-  isOr <- matchToken Token.Or
-  if isOr
-    then do
+  maybeOr <- match $ mkOperator [(Token.Or, Expr.Or)]
+  case maybeOr of
+    Just op -> do
       right <- logicalAnd
-      whileLogicalOr $ Expr.Logical Expr.Or expr right
-    else pure expr
+      whileLogicalOr $ Expr.Logical op expr right
+    Nothing -> pure expr
 
 logicalAnd :: ExprParser
 logicalAnd = do
@@ -249,12 +249,12 @@ logicalAnd = do
 
 whileLogicalAnd :: Expr.Expr -> ExprParser
 whileLogicalAnd expr = do
-  isAnd <- matchToken Token.And
-  if isAnd
-    then do
+  maybeAnd <- match $ mkOperator [(Token.And, Expr.And)]
+  case maybeAnd of
+    Just op -> do
       right <- equality
-      whileLogicalAnd $ Expr.Logical Expr.And expr right
-    else pure expr
+      whileLogicalAnd $ Expr.Logical op expr right
+    Nothing -> pure expr
 
 equality :: ExprParser
 equality = do
@@ -271,10 +271,11 @@ whileEquality expr = do
     Nothing -> pure expr
 
 equalityOp :: Token.Token -> Maybe Expr.BinaryOp
-equalityOp t
-  | Token.tType t == Token.EqualEqual = Just Expr.Equal
-  | Token.tType t == Token.BangEqual = Just Expr.NotEqual
-  | otherwise = Nothing
+equalityOp =
+  mkOperator
+    [ (Token.EqualEqual, Expr.Equal),
+      (Token.BangEqual, Expr.NotEqual)
+    ]
 
 comparison :: ExprParser
 comparison = do
@@ -291,12 +292,13 @@ whileComparison expr = do
     Nothing -> pure expr
 
 comparisonOp :: Token.Token -> Maybe Expr.BinaryOp
-comparisonOp t
-  | Token.tType t == Token.Greater = Just Expr.Greater
-  | Token.tType t == Token.GreaterEqual = Just Expr.GreaterEqual
-  | Token.tType t == Token.Less = Just Expr.Less
-  | Token.tType t == Token.LessEqual = Just Expr.LessEqual
-  | otherwise = Nothing
+comparisonOp =
+  mkOperator
+    [ (Token.Greater, Expr.Greater),
+      (Token.GreaterEqual, Expr.GreaterEqual),
+      (Token.Less, Expr.Less),
+      (Token.LessEqual, Expr.LessEqual)
+    ]
 
 term :: ExprParser
 term = do
@@ -313,10 +315,11 @@ whileTerm expr = do
     Nothing -> pure expr
 
 termOp :: Token.Token -> Maybe Expr.BinaryOp
-termOp t
-  | Token.tType t == Token.Minus = Just Expr.Minus
-  | Token.tType t == Token.Plus = Just Expr.Plus
-  | otherwise = Nothing
+termOp =
+  mkOperator
+    [ (Token.Minus, Expr.Minus),
+      (Token.Plus, Expr.Plus)
+    ]
 
 factor :: ExprParser
 factor = do
@@ -333,10 +336,11 @@ whileFactor expr = do
     Nothing -> pure expr
 
 factorOp :: Token.Token -> Maybe Expr.BinaryOp
-factorOp t
-  | Token.tType t == Token.Slash = Just Expr.Div
-  | Token.tType t == Token.Star = Just Expr.Mult
-  | otherwise = Nothing
+factorOp =
+  mkOperator
+    [ (Token.Slash, Expr.Div),
+      (Token.Star, Expr.Mult)
+    ]
 
 unary :: ExprParser
 unary = do
@@ -347,10 +351,18 @@ unary = do
     Nothing -> call
 
 unaryOp :: Token.Token -> Maybe Expr.UnaryOp
-unaryOp t
-  | Token.tType t == Token.Bang = Just Expr.Not
-  | Token.tType t == Token.Minus = Just Expr.Neg
-  | otherwise = Nothing
+unaryOp =
+  mkOperator
+    [ (Token.Bang, Expr.Not),
+      (Token.Minus, Expr.Neg)
+    ]
+
+mkOperator :: [(Token.TokenType, a)] -> Token.Token -> Maybe (Expr.Operator a)
+mkOperator ((tType, op) : types) t =
+  if tType == Token.tType t
+    then Just $ Expr.Operator op (Token.tLine t)
+    else mkOperator types t
+mkOperator [] _ = Nothing
 
 call :: ExprParser
 call = do
@@ -396,7 +408,7 @@ primary = do
     Nothing -> do
       maybeIdentifier <- match identifier
       case maybeIdentifier of
-        Just name -> pure $ Expr.Variable name
+        Just (name, loc) -> pure $ Expr.Variable (Expr.VariableName name loc)
         Nothing -> grouping
 
 grouping :: ExprParser
@@ -415,8 +427,8 @@ literal t = case Token.tType t of
   (Token.String s) -> Just $ Literal.String s
   _ -> Nothing
 
-identifier :: Token.Token -> Maybe Text.Text
-identifier (Token.Token (Token.Identifier name) _ _) = Just name
+identifier :: Token.Token -> Maybe (Text.Text, Expr.Location)
+identifier (Token.Token (Token.Identifier name) _ line) = Just (name, line)
 identifier _ = Nothing
 
 isToken :: Token.TokenType -> Token.Token -> Maybe ()

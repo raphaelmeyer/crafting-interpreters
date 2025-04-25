@@ -4,19 +4,19 @@ import qualified Data.Text as Text
 import qualified Literal
 
 data Expr
-  = Assign {assignName :: Text.Text, assignExpr :: Expr}
+  = Assign {assignName :: VariableName, assignExpr :: Expr}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
   | Call {callCallee :: Expr, callArguments :: [Expr]}
   | Grouping Expr
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
-  | Variable Text.Text
+  | Variable VariableName
   deriving (Eq, Show)
 
-data UnaryOp = Neg | Not deriving (Eq, Show)
+data UnaryOperation = Neg | Not deriving (Eq, Show)
 
-data BinaryOp
+data BinaryOperation
   = Plus
   | Minus
   | Mult
@@ -29,4 +29,16 @@ data BinaryOp
   | GreaterEqual
   deriving (Eq, Show)
 
-data LogicalOp = And | Or deriving (Eq, Show)
+data LogicalOperation = And | Or deriving (Eq, Show)
+
+type Location = Int
+
+data Operator a = Operator a Location deriving (Eq, Show)
+
+type UnaryOp = Operator UnaryOperation
+
+type BinaryOp = Operator BinaryOperation
+
+type LogicalOp = Operator LogicalOperation
+
+data VariableName = VariableName Text.Text Location deriving (Eq, Show)

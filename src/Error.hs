@@ -33,8 +33,7 @@ instance Show Error where
         ++ "': "
         ++ Text.unpack message
     RuntimeError line message ->
-      "Runtime Error: "
-        ++ Text.unpack message
+      Text.unpack message
         ++ "\n[line "
         ++ show line
         ++ "]"

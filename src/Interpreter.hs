@@ -88,10 +88,10 @@ evaluate (Expr.Binary op l r) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right
-evaluate (Expr.Variable name) = Env.get name
-evaluate (Expr.Assign name expr) = do
+evaluate (Expr.Variable (Expr.VariableName name loc)) = Env.get (name, loc)
+evaluate (Expr.Assign (Expr.VariableName name loc) expr) = do
   value <- evaluate expr
-  Env.assign name value
+  Env.assign (name, loc) value
   pure value
 evaluate (Expr.Logical op l r) = evalLogical op l r
 evaluate (Expr.Call calleeExpr args) = do
@@ -100,15 +100,15 @@ evaluate (Expr.Call calleeExpr args) = do
   invoke callee argValues
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Interpreter Runtime.Value
-evalUnary Expr.Neg (Runtime.Number n) = pure $ Runtime.Number (-n)
-evalUnary Expr.Not v = pure . Runtime.Boolean . not . truthy $ v
-evalUnary Expr.Neg _ = reportError "Operand must be a number."
+evalUnary (Expr.Operator Expr.Neg _) (Runtime.Number n) = pure $ Runtime.Number (-n)
+evalUnary (Expr.Operator Expr.Not _) v = pure . Runtime.Boolean . not . truthy $ v
+evalUnary (Expr.Operator Expr.Neg loc) _ = reportError loc "Operand must be a number."
 
 evalBinary :: Expr.BinaryOp -> Runtime.Value -> Runtime.Value -> Interpreter Runtime.Value
-evalBinary Expr.Equal a b = pure $ Runtime.Boolean (a == b)
-evalBinary Expr.NotEqual a b = pure $ Runtime.Boolean (a /= b)
-evalBinary Expr.Plus (Runtime.String a) (Runtime.String b) = pure $ Runtime.String (Text.append a b)
-evalBinary op (Runtime.Number a) (Runtime.Number b) =
+evalBinary (Expr.Operator Expr.Equal _) a b = pure $ Runtime.Boolean (a == b)
+evalBinary (Expr.Operator Expr.NotEqual _) a b = pure $ Runtime.Boolean (a /= b)
+evalBinary (Expr.Operator Expr.Plus _) (Runtime.String a) (Runtime.String b) = pure $ Runtime.String (Text.append a b)
+evalBinary (Expr.Operator op _) (Runtime.Number a) (Runtime.Number b) =
   pure $ case op of
     Expr.Plus -> Runtime.Number (a + b)
     Expr.Minus -> Runtime.Number (a - b)
@@ -118,14 +118,14 @@ evalBinary op (Runtime.Number a) (Runtime.Number b) =
     Expr.GreaterEqual -> Runtime.Boolean (a >= b)
     Expr.Less -> Runtime.Boolean (a < b)
     Expr.LessEqual -> Runtime.Boolean (a <= b)
-evalBinary Expr.Plus _ _ = reportError "Operands must be two numbers or two strings."
-evalBinary _ _ _ = reportError "Operands must be numbers."
+evalBinary (Expr.Operator Expr.Plus loc) _ _ = reportError loc "Operands must be two numbers or two strings."
+evalBinary (Expr.Operator _ loc) _ _ = reportError loc "Operands must be numbers."
 
 evalLogical :: Expr.LogicalOp -> Expr.Expr -> Expr.Expr -> Interpreter Runtime.Value
-evalLogical Expr.Or l r = do
+evalLogical (Expr.Operator Expr.Or _) l r = do
   a <- evaluate l
   if truthy a then pure a else evaluate r
-evalLogical Expr.And l r = do
+evalLogical (Expr.Operator Expr.And _) l r = do
   a <- evaluate l
   if truthy a then evaluate r else pure a
 
@@ -147,13 +147,13 @@ invoke (Runtime.Callable declaration) args = do
       case result of
         Continue -> pure Runtime.Nil
         Return value -> pure value
-invoke _ _ = reportError "Can only call functions and classes."
+invoke _ _ = reportError 0 "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Interpreter ()
 checkArity declaration args = do
   let arity = Runtime.arity declaration
   Monad.when (arity /= length args) $
-    reportError $
+    reportError 0 $
       Text.concat
         [ "Expected ",
           Text.pack . show $ arity,
@@ -180,8 +180,8 @@ truthy Runtime.Nil = False
 truthy (Runtime.Boolean b) = b
 truthy _ = True
 
-reportError :: (Monad m) => Text.Text -> Except.ExceptT Error.Error m a
-reportError = Except.throwError . Error.RuntimeError 0
+reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Error.Error m a
+reportError loc = Except.throwError . Error.RuntimeError loc
 
 toString :: Runtime.Value -> String
 toString (Runtime.Boolean b) = if b then "true" else "false"
