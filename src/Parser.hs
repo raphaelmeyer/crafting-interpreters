@@ -219,14 +219,20 @@ expression = assignment
 assignment :: ExprParser
 assignment = do
   expr <- logicalOr
-  isAssign <- matchToken Token.Equal
-  if isAssign
-    then do
+  maybeAssign <- match isEqual
+  case maybeAssign of
+    Just assign -> do
       value <- assignment
       case expr of
         (Expr.Variable variable) -> pure $ Expr.Assign variable value
-        _ -> reportError "Invalid assignment target."
-    else pure expr
+        _ -> reportErrorWithToken assign "Invalid assignment target."
+    Nothing -> pure expr
+
+isEqual :: Token.Token -> Maybe Token.Token
+isEqual t =
+  if Token.tType t == Token.Equal
+    then Just t
+    else Nothing
 
 logicalOr :: ExprParser
 logicalOr = do
@@ -493,6 +499,9 @@ reportError e = do
     newError p = case List.uncons . pTokens $ p of
       Just (t, _) -> Error.ParseError (Token.tLine t) (Token.tLexeme t) e
       Nothing -> Error.ParseError 0 "EOF" e
+
+reportErrorWithToken :: Token.Token -> Text.Text -> Parser a
+reportErrorWithToken t e = Except.throwError $ Error.ParseError (Token.tLine t) (Token.tLexeme t) e
 
 synchronize :: State.State ParserState ()
 synchronize = do
