@@ -497,17 +497,23 @@ reportError e = do
 synchronize :: State.State ParserState ()
 synchronize = do
   p <- State.get
-  case List.uncons . pTokens $ p of
-    Just (t, ts) -> do
-      State.put p {pTokens = if isSemiColon t then ts else sync ts}
+  case List.uncons $ pTokens p of
+    Just (_, ts) -> State.put p {pTokens = consumeUntilSync ts}
     Nothing -> pure ()
+
+consumeUntilSync :: [Token.Token] -> [Token.Token]
+consumeUntilSync [] = []
+consumeUntilSync (t : ts)
+  | syncPoint t = t : ts
+  | isSemiColon t = ts
+  | isEnd t = [t]
+  | otherwise = consumeUntilSync ts
   where
-    sync = dropWhile (not . syncPoint)
     isSemiColon = (== Token.SemiColon) . Token.tType
+    isEnd = (== Token.EOF) . Token.tType
 
 syncPoint :: Token.Token -> Bool
 syncPoint t = case Token.tType t of
-  Token.SemiColon -> True
   Token.Class -> True
   Token.Fun -> True
   Token.Var -> True
