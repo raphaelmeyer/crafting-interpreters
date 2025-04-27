@@ -23,7 +23,8 @@ data Result = Continue | Return Runtime.Value
 
 interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
 interpret stmts = do
-  result <- State.evalStateT (Except.runExceptT $ execute stmts) Env.make
+  globals <- Env.make
+  result <- State.evalStateT (Except.runExceptT $ execute stmts) globals
   case result of
     Left err -> pure $ Left [err]
     Right _ -> pure $ Right ()
@@ -171,6 +172,7 @@ withGlobals action = do
   globals <- Env.globals
   original <- State.get
   State.put globals
+  Env.push
   result <- action
   State.put original
   pure result

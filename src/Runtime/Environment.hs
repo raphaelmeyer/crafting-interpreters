@@ -4,19 +4,25 @@ module Runtime.Environment (Values, assign, define, get, globals, make, pop, pus
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
+import qualified Control.Monad.Trans as Trans
+import qualified Data.IORef as IORef
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Error
 import qualified Runtime.Types as Runtime
 
-type Scope = Map.Map Text.Text Runtime.Value
+type Storage = Map.Map Text.Text Runtime.Value
+
+type Scope = IORef.IORef Storage
 
 data Values = Global Scope | Local Scope Values
 
 type Interpreter a = Runtime.Interpreter IO Values a
 
-make :: Values
-make = Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
+make :: IO Values
+make = do
+  m <- IORef.newIORef $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
+  pure $ Global m
 
 globals :: Interpreter Values
 globals = globals' <$> State.get
@@ -24,28 +30,31 @@ globals = globals' <$> State.get
 get :: (Text.Text, Int) -> Interpreter Runtime.Value
 get (name, loc) = do
   env <- State.get
-  case get' name env of
+  maybeValue <- Trans.liftIO $ get' name env
+  case maybeValue of
     Just value -> pure value
     Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
 define :: Text.Text -> Runtime.Value -> Interpreter ()
 define name value = do
   env <- State.get
-  State.put $ case env of
-    Global scope -> Global $ Map.insert name value scope
-    Local scope parent -> Local (Map.insert name value scope) parent
+  Trans.liftIO $ case env of
+    Global scope -> insert name value scope
+    Local scope _ -> insert name value scope
 
 assign :: (Text.Text, Int) -> Runtime.Value -> Interpreter ()
 assign (name, loc) value = do
   env <- State.get
-  case assign' name value env of
-    Just assigned -> State.put assigned
-    Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
+  assigned <- Trans.liftIO $ assign' name value env
+  if assigned
+    then pure ()
+    else reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
 push :: Interpreter ()
 push = do
   env <- State.get
-  State.put $ Local Map.empty env
+  scope <- Trans.liftIO $ IORef.newIORef Map.empty
+  State.put $ Local scope env
 
 pop :: Interpreter ()
 pop = do
@@ -55,26 +64,43 @@ pop = do
     Global _ -> reportError 0 "Can not pop global environment."
 
 globals' :: Values -> Values
-globals' env = case env of
-  Global scope -> Global scope
-  Local _ parent -> globals' parent
+globals' env = do
+  case env of
+    Global scope -> Global scope
+    Local _ parent -> globals' parent
 
-get' :: Text.Text -> Values -> Maybe Runtime.Value
+get' :: Text.Text -> Values -> IO (Maybe Runtime.Value)
 get' name env = case env of
-  Global scope -> Map.lookup name scope
-  Local scope parent -> case Map.lookup name scope of
-    Just value -> Just value
-    Nothing -> get' name parent
+  Global scope -> Runtime.Environment.lookup name scope
+  Local scope parent -> do
+    maybeValue <- Runtime.Environment.lookup name scope
+    case maybeValue of
+      Just value -> pure $ Just value
+      Nothing -> get' name parent
 
-assign' :: Text.Text -> Runtime.Value -> Values -> Maybe Values
-assign' name value (Global scope) = case Map.lookup name scope of
-  Just _ -> Just . Global $ Map.insert name value scope
-  Nothing -> Nothing
-assign' name value (Local scope parent) = case Map.lookup name scope of
-  Just _ -> Just $ Local (Map.insert name value scope) parent
-  Nothing -> case assign' name value parent of
-    Just assigned -> Just $ Local scope assigned
-    Nothing -> Nothing
+assign' :: Text.Text -> Runtime.Value -> Values -> IO Bool
+assign' name value (Global scope) = do
+  maybeValue <- Runtime.Environment.lookup name scope
+  case maybeValue of
+    Just _ -> do
+      insert name value scope
+      pure True
+    Nothing -> pure False
+assign' name value (Local scope parent) = do
+  maybeValue <- Runtime.Environment.lookup name scope
+  case maybeValue of
+    Just _ -> do
+      insert name value scope
+      pure True
+    Nothing -> assign' name value parent
+
+insert :: Text.Text -> Runtime.Value -> Scope -> IO ()
+insert name value scope = IORef.modifyIORef scope (Map.insert name value)
+
+lookup :: Text.Text -> Scope -> IO (Maybe Runtime.Value)
+lookup name scope = do
+  storage <- IORef.readIORef scope
+  pure $ Map.lookup name storage
 
 reportError :: Int -> Text.Text -> Interpreter a
 reportError loc = Except.throwError . Error.RuntimeError loc
