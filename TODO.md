@@ -2,6 +2,7 @@
 
 Some notes or ideas what maybe could be improved.
 
+- type for native functions, including name, ..., `fn :: ([Value] -> Value)` or similar
 - move Expr.VariableName to new identifier module and use in environment etc
 - move location to extra module ? ^^^ ???
 - add missing location information

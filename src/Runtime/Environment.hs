@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Environment (Environment, assign, define, get, globals, make, pop, push) where
+module Runtime.Environment (Values, assign, define, get, globals, make, pop, push) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -9,70 +9,72 @@ import qualified Data.Text as Text
 import qualified Error
 import qualified Runtime.Types as Runtime
 
-type Environment = State.StateT Runtime.Values
+type Scope = Map.Map Text.Text Runtime.Value
 
-type Environment' m a = Except.ExceptT Error.Error (Environment m) a
+data Values = Global Scope | Local Scope Values
 
-make :: Runtime.Values
-make = Runtime.Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
+type Interpreter a = Runtime.Interpreter IO Values a
 
-globals :: (Monad m) => Environment m Runtime.Values
+make :: Values
+make = Global $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
+
+globals :: Interpreter Values
 globals = globals' <$> State.get
 
-get :: (Monad m) => (Text.Text, Int) -> Environment' m Runtime.Value
+get :: (Text.Text, Int) -> Interpreter Runtime.Value
 get (name, loc) = do
   env <- State.get
   case get' name env of
     Just value -> pure value
     Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
-define :: (Monad m) => Text.Text -> Runtime.Value -> Environment m ()
+define :: Text.Text -> Runtime.Value -> Interpreter ()
 define name value = do
   env <- State.get
   State.put $ case env of
-    Runtime.Global scope -> Runtime.Global $ Map.insert name value scope
-    Runtime.Local scope parent -> Runtime.Local (Map.insert name value scope) parent
+    Global scope -> Global $ Map.insert name value scope
+    Local scope parent -> Local (Map.insert name value scope) parent
 
-assign :: (Monad m) => (Text.Text, Int) -> Runtime.Value -> Environment' m ()
+assign :: (Text.Text, Int) -> Runtime.Value -> Interpreter ()
 assign (name, loc) value = do
   env <- State.get
   case assign' name value env of
     Just assigned -> State.put assigned
     Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
 
-push :: (Monad m) => Environment m ()
+push :: Interpreter ()
 push = do
   env <- State.get
-  State.put $ Runtime.Local Map.empty env
+  State.put $ Local Map.empty env
 
-pop :: (Monad m) => Environment' m ()
+pop :: Interpreter ()
 pop = do
   env <- State.get
   case env of
-    Runtime.Local _ parent -> State.put parent
-    Runtime.Global _ -> reportError 0 "Can not pop global environment."
+    Local _ parent -> State.put parent
+    Global _ -> reportError 0 "Can not pop global environment."
 
-globals' :: Runtime.Values -> Runtime.Values
+globals' :: Values -> Values
 globals' env = case env of
-  Runtime.Global scope -> Runtime.Global scope
-  Runtime.Local _ parent -> globals' parent
+  Global scope -> Global scope
+  Local _ parent -> globals' parent
 
-get' :: Text.Text -> Runtime.Values -> Maybe Runtime.Value
+get' :: Text.Text -> Values -> Maybe Runtime.Value
 get' name env = case env of
-  Runtime.Global scope -> Map.lookup name scope
-  Runtime.Local scope parent -> case Map.lookup name scope of
+  Global scope -> Map.lookup name scope
+  Local scope parent -> case Map.lookup name scope of
     Just value -> Just value
     Nothing -> get' name parent
 
-assign' :: Text.Text -> Runtime.Value -> Runtime.Values -> Maybe Runtime.Values
-assign' name value (Runtime.Global scope) = case Map.lookup name scope of
-  Just _ -> Just . Runtime.Global $ Map.insert name value scope
+assign' :: Text.Text -> Runtime.Value -> Values -> Maybe Values
+assign' name value (Global scope) = case Map.lookup name scope of
+  Just _ -> Just . Global $ Map.insert name value scope
   Nothing -> Nothing
-assign' name value (Runtime.Local scope parent) = case Map.lookup name scope of
-  Just _ -> Just $ Runtime.Local (Map.insert name value scope) parent
+assign' name value (Local scope parent) = case Map.lookup name scope of
+  Just _ -> Just $ Local (Map.insert name value scope) parent
   Nothing -> case assign' name value parent of
-    Just assigned -> Just $ Runtime.Local scope assigned
+    Just assigned -> Just $ Local scope assigned
     Nothing -> Nothing
 
-reportError :: (Monad m) => Int -> Text.Text -> Environment' m a
+reportError :: Int -> Text.Text -> Interpreter a
 reportError loc = Except.throwError . Error.RuntimeError loc

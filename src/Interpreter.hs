@@ -17,7 +17,7 @@ import qualified Runtime.Native as Native
 import qualified Runtime.Types as Runtime
 import qualified Stmt
 
-type Interpreter a = Except.ExceptT Error.Error (Env.Environment IO) a
+type Interpreter a = Runtime.Interpreter IO Env.Values a
 
 data Result = Continue | Return Runtime.Value
 
@@ -46,7 +46,7 @@ statement (Stmt.Print expr) = do
   pure Continue
 statement (Stmt.Variable name expr) = do
   value <- evaluate expr
-  Trans.lift $ Env.define name value
+  Env.define name value
   pure Continue
 statement (Stmt.Block block) = do
   executeBlock block
@@ -68,14 +68,14 @@ statement stmt@(Stmt.While condition body) = do
         Return value -> pure $ Return value
     else pure Continue
 statement (Stmt.Function name params body) = do
-  Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function name params body)
+  Env.define name $ Runtime.Callable (Runtime.Function name params body)
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
 
 executeBlock :: [Stmt.Stmt] -> Interpreter Result
 executeBlock stmts = do
-  Trans.lift Env.push
+  Env.push
   result <- execute stmts
   Env.pop
   pure result
@@ -164,11 +164,11 @@ checkArity declaration args loc = do
 
 bindParameters :: [(Text.Text, Runtime.Value)] -> Interpreter ()
 bindParameters = do
-  mapM_ (\(name, value) -> Trans.lift $ Env.define name value)
+  mapM_ (uncurry Env.define)
 
 withGlobals :: Interpreter a -> Interpreter a
 withGlobals action = do
-  globals <- Trans.lift Env.globals
+  globals <- Env.globals
   original <- State.get
   State.put globals
   result <- action
