@@ -17,15 +17,15 @@ library
 
     exposed-modules:
         HLox,
-        Environment,
         Error,
         Expr,
         Interpreter,
         Literal,
         Lox,
-        Native,
         Parser,
-        Runtime,
+        Runtime.Environment,
+        Runtime.Native,
+        Runtime.Types,
         Scanner,
         Stmt,
         Token

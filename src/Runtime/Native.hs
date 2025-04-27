@@ -1,7 +1,7 @@
-module Native (clock) where
+module Runtime.Native (clock) where
 
 import qualified Data.Time.Clock.System as Clock
-import qualified Runtime
+import qualified Runtime.Types as Runtime
 
 clock :: IO Runtime.Value
 clock = do

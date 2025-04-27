@@ -7,14 +7,14 @@ import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans as Trans
 import qualified Data.Text as Text
-import qualified Environment as Env
 import qualified Error
 import qualified Expr
 import qualified Literal
 import qualified Lox
-import qualified Native
 import qualified Numeric
-import qualified Runtime
+import qualified Runtime.Environment as Env
+import qualified Runtime.Native as Native
+import qualified Runtime.Types as Runtime
 import qualified Stmt
 
 type Interpreter a = Except.ExceptT Error.Error (Env.Environment IO) a
