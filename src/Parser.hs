@@ -2,9 +2,11 @@
 
 module Parser (parse) where
 
+import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Data.List as List
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Error
 import qualified Expr
@@ -380,21 +382,21 @@ whileCall expr = do
   isParen <- matchToken Token.LeftParen
   if isParen
     then do
-      args <- arguments
+      (args, loc) <- arguments
       if length args > 255
         then reportError "Can't have more than 255 arguments."
-        else whileCall $ Expr.Call expr args
+        else whileCall $ Expr.Call expr args loc
     else pure expr
 
-arguments :: Parser [Expr.Expr]
+arguments :: Parser ([Expr.Expr], Expr.Location)
 arguments = do
-  isEmpty <- matchToken Token.RightParen
-  if isEmpty
-    then pure []
-    else do
+  maybeParen <- matchTokenAt Token.RightParen
+  case maybeParen of
+    Just paren -> pure ([], paren)
+    Nothing -> do
       args <- whileArguments
-      expectToken Token.RightParen "Expect ')' after arguments."
-      pure args
+      location <- expectTokenAt Token.RightParen "Expect ')' after arguments."
+      pure (args, location)
 
 whileArguments :: Parser [Expr.Expr]
 whileArguments = do
@@ -437,10 +439,10 @@ identifier :: Token.Token -> Maybe (Text.Text, Expr.Location)
 identifier (Token.Token (Token.Identifier name) _ line) = Just (name, line)
 identifier _ = Nothing
 
-isToken :: Token.TokenType -> Token.Token -> Maybe ()
+isToken :: Token.TokenType -> Token.Token -> Maybe Token.Token
 isToken tType token =
   if tType == Token.tType token
-    then Just ()
+    then Just token
     else Nothing
 
 anyOf :: [Token.TokenType] -> Token.Token -> Maybe Token.TokenType
@@ -463,16 +465,23 @@ expect check msg = do
 
 matchToken :: Token.TokenType -> Parser Bool
 matchToken expected = do
-  m <- advance $ isToken expected
-  pure $ case m of
-    Just _ -> True
-    Nothing -> False
+  m <- matchTokenAt expected
+  pure $ Maybe.isJust m
 
 expectToken :: Token.TokenType -> Text.Text -> Parser ()
 expectToken expected msg = do
+  Monad.void $ expectTokenAt expected msg
+
+matchTokenAt :: Token.TokenType -> Parser (Maybe Expr.Location)
+matchTokenAt expected = do
+  m <- advance $ isToken expected
+  pure $ fmap Token.tLine m
+
+expectTokenAt :: Token.TokenType -> Text.Text -> Parser Expr.Location
+expectTokenAt expected msg = do
   m <- advance $ isToken expected
   case m of
-    Just _ -> pure ()
+    Just t -> pure $ Token.tLine t
     Nothing -> reportError msg
 
 advance :: (Token.Token -> Maybe a) -> Parser (Maybe a)

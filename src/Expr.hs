@@ -6,7 +6,7 @@ import qualified Literal
 data Expr
   = Assign {assignName :: VariableName, assignExpr :: Expr}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
-  | Call {callCallee :: Expr, callArguments :: [Expr]}
+  | Call {callCallee :: Expr, callArguments :: [Expr], callLocation :: Location}
   | Grouping Expr
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}

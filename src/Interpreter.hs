@@ -94,10 +94,10 @@ evaluate (Expr.Assign (Expr.VariableName name loc) expr) = do
   Env.assign (name, loc) value
   pure value
 evaluate (Expr.Logical op l r) = evalLogical op l r
-evaluate (Expr.Call calleeExpr args) = do
+evaluate (Expr.Call calleeExpr args loc) = do
   callee <- evaluate calleeExpr
   argValues <- mapM evaluate args
-  invoke callee argValues
+  invoke callee argValues loc
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Interpreter Runtime.Value
 evalUnary (Expr.Operator Expr.Neg _) (Runtime.Number n) = pure $ Runtime.Number (-n)
@@ -135,9 +135,9 @@ literal (Literal.Boolean b) = Runtime.Boolean b
 literal (Literal.Number n) = Runtime.Number n
 literal (Literal.String s) = Runtime.String s
 
-invoke :: Runtime.Value -> [Runtime.Value] -> Interpreter Runtime.Value
-invoke (Runtime.Callable declaration) args = do
-  checkArity declaration args
+invoke :: Runtime.Value -> [Runtime.Value] -> Expr.Location -> Interpreter Runtime.Value
+invoke (Runtime.Callable declaration) args loc = do
+  checkArity declaration args loc
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
     Runtime.Function params body -> do
@@ -147,13 +147,13 @@ invoke (Runtime.Callable declaration) args = do
       case result of
         Continue -> pure Runtime.Nil
         Return value -> pure value
-invoke _ _ = reportError 0 "Can only call functions and classes."
+invoke _ _ loc = reportError loc "Can only call functions and classes."
 
-checkArity :: Runtime.Declaration -> [a] -> Interpreter ()
-checkArity declaration args = do
+checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()
+checkArity declaration args loc = do
   let arity = Runtime.arity declaration
   Monad.when (arity /= length args) $
-    reportError 0 $
+    reportError loc $
       Text.concat
         [ "Expected ",
           Text.pack . show $ arity,
