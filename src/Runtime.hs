@@ -14,7 +14,8 @@ data Value
 data Declaration
   = Clock
   | Function
-      { funParameters :: [Text.Text],
+      { funName :: Text.Text,
+        funParameters :: [Text.Text],
         funBody :: [Stmt.Stmt]
       }
   deriving (Eq, Show)

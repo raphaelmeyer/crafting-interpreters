@@ -68,7 +68,7 @@ statement stmt@(Stmt.While condition body) = do
         Return value -> pure $ Return value
     else pure Continue
 statement (Stmt.Function name params body) = do
-  Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function params body)
+  Trans.lift . Env.define name $ Runtime.Callable (Runtime.Function name params body)
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
@@ -140,7 +140,7 @@ invoke (Runtime.Callable declaration) args loc = do
   checkArity declaration args loc
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
-    Runtime.Function params body -> do
+    Runtime.Function _ params body -> do
       result <- withGlobals $ do
         bindParameters $ zip params args
         executeBlock body
@@ -188,4 +188,5 @@ toString (Runtime.Boolean b) = if b then "true" else "false"
 toString Runtime.Nil = "nil"
 toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
-toString (Runtime.Callable _) = "<Function Object>"
+toString (Runtime.Callable Runtime.Clock) = "<native fn>"
+toString (Runtime.Callable (Runtime.Function name _ _)) = "<fn " ++ Text.unpack name ++ ">"
