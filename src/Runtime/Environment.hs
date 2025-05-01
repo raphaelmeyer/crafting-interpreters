@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Environment (Values, assign, define, get, globals, make, pop, push) where
+module Runtime.Environment (assign, current, define, get, globals, make, pop, push) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -11,21 +11,18 @@ import qualified Data.Text as Text
 import qualified Error
 import qualified Runtime.Types as Runtime
 
-type Storage = Map.Map Text.Text Runtime.Value
+type Interpreter a = Runtime.Interpreter IO a
 
-type Scope = IORef.IORef Storage
-
-data Values = Global Scope | Local Scope Values
-
-type Interpreter a = Runtime.Interpreter IO Values a
-
-make :: IO Values
+make :: IO Runtime.Environment
 make = do
   m <- IORef.newIORef $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
-  pure $ Global m
+  pure $ Runtime.Global m
 
-globals :: Interpreter Values
+globals :: Interpreter Runtime.Environment
 globals = globals' <$> State.get
+
+current :: Interpreter Runtime.Environment
+current = State.get
 
 get :: (Text.Text, Int) -> Interpreter Runtime.Value
 get (name, loc) = do
@@ -39,8 +36,8 @@ define :: Text.Text -> Runtime.Value -> Interpreter ()
 define name value = do
   env <- State.get
   Trans.liftIO $ case env of
-    Global scope -> insert name value scope
-    Local scope _ -> insert name value scope
+    Runtime.Global scope -> insert name value scope
+    Runtime.Local scope _ -> insert name value scope
 
 assign :: (Text.Text, Int) -> Runtime.Value -> Interpreter ()
 assign (name, loc) value = do
@@ -54,39 +51,39 @@ push :: Interpreter ()
 push = do
   env <- State.get
   scope <- Trans.liftIO $ IORef.newIORef Map.empty
-  State.put $ Local scope env
+  State.put $ Runtime.Local scope env
 
 pop :: Interpreter ()
 pop = do
   env <- State.get
   case env of
-    Local _ parent -> State.put parent
-    Global _ -> reportError 0 "Can not pop global environment."
+    Runtime.Local _ parent -> State.put parent
+    Runtime.Global _ -> reportError 0 "Can not pop global environment."
 
-globals' :: Values -> Values
+globals' :: Runtime.Environment -> Runtime.Environment
 globals' env = do
   case env of
-    Global scope -> Global scope
-    Local _ parent -> globals' parent
+    Runtime.Global scope -> Runtime.Global scope
+    Runtime.Local _ parent -> globals' parent
 
-get' :: Text.Text -> Values -> IO (Maybe Runtime.Value)
+get' :: Text.Text -> Runtime.Environment -> IO (Maybe Runtime.Value)
 get' name env = case env of
-  Global scope -> Runtime.Environment.lookup name scope
-  Local scope parent -> do
+  Runtime.Global scope -> Runtime.Environment.lookup name scope
+  Runtime.Local scope parent -> do
     maybeValue <- Runtime.Environment.lookup name scope
     case maybeValue of
       Just value -> pure $ Just value
       Nothing -> get' name parent
 
-assign' :: Text.Text -> Runtime.Value -> Values -> IO Bool
-assign' name value (Global scope) = do
+assign' :: Text.Text -> Runtime.Value -> Runtime.Environment -> IO Bool
+assign' name value (Runtime.Global scope) = do
   maybeValue <- Runtime.Environment.lookup name scope
   case maybeValue of
     Just _ -> do
       insert name value scope
       pure True
     Nothing -> pure False
-assign' name value (Local scope parent) = do
+assign' name value (Runtime.Local scope parent) = do
   maybeValue <- Runtime.Environment.lookup name scope
   case maybeValue of
     Just _ -> do
@@ -94,10 +91,10 @@ assign' name value (Local scope parent) = do
       pure True
     Nothing -> assign' name value parent
 
-insert :: Text.Text -> Runtime.Value -> Scope -> IO ()
+insert :: Text.Text -> Runtime.Value -> Runtime.Scope -> IO ()
 insert name value scope = IORef.modifyIORef scope (Map.insert name value)
 
-lookup :: Text.Text -> Scope -> IO (Maybe Runtime.Value)
+lookup :: Text.Text -> Runtime.Scope -> IO (Maybe Runtime.Value)
 lookup name scope = do
   storage <- IORef.readIORef scope
   pure $ Map.lookup name storage

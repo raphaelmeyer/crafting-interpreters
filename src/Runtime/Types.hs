@@ -1,7 +1,11 @@
+{-# LANGUAGE InstanceSigs #-}
+
 module Runtime.Types where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
+import qualified Data.IORef as IORef
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Error
 import qualified Stmt
@@ -19,12 +23,24 @@ data Declaration
   | Function
       { funName :: Text.Text,
         funParameters :: [Text.Text],
-        funBody :: [Stmt.Stmt]
+        funBody :: [Stmt.Stmt],
+        funClosure :: Environment
       }
   deriving (Eq, Show)
+
+type Storage = Map.Map Text.Text Value
+
+type Scope = IORef.IORef Storage
+
+data Environment = Global Scope | Local Scope Environment deriving (Eq)
 
 arity :: Declaration -> Int
 arity Clock = 0
 arity Function {funParameters = params} = length params
 
-type Interpreter m v a = Except.ExceptT Error.Error (State.StateT v m) a
+type Interpreter m a = Except.ExceptT Error.Error (State.StateT Environment m) a
+
+instance Show Environment where
+  show :: Environment -> String
+  show (Global _) = "Global"
+  show (Local _ parent) = "Local { " ++ show parent ++ " }"

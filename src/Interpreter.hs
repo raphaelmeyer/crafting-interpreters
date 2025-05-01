@@ -17,7 +17,7 @@ import qualified Runtime.Native as Native
 import qualified Runtime.Types as Runtime
 import qualified Stmt
 
-type Interpreter a = Runtime.Interpreter IO Env.Values a
+type Interpreter a = Runtime.Interpreter IO a
 
 data Result = Continue | Return Runtime.Value
 
@@ -69,7 +69,8 @@ statement stmt@(Stmt.While condition body) = do
         Return value -> pure $ Return value
     else pure Continue
 statement (Stmt.Function name params body) = do
-  Env.define name $ Runtime.Callable (Runtime.Function name params body)
+  closure <- Env.current
+  Env.define name $ Runtime.Callable (Runtime.Function name params body closure)
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
@@ -141,8 +142,8 @@ invoke (Runtime.Callable declaration) args loc = do
   checkArity declaration args loc
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
-    Runtime.Function _ params body -> do
-      result <- withGlobals $ do
+    Runtime.Function _ params body closure -> do
+      result <- withEnvironment closure $ do
         bindParameters $ zip params args
         executeBlock body
       case result of
@@ -167,11 +168,10 @@ bindParameters :: [(Text.Text, Runtime.Value)] -> Interpreter ()
 bindParameters = do
   mapM_ (uncurry Env.define)
 
-withGlobals :: Interpreter a -> Interpreter a
-withGlobals action = do
-  globals <- Env.globals
+withEnvironment :: Runtime.Environment -> Interpreter a -> Interpreter a
+withEnvironment env action = do
   original <- State.get
-  State.put globals
+  State.put env
   Env.push
   result <- action
   State.put original
@@ -191,4 +191,4 @@ toString Runtime.Nil = "nil"
 toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
-toString (Runtime.Callable (Runtime.Function name _ _)) = "<fn " ++ Text.unpack name ++ ">"
+toString (Runtime.Callable (Runtime.Function name _ _ _)) = "<fn " ++ Text.unpack name ++ ">"
