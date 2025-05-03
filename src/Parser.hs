@@ -72,7 +72,7 @@ function = do
       expectToken Token.LeftBrace "Expect '{' before function body."
       Stmt.Function name params <$> whileBlock
 
-parameters :: Parser [Text.Text]
+parameters :: Parser [Expr.Identifier]
 parameters = do
   isEmpty <- matchToken Token.RightParen
   if isEmpty
@@ -82,7 +82,7 @@ parameters = do
       expectToken Token.RightParen "Expect ')' after parameters."
       pure params
 
-whileParameters :: Parser [Text.Text]
+whileParameters :: Parser [Expr.Identifier]
 whileParameters = do
   (param, _) <- expect identifier "Expect parameter name."
   isComma <- matchToken Token.Comma
@@ -94,9 +94,9 @@ whileParameters = do
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
-  (name, _) <- expect identifier "Expect variable name."
+  (name, loc) <- expect identifier "Expect variable name."
   isAssign <- matchToken Token.Equal
-  value <- if isAssign then expression else pure $ Expr.Literal Literal.Nil
+  value <- if isAssign then expression else pure $ Expr.Expr (Expr.Literal Literal.Nil) loc
   expectToken Token.SemiColon "Expect ';' after variable declaration."
   pure $ Stmt.Variable name value
 
@@ -138,10 +138,10 @@ forInitializer = do
 
 forCondition :: ExprParser
 forCondition = do
-  noCondition <- matchToken Token.SemiColon
-  if noCondition
-    then pure $ Expr.Literal (Literal.Boolean True)
-    else do
+  noCondition <- matchTokenAt Token.SemiColon
+  case noCondition of
+    Just loc -> pure $ Expr.Expr (Expr.Literal (Literal.Boolean True)) loc
+    Nothing -> do
       condition <- expression
       expectToken Token.SemiColon "Expect ';' after loop condition."
       pure condition
@@ -177,10 +177,10 @@ printStatement = do
 
 returnStatement :: StmtParser
 returnStatement = do
-  isEmpty <- matchToken Token.SemiColon
-  if isEmpty
-    then pure . Stmt.Return . Expr.Literal $ Literal.Nil
-    else do
+  isEmpty <- matchTokenAt Token.SemiColon
+  case isEmpty of
+    Just loc -> pure . Stmt.Return $ Expr.Expr (Expr.Literal Literal.Nil) loc
+    Nothing -> do
       value <- expression
       expectToken Token.SemiColon "Expect ';' after return value."
       pure $ Stmt.Return value
@@ -226,7 +226,7 @@ assignment = do
     Just assign -> do
       value <- assignment
       case expr of
-        (Expr.Variable variable) -> pure $ Expr.Assign variable value
+        Expr.Expr (Expr.Variable variable) loc -> pure $ Expr.Expr (Expr.Assign variable value) loc
         _ -> reportErrorWithToken assign "Invalid assignment target."
     Nothing -> pure expr
 
@@ -245,9 +245,9 @@ whileLogicalOr :: Expr.Expr -> ExprParser
 whileLogicalOr expr = do
   maybeOr <- match $ mkOperator [(Token.Or, Expr.Or)]
   case maybeOr of
-    Just op -> do
+    Just (op, loc) -> do
       right <- logicalAnd
-      whileLogicalOr $ Expr.Logical op expr right
+      whileLogicalOr $ Expr.Expr (Expr.Logical op expr right) loc
     Nothing -> pure expr
 
 logicalAnd :: ExprParser
@@ -259,9 +259,9 @@ whileLogicalAnd :: Expr.Expr -> ExprParser
 whileLogicalAnd expr = do
   maybeAnd <- match $ mkOperator [(Token.And, Expr.And)]
   case maybeAnd of
-    Just op -> do
+    Just (op, loc) -> do
       right <- equality
-      whileLogicalAnd $ Expr.Logical op expr right
+      whileLogicalAnd $ Expr.Expr (Expr.Logical op expr right) loc
     Nothing -> pure expr
 
 equality :: ExprParser
@@ -273,12 +273,12 @@ whileEquality :: Expr.Expr -> ExprParser
 whileEquality expr = do
   maybeOp <- match equalityOp
   case maybeOp of
-    Just op -> do
+    Just (op, loc) -> do
       right <- comparison
-      whileEquality $ Expr.Binary op expr right
+      whileEquality $ Expr.Expr (Expr.Binary op expr right) loc
     Nothing -> pure expr
 
-equalityOp :: Token.Token -> Maybe Expr.BinaryOp
+equalityOp :: Token.Token -> Maybe (Expr.BinaryOp, Expr.Location)
 equalityOp =
   mkOperator
     [ (Token.EqualEqual, Expr.Equal),
@@ -294,12 +294,12 @@ whileComparison :: Expr.Expr -> ExprParser
 whileComparison expr = do
   maybeOp <- match comparisonOp
   case maybeOp of
-    Just op -> do
+    Just (op, loc) -> do
       right <- term
-      whileComparison $ Expr.Binary op expr right
+      whileComparison $ Expr.Expr (Expr.Binary op expr right) loc
     Nothing -> pure expr
 
-comparisonOp :: Token.Token -> Maybe Expr.BinaryOp
+comparisonOp :: Token.Token -> Maybe (Expr.BinaryOp, Expr.Location)
 comparisonOp =
   mkOperator
     [ (Token.Greater, Expr.Greater),
@@ -317,12 +317,12 @@ whileTerm :: Expr.Expr -> ExprParser
 whileTerm expr = do
   maybeOp <- match termOp
   case maybeOp of
-    Just op -> do
+    Just (op, loc) -> do
       right <- factor
-      whileTerm $ Expr.Binary op expr right
+      whileTerm $ Expr.Expr (Expr.Binary op expr right) loc
     Nothing -> pure expr
 
-termOp :: Token.Token -> Maybe Expr.BinaryOp
+termOp :: Token.Token -> Maybe (Expr.BinaryOp, Expr.Location)
 termOp =
   mkOperator
     [ (Token.Minus, Expr.Minus),
@@ -338,12 +338,12 @@ whileFactor :: Expr.Expr -> ExprParser
 whileFactor expr = do
   maybeOp <- match factorOp
   case maybeOp of
-    Just op -> do
+    Just (op, loc) -> do
       right <- unary
-      whileFactor $ Expr.Binary op expr right
+      whileFactor $ Expr.Expr (Expr.Binary op expr right) loc
     Nothing -> pure expr
 
-factorOp :: Token.Token -> Maybe Expr.BinaryOp
+factorOp :: Token.Token -> Maybe (Expr.BinaryOp, Expr.Location)
 factorOp =
   mkOperator
     [ (Token.Slash, Expr.Div),
@@ -354,21 +354,22 @@ unary :: ExprParser
 unary = do
   maybeOp <- match unaryOp
   case maybeOp of
-    Just op -> do
-      Expr.Unary op <$> unary
+    Just (op, loc) -> do
+      expr <- unary
+      pure $ Expr.Expr (Expr.Unary op expr) loc
     Nothing -> call
 
-unaryOp :: Token.Token -> Maybe Expr.UnaryOp
+unaryOp :: Token.Token -> Maybe (Expr.UnaryOp, Expr.Location)
 unaryOp =
   mkOperator
     [ (Token.Bang, Expr.Not),
       (Token.Minus, Expr.Neg)
     ]
 
-mkOperator :: [(Token.TokenType, a)] -> Token.Token -> Maybe (Expr.Operator a)
+mkOperator :: [(Token.TokenType, a)] -> Token.Token -> Maybe (a, Expr.Location)
 mkOperator ((tType, op) : types) t =
   if tType == Token.tType t
-    then Just $ Expr.Operator op (Token.tLine t)
+    then Just (op, Token.tLine t)
     else mkOperator types t
 mkOperator [] _ = Nothing
 
@@ -385,14 +386,14 @@ whileCall expr = do
       (args, loc) <- arguments
       if length args > 255
         then reportError "Can't have more than 255 arguments."
-        else whileCall $ Expr.Call expr args loc
+        else whileCall $ Expr.Expr (Expr.Call expr args) loc
     else pure expr
 
 arguments :: Parser ([Expr.Expr], Expr.Location)
 arguments = do
   maybeParen <- matchTokenAt Token.RightParen
   case maybeParen of
-    Just paren -> pure ([], paren)
+    Just loc -> pure ([], loc)
     Nothing -> do
       args <- whileArguments
       location <- expectTokenAt Token.RightParen "Expect ')' after arguments."
@@ -412,30 +413,32 @@ primary :: ExprParser
 primary = do
   maybeLiteral <- match literal
   case maybeLiteral of
-    Just l -> pure $ Expr.Literal l
+    Just (l, loc) -> pure $ Expr.Expr (Expr.Literal l) loc
     Nothing -> do
       maybeIdentifier <- match identifier
       case maybeIdentifier of
-        Just (name, loc) -> pure $ Expr.Variable (Expr.VariableName name loc)
+        Just (name, loc) -> pure $ Expr.Expr (Expr.Variable name) loc
         Nothing -> grouping
 
 grouping :: ExprParser
 grouping = do
-  expectToken Token.LeftParen "Expect expression."
+  loc <- expectTokenAt Token.LeftParen "Expect expression."
   expr <- expression
   expectToken Token.RightParen "Expect ')' after expression."
-  pure $ Expr.Grouping expr
+  pure $ Expr.Expr (Expr.Grouping expr) loc
 
-literal :: Token.Token -> Maybe Literal.Value
+literal :: Token.Token -> Maybe (Literal.Value, Expr.Location)
 literal t = case Token.tType t of
-  Token.False -> Just $ Literal.Boolean False
-  Token.True -> Just $ Literal.Boolean True
-  Token.Nil -> Just Literal.Nil
-  (Token.Number n) -> Just $ Literal.Number n
-  (Token.String s) -> Just $ Literal.String s
+  Token.False -> mkLiteral $ Literal.Boolean False
+  Token.True -> mkLiteral $ Literal.Boolean True
+  Token.Nil -> mkLiteral Literal.Nil
+  (Token.Number n) -> mkLiteral $ Literal.Number n
+  (Token.String s) -> mkLiteral $ Literal.String s
   _ -> Nothing
+  where
+    mkLiteral l = Just (l, Token.tLine t)
 
-identifier :: Token.Token -> Maybe (Text.Text, Expr.Location)
+identifier :: Token.Token -> Maybe (Expr.Identifier, Expr.Location)
 identifier (Token.Token (Token.Identifier name) _ line) = Just (name, line)
 identifier _ = Nothing
 
@@ -503,11 +506,9 @@ isAtEnd p = case List.uncons . pTokens $ p of
 reportError :: Text.Text -> Parser a
 reportError e = do
   p <- State.get
-  Except.throwError . newError $ p
-  where
-    newError p = case List.uncons . pTokens $ p of
-      Just (t, _) -> Error.ParseError (Token.tLine t) (Token.tLexeme t) e
-      Nothing -> Error.ParseError 0 "EOF" e
+  case List.uncons . pTokens $ p of
+    Just (t, _) -> reportErrorWithToken t e
+    Nothing -> Except.throwError $ Error.ParseError 0 "EOF" e
 
 reportErrorWithToken :: Token.Token -> Text.Text -> Parser a
 reportErrorWithToken t e = Except.throwError $ Error.ParseError (Token.tLine t) (Token.tLexeme t) e

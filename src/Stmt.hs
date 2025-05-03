@@ -1,14 +1,13 @@
 module Stmt where
 
-import qualified Data.Text as Text
 import qualified Expr
 
 data Stmt
   = Block [Stmt]
   | Expression Expr.Expr
   | Function
-      { funName :: Text.Text,
-        funParameters :: [Text.Text],
+      { funName :: Expr.Identifier,
+        funParameters :: [Expr.Identifier],
         funBody :: [Stmt]
       }
   | If
@@ -18,6 +17,6 @@ data Stmt
       }
   | Print Expr.Expr
   | Return Expr.Expr
-  | Variable Text.Text Expr.Expr
+  | Variable Expr.Identifier Expr.Expr
   | While Expr.Expr Stmt
   deriving (Eq, Show)

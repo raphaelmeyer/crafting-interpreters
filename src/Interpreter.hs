@@ -83,34 +83,36 @@ executeBlock stmts = do
   pure result
 
 evaluate :: Expr.Expr -> Interpreter Runtime.Value
-evaluate (Expr.Literal l) = pure $ literal l
-evaluate (Expr.Grouping g) = evaluate g
-evaluate (Expr.Unary op r) = evaluate r >>= evalUnary op
-evaluate (Expr.Binary op l r) = do
+evaluate (Expr.Expr (Expr.Literal l) _) = pure $ literal l
+evaluate (Expr.Expr (Expr.Grouping g) _) = evaluate g
+evaluate (Expr.Expr (Expr.Unary op r) loc) = do
+  right <- evaluate r
+  evalUnary op right loc
+evaluate (Expr.Expr (Expr.Binary op l r) loc) = do
   left <- evaluate l
   right <- evaluate r
-  evalBinary op left right
-evaluate (Expr.Variable (Expr.VariableName name loc)) = Env.get (name, loc)
-evaluate (Expr.Assign (Expr.VariableName name loc) expr) = do
+  evalBinary op left right loc
+evaluate (Expr.Expr (Expr.Variable name) loc) = Env.get (name, loc)
+evaluate (Expr.Expr (Expr.Assign name expr) loc) = do
   value <- evaluate expr
   Env.assign (name, loc) value
   pure value
-evaluate (Expr.Logical op l r) = evalLogical op l r
-evaluate (Expr.Call calleeExpr args loc) = do
+evaluate (Expr.Expr (Expr.Logical op l r) _) = evalLogical op l r
+evaluate (Expr.Expr (Expr.Call calleeExpr args) loc) = do
   callee <- evaluate calleeExpr
   argValues <- mapM evaluate args
   invoke callee argValues loc
 
-evalUnary :: Expr.UnaryOp -> Runtime.Value -> Interpreter Runtime.Value
-evalUnary (Expr.Operator Expr.Neg _) (Runtime.Number n) = pure $ Runtime.Number (-n)
-evalUnary (Expr.Operator Expr.Not _) v = pure . Runtime.Boolean . not . truthy $ v
-evalUnary (Expr.Operator Expr.Neg loc) _ = reportError loc "Operand must be a number."
+evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
+evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
+evalUnary Expr.Not v _ = pure . Runtime.Boolean . not . truthy $ v
+evalUnary Expr.Neg _ loc = reportError loc "Operand must be a number."
 
-evalBinary :: Expr.BinaryOp -> Runtime.Value -> Runtime.Value -> Interpreter Runtime.Value
-evalBinary (Expr.Operator Expr.Equal _) a b = pure $ Runtime.Boolean (a == b)
-evalBinary (Expr.Operator Expr.NotEqual _) a b = pure $ Runtime.Boolean (a /= b)
-evalBinary (Expr.Operator Expr.Plus _) (Runtime.String a) (Runtime.String b) = pure $ Runtime.String (Text.append a b)
-evalBinary (Expr.Operator op _) (Runtime.Number a) (Runtime.Number b) =
+evalBinary :: Expr.BinaryOp -> Runtime.Value -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
+evalBinary Expr.Equal a b _ = pure $ Runtime.Boolean (a == b)
+evalBinary Expr.NotEqual a b _ = pure $ Runtime.Boolean (a /= b)
+evalBinary Expr.Plus (Runtime.String a) (Runtime.String b) _ = pure $ Runtime.String (Text.append a b)
+evalBinary op (Runtime.Number a) (Runtime.Number b) _ =
   pure $ case op of
     Expr.Plus -> Runtime.Number (a + b)
     Expr.Minus -> Runtime.Number (a - b)
@@ -120,14 +122,14 @@ evalBinary (Expr.Operator op _) (Runtime.Number a) (Runtime.Number b) =
     Expr.GreaterEqual -> Runtime.Boolean (a >= b)
     Expr.Less -> Runtime.Boolean (a < b)
     Expr.LessEqual -> Runtime.Boolean (a <= b)
-evalBinary (Expr.Operator Expr.Plus loc) _ _ = reportError loc "Operands must be two numbers or two strings."
-evalBinary (Expr.Operator _ loc) _ _ = reportError loc "Operands must be numbers."
+evalBinary Expr.Plus _ _ loc = reportError loc "Operands must be two numbers or two strings."
+evalBinary _ _ _ loc = reportError loc "Operands must be numbers."
 
 evalLogical :: Expr.LogicalOp -> Expr.Expr -> Expr.Expr -> Interpreter Runtime.Value
-evalLogical (Expr.Operator Expr.Or _) l r = do
+evalLogical Expr.Or l r = do
   a <- evaluate l
   if truthy a then pure a else evaluate r
-evalLogical (Expr.Operator Expr.And _) l r = do
+evalLogical Expr.And l r = do
   a <- evaluate l
   if truthy a then evaluate r else pure a
 

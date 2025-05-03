@@ -3,20 +3,22 @@ module Expr where
 import qualified Data.Text as Text
 import qualified Literal
 
-data Expr
-  = Assign {assignName :: VariableName, assignExpr :: Expr}
+data Expr = Expr Expression Location deriving (Eq, Show)
+
+data Expression
+  = Assign {assignName :: Identifier, assignExpr :: Expr}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
-  | Call {callCallee :: Expr, callArguments :: [Expr], callLocation :: Location}
+  | Call {callCallee :: Expr, callArguments :: [Expr]}
   | Grouping Expr
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
-  | Variable VariableName
+  | Variable Identifier
   deriving (Eq, Show)
 
-data UnaryOperation = Neg | Not deriving (Eq, Show)
+data UnaryOp = Neg | Not deriving (Eq, Show)
 
-data BinaryOperation
+data BinaryOp
   = Plus
   | Minus
   | Mult
@@ -29,16 +31,8 @@ data BinaryOperation
   | GreaterEqual
   deriving (Eq, Show)
 
-data LogicalOperation = And | Or deriving (Eq, Show)
+data LogicalOp = And | Or deriving (Eq, Show)
 
 type Location = Int
 
-data Operator a = Operator a Location deriving (Eq, Show)
-
-type UnaryOp = Operator UnaryOperation
-
-type BinaryOp = Operator BinaryOperation
-
-type LogicalOp = Operator LogicalOperation
-
-data VariableName = VariableName Text.Text Location deriving (Eq, Show)
+type Identifier = Text.Text
