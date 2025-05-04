@@ -66,11 +66,8 @@ function = do
   (name, _) <- expect identifier "Expect function name."
   expectToken Token.LeftParen "Expect '(' after function name."
   params <- parameters
-  if length params > 255
-    then reportError "Can't have more than 255 parameters."
-    else do
-      expectToken Token.LeftBrace "Expect '{' before function body."
-      Stmt.Function name params <$> whileBlock
+  expectToken Token.LeftBrace "Expect '{' before function body."
+  Stmt.Function name params <$> whileBlock
 
 parameters :: Parser [Expr.Identifier]
 parameters = do
@@ -78,19 +75,22 @@ parameters = do
   if isEmpty
     then pure []
     else do
-      params <- whileParameters
+      params <- whileParameters 0
       expectToken Token.RightParen "Expect ')' after parameters."
       pure params
 
-whileParameters :: Parser [Expr.Identifier]
-whileParameters = do
-  (param, _) <- expect identifier "Expect parameter name."
-  isComma <- matchToken Token.Comma
-  if isComma
-    then do
-      params <- whileParameters
-      pure $ param : params
-    else pure [param]
+whileParameters :: Int -> Parser [Expr.Identifier]
+whileParameters count = do
+  if count >= 255
+    then reportError "Can't have more than 255 parameters."
+    else do
+      (param, _) <- expect identifier "Expect parameter name."
+      isComma <- matchToken Token.Comma
+      if isComma
+        then do
+          params <- whileParameters (count + 1)
+          pure $ param : params
+        else pure [param]
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
@@ -384,9 +384,7 @@ whileCall expr = do
   if isParen
     then do
       (args, loc) <- arguments
-      if length args > 255
-        then reportError "Can't have more than 255 arguments."
-        else whileCall $ Expr.Expr (Expr.Call expr args) loc
+      whileCall $ Expr.Expr (Expr.Call expr args) loc
     else pure expr
 
 arguments :: Parser ([Expr.Expr], Expr.Location)
@@ -395,19 +393,22 @@ arguments = do
   case maybeParen of
     Just loc -> pure ([], loc)
     Nothing -> do
-      args <- whileArguments
+      args <- whileArguments 0
       location <- expectTokenAt Token.RightParen "Expect ')' after arguments."
       pure (args, location)
 
-whileArguments :: Parser [Expr.Expr]
-whileArguments = do
-  arg <- expression
-  isComma <- matchToken Token.Comma
-  if isComma
-    then do
-      args <- whileArguments
-      pure $ arg : args
-    else pure [arg]
+whileArguments :: Int -> Parser [Expr.Expr]
+whileArguments count = do
+  if count >= 255
+    then reportError "Can't have more than 255 arguments."
+    else do
+      arg <- expression
+      isComma <- matchToken Token.Comma
+      if isComma
+        then do
+          args <- whileArguments (count + 1)
+          pure $ arg : args
+        else pure [arg]
 
 primary :: ExprParser
 primary = do
@@ -511,7 +512,10 @@ reportError e = do
     Nothing -> Except.throwError $ Error.ParseError 0 "EOF" e
 
 reportErrorWithToken :: Token.Token -> Text.Text -> Parser a
-reportErrorWithToken t e = Except.throwError $ Error.ParseError (Token.tLine t) (Token.tLexeme t) e
+reportErrorWithToken t = reportErrorAt (Token.tLine t) (Token.tLexeme t)
+
+reportErrorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser a
+reportErrorAt loc lexeme = Except.throwError . Error.ParseError loc lexeme
 
 synchronize :: State.State ParserState ()
 synchronize = do
