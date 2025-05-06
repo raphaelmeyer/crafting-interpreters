@@ -82,16 +82,15 @@ parameters = do
 
 whileParameters :: Int -> Parser [Expr.Identifier]
 whileParameters count = do
-  if count >= 255
-    then reportError "Can't have more than 255 parameters."
-    else do
-      (param, _) <- expect identifier "Expect parameter name."
-      isComma <- matchToken Token.Comma
-      if isComma
-        then do
-          params <- whileParameters (count + 1)
-          pure $ param : params
-        else pure [param]
+  Monad.when (count >= 255) $
+    errorCurrentToken "Can't have more than 255 parameters." >>= report
+  (param, _) <- expect identifier "Expect parameter name."
+  isComma <- matchToken Token.Comma
+  if isComma
+    then do
+      params <- whileParameters (count + 1)
+      pure $ param : params
+    else pure [param]
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
@@ -210,7 +209,7 @@ whileBlock = do
     else do
       atEnd <- State.gets isAtEnd
       if atEnd
-        then reportError "Expect '}' after block."
+        then errorCurrentToken "Expect '}' after block." >>= throw
         else do
           stmt <- declaration
           stmts <- whileBlock
@@ -228,7 +227,7 @@ assignment = do
       value <- assignment
       case expr of
         Expr.Expr (Expr.Variable variable) loc -> pure $ Expr.Expr (Expr.Assign variable value) loc
-        _ -> reportErrorWithToken assign "Invalid assignment target."
+        _ -> errorWithToken assign "Invalid assignment target." >>= throw
     Nothing -> pure expr
 
 isEqual :: Token.Token -> Maybe Token.Token
@@ -400,16 +399,15 @@ arguments = do
 
 whileArguments :: Int -> Parser [Expr.Expr]
 whileArguments count = do
-  if count >= 255
-    then reportError "Can't have more than 255 arguments."
-    else do
-      arg <- expression
-      isComma <- matchToken Token.Comma
-      if isComma
-        then do
-          args <- whileArguments (count + 1)
-          pure $ arg : args
-        else pure [arg]
+  Monad.when (count >= 255) $
+    errorCurrentToken "Can't have more than 255 arguments." >>= report
+  arg <- expression
+  isComma <- matchToken Token.Comma
+  if isComma
+    then do
+      args <- whileArguments (count + 1)
+      pure $ arg : args
+    else pure [arg]
 
 primary :: ExprParser
 primary = do
@@ -466,7 +464,7 @@ expect check msg = do
   m <- advance check
   case m of
     Just result -> pure result
-    Nothing -> reportError msg
+    Nothing -> errorCurrentToken msg >>= throw
 
 matchToken :: Token.TokenType -> Parser Bool
 matchToken expected = do
@@ -487,7 +485,7 @@ expectTokenAt expected msg = do
   m <- advance $ isToken expected
   case m of
     Just t -> pure $ Token.tLine t
-    Nothing -> reportError msg
+    Nothing -> errorCurrentToken msg >>= throw
 
 advance :: (Token.Token -> Maybe a) -> Parser (Maybe a)
 advance check = do
@@ -505,18 +503,27 @@ isAtEnd p = case List.uncons . pTokens $ p of
   Just (t, _) -> Token.tType t == Token.EOF
   Nothing -> True
 
-reportError :: Text.Text -> Parser a
-reportError e = do
+throw :: Error.Error -> Parser a
+throw = Except.throwError
+
+report :: Error.Error -> Parser ()
+report err = do
+  p <- State.get
+  State.put p {pErrors = err : pErrors p}
+  pure ()
+
+errorCurrentToken :: Text.Text -> Parser Error.Error
+errorCurrentToken msg = do
   p <- State.get
   case List.uncons . pTokens $ p of
-    Just (t, _) -> reportErrorWithToken t e
-    Nothing -> Except.throwError $ Error.ParseError 0 "EOF" e
+    Just (t, _) -> errorWithToken t msg
+    Nothing -> pure $ Error.ParseError 0 "EOF" msg
 
-reportErrorWithToken :: Token.Token -> Text.Text -> Parser a
-reportErrorWithToken t = reportErrorAt (Token.tLine t) (Token.tLexeme t)
+errorWithToken :: Token.Token -> Text.Text -> Parser Error.Error
+errorWithToken t = errorAt (Token.tLine t) (Token.tLexeme t)
 
-reportErrorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser a
-reportErrorAt loc lexeme = Except.throwError . Error.ParseError loc lexeme
+errorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser Error.Error
+errorAt loc lexeme msg = pure $ Error.ParseError loc lexeme msg
 
 synchronize :: State.State ParserState ()
 synchronize = do
