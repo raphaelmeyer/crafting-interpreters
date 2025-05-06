@@ -15,7 +15,11 @@ import qualified Lox
 import qualified Stmt
 import qualified Token
 
-newtype ParserState = ParserState {pTokens :: [Token.Token]} deriving (Eq, Show)
+data ParserState = ParserState
+  { pTokens :: [Token.Token],
+    pErrors :: [Error.Error]
+  }
+  deriving (Eq, Show)
 
 type Parser a = Except.ExceptT Error.Error (State.State ParserState) a
 
@@ -24,34 +28,31 @@ type ExprParser = Parser Expr.Expr
 type StmtParser = Parser Stmt.Stmt
 
 parse :: [Token.Token] -> Lox.Result [Stmt.Stmt]
-parse tokens = State.evalState program (initParser tokens)
+parse tokens = case pErrors p of
+  [] -> Right stmts
+  errs -> Left errs
+  where
+    (stmts, p) = State.runState program (initParser tokens)
 
 initParser :: [Token.Token] -> ParserState
-initParser = ParserState
+initParser tokens = ParserState tokens []
 
-program :: State.State ParserState (Lox.Result [Stmt.Stmt])
+program :: State.State ParserState [Stmt.Stmt]
 program = do
   atEnd <- State.gets isAtEnd
   if atEnd
-    then pure $ Right []
+    then pure []
     else do
       result <- Except.runExceptT declaration
       case result of
         Right stmt -> do
-          addStmt stmt <$> program
+          stmts <- program
+          pure $ stmt : stmts
         Left err -> do
+          p <- State.get
+          State.put p {pErrors = err : pErrors p}
           synchronize
-          addError err <$> program
-
-addStmt :: Stmt.Stmt -> Lox.Result [Stmt.Stmt] -> Lox.Result [Stmt.Stmt]
-addStmt stmt result = case result of
-  Right stmts -> Right $ stmt : stmts
-  Left errs -> Left errs
-
-addError :: Error.Error -> Lox.Result [Stmt.Stmt] -> Lox.Result [Stmt.Stmt]
-addError err result = case result of
-  Right _ -> Left [err]
-  Left errs -> Left $ err : errs
+          program
 
 declaration :: StmtParser
 declaration = do
