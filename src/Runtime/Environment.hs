@@ -8,7 +8,7 @@ import qualified Control.Monad.Trans as Trans
 import qualified Data.IORef as IORef
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Error
+import qualified Lox
 import qualified Runtime.Types as Runtime
 
 type Interpreter a = Runtime.Interpreter IO a
@@ -100,4 +100,4 @@ lookup name scope = do
   pure $ Map.lookup name storage
 
 reportError :: Int -> Text.Text -> Interpreter a
-reportError loc = Except.throwError . Error.RuntimeError loc
+reportError loc = Except.throwError . Lox.RuntimeError loc

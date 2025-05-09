@@ -1,4 +1,4 @@
-module Literal where
+module Parser.Literal where
 
 import qualified Data.Text as Text
 

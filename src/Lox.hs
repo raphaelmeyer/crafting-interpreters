@@ -1,5 +1,41 @@
 module Lox where
 
-import qualified Error
+import qualified Data.Text as Text
 
-type Result a = Either [Error.Error] a
+type Result a = Either [Error] a
+
+data Error
+  = ScanError
+      { eLine :: Int,
+        eMessage :: Text.Text
+      }
+  | ParseError
+      { eLine :: Int,
+        eLexeme :: Text.Text,
+        eMessage :: Text.Text
+      }
+  | RuntimeError
+      { eLine :: Int,
+        eMessage :: Text.Text
+      }
+  deriving (Eq)
+
+instance Show Error where
+  show err = case err of
+    ScanError line message ->
+      "Scanner [line "
+        ++ show line
+        ++ "] Error: "
+        ++ Text.unpack message
+    ParseError line lexeme message ->
+      "Parser [line "
+        ++ show line
+        ++ "] Error at '"
+        ++ Text.unpack lexeme
+        ++ "': "
+        ++ Text.unpack message
+    RuntimeError line message ->
+      Text.unpack message
+        ++ "\n[line "
+        ++ show line
+        ++ "]"

@@ -1,6 +1,6 @@
-module Stmt where
+module Parser.Stmt where
 
-import qualified Expr
+import qualified Parser.Expr as Expr
 
 data Stmt
   = Block [Stmt]

@@ -7,8 +7,8 @@ import qualified Control.Monad.State.Strict as State
 import qualified Data.IORef as IORef
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Error
-import qualified Stmt
+import qualified Lox
+import qualified Parser.Stmt as Stmt
 
 data Value
   = Boolean Bool
@@ -38,7 +38,7 @@ arity :: Declaration -> Int
 arity Clock = 0
 arity Function {funParameters = params} = length params
 
-type Interpreter m a = Except.ExceptT Error.Error (State.StateT Environment m) a
+type Interpreter m a = Except.ExceptT Lox.Error (State.StateT Environment m) a
 
 instance Show Environment where
   show :: Environment -> String

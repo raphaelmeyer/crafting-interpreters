@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser (parse) where
+module Parser.Parser (parse) where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
@@ -8,20 +8,19 @@ import qualified Control.Monad.State.Strict as State
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
-import qualified Error
-import qualified Expr
-import qualified Literal
 import qualified Lox
-import qualified Stmt
-import qualified Token
+import qualified Parser.Expr as Expr
+import qualified Parser.Literal as Literal
+import qualified Parser.Stmt as Stmt
+import qualified Scanner.Token as Token
 
 data ParserState = ParserState
   { pTokens :: [Token.Token],
-    pErrors :: [Error.Error]
+    pErrors :: [Lox.Error]
   }
   deriving (Eq, Show)
 
-type Parser a = Except.ExceptT Error.Error (State.State ParserState) a
+type Parser a = Except.ExceptT Lox.Error (State.State ParserState) a
 
 type ExprParser = Parser Expr.Expr
 
@@ -503,27 +502,27 @@ isAtEnd p = case List.uncons . pTokens $ p of
   Just (t, _) -> Token.tType t == Token.EOF
   Nothing -> True
 
-throw :: Error.Error -> Parser a
+throw :: Lox.Error -> Parser a
 throw = Except.throwError
 
-report :: Error.Error -> Parser ()
+report :: Lox.Error -> Parser ()
 report err = do
   p <- State.get
   State.put p {pErrors = err : pErrors p}
   pure ()
 
-errorCurrentToken :: Text.Text -> Parser Error.Error
+errorCurrentToken :: Text.Text -> Parser Lox.Error
 errorCurrentToken msg = do
   p <- State.get
   case List.uncons . pTokens $ p of
     Just (t, _) -> errorWithToken t msg
-    Nothing -> pure $ Error.ParseError 0 "EOF" msg
+    Nothing -> pure $ Lox.ParseError 0 "EOF" msg
 
-errorWithToken :: Token.Token -> Text.Text -> Parser Error.Error
+errorWithToken :: Token.Token -> Text.Text -> Parser Lox.Error
 errorWithToken t = errorAt (Token.tLine t) (Token.tLexeme t)
 
-errorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser Error.Error
-errorAt loc lexeme msg = pure $ Error.ParseError loc lexeme msg
+errorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser Lox.Error
+errorAt loc lexeme msg = pure $ Lox.ParseError loc lexeme msg
 
 synchronize :: State.State ParserState ()
 synchronize = do

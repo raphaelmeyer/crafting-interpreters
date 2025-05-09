@@ -17,18 +17,17 @@ library
 
     exposed-modules:
         HLox,
-        Error,
-        Expr,
-        Interpreter,
-        Literal,
         Lox,
-        Parser,
+        Parser.Expr,
+        Parser.Literal,
+        Parser.Parser,
+        Parser.Stmt,
         Runtime.Environment,
+        Runtime.Interpreter,
         Runtime.Native,
         Runtime.Types,
-        Scanner,
-        Stmt,
-        Token
+        Scanner.Scanner,
+        Scanner.Token
 
     build-depends:
         base == 4.18.3.0,

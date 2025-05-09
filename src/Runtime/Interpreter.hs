@@ -1,21 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Interpreter (interpret) where
+module Runtime.Interpreter (interpret) where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans as Trans
 import qualified Data.Text as Text
-import qualified Error
-import qualified Expr
-import qualified Literal
 import qualified Lox
 import qualified Numeric
+import qualified Parser.Expr as Expr
+import qualified Parser.Literal as Literal
+import qualified Parser.Stmt as Stmt
 import qualified Runtime.Environment as Env
 import qualified Runtime.Native as Native
 import qualified Runtime.Types as Runtime
-import qualified Stmt
 
 type Interpreter a = Runtime.Interpreter IO a
 
@@ -184,8 +183,8 @@ truthy Runtime.Nil = False
 truthy (Runtime.Boolean b) = b
 truthy _ = True
 
-reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Error.Error m a
-reportError loc = Except.throwError . Error.RuntimeError loc
+reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
+reportError loc = Except.throwError . Lox.RuntimeError loc
 
 toString :: Runtime.Value -> String
 toString (Runtime.Boolean b) = if b then "true" else "false"

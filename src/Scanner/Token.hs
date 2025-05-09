@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Token where
+module Scanner.Token where
 
 import qualified Data.Text as Text
 

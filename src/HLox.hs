@@ -4,10 +4,10 @@ import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.IO.Class as IOClass
 import qualified Data.Text as Text
-import qualified Error
-import qualified Interpreter
-import qualified Parser
-import qualified Scanner
+import qualified Lox
+import qualified Parser.Parser as Parser
+import qualified Runtime.Interpreter as Interpreter
+import qualified Scanner.Scanner as Scanner
 import qualified System.Exit as Exit
 import qualified System.IO as System
 
@@ -29,7 +29,7 @@ run debug source = do
 printError :: (Show a) => a -> IO ()
 printError = System.hPrint System.stderr
 
-exitCode :: [Error.Error] -> Exit.ExitCode
-exitCode (Error.RuntimeError {} : _) = Exit.ExitFailure 70
+exitCode :: [Lox.Error] -> Exit.ExitCode
+exitCode (Lox.RuntimeError {} : _) = Exit.ExitFailure 70
 exitCode (_ : _) = Exit.ExitFailure 65
 exitCode [] = Exit.ExitFailure 1

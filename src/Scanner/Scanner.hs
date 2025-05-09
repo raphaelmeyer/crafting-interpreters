@@ -1,21 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scanner (scanTokens) where
+module Scanner.Scanner (scanTokens) where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Char as Char
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
-import qualified Error
 import qualified Lox
+import qualified Scanner.Token as Token
 import qualified Text.Read as Read
-import qualified Token
 
 data Scanner = Scanner
   { sCurrent :: Int,
     sLine :: Int,
     sSource :: Text.Text,
-    sErrors :: [Error.Error]
+    sErrors :: [Lox.Error]
   }
   deriving (Eq, Show)
 
@@ -218,7 +217,7 @@ makeToken token lexeme line = Just $ Token.Token token lexeme line
 
 addError :: Text.Text -> State.State Scanner (Maybe Token.Token)
 addError e = do
-  State.modify (\s -> s {sErrors = Error.ScanError (sLine s) e : sErrors s})
+  State.modify (\s -> s {sErrors = Lox.ScanError (sLine s) e : sErrors s})
   pure Nothing
 
 skip :: Scanner -> Scanner

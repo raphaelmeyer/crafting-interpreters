@@ -1,7 +1,7 @@
-module Expr where
+module Parser.Expr where
 
 import qualified Data.Text as Text
-import qualified Literal
+import qualified Parser.Literal as Literal
 
 data Expr = Expr Expression Location deriving (Eq, Show)
 
