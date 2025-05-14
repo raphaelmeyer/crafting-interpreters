@@ -1,0 +1,7 @@
+name = "alox"
+description = "Lox compiler and VM"
+version = "0.1.0-dev"
+
+authors = ["Raphael Meyer"]
+maintainers-logins = ["raphaelmeyer"]
+licenses = "MIT"
