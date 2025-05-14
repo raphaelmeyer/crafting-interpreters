@@ -4,3 +4,8 @@ tasks:
   build:
     cmds:
       - alr build
+
+  test:
+    dir: tests
+    cmds:
+      - alr run
