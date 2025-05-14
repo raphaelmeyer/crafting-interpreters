@@ -31,3 +31,8 @@ tasks:
       - cxxlox
     cmds:
       - build/cxxlox --debug
+
+  alox:
+    dir: alox
+    cmds:
+      - alr build
