@@ -11,6 +11,4 @@ package Chunk_Tests is
    overriding
    function Name (T : Chunk_Test) return AUnit.Message_String;
 
-   procedure Test_Empty_Chunk (T : in out AUnit.Test_Cases.Test_Case'Class);
-
 end Chunk_Tests;

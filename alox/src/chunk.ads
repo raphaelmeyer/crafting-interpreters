@@ -1,7 +1,7 @@
 with Ada.Finalization;
 
 package Chunk is
-   type Op_Code is (Op_Return) with Size => 8;
+   type Op_Code is (Op_Constant, Op_Return) with Size => 8;
 
    type Code_Array is array (Natural range <>) of Op_Code;
    type Code_Array_Access is access all Code_Array;
