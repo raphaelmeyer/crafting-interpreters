@@ -5,6 +5,10 @@ tasks:
     cmds:
       - alr build
 
+  run:
+    cmds:
+      - alr run
+
   test:
     dir: tests
     cmds:
