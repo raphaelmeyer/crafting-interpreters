@@ -9,6 +9,8 @@ package body Chunk_Tests is
       Chunk.Init (Testee);
 
       Assert (Testee.Count = 0, "Should be empty");
+      Assert (Testee.Capacity = 0, "Should not have a capacity");
+      Assert (Testee.Code = null, "Should not have data");
    end Test_Empty;
 
    procedure Test_Append (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -19,6 +21,7 @@ package body Chunk_Tests is
       Chunk.Write (Testee, Chunk.Op_Return);
 
       Assert (Testee.Count = 1, "Should contain element");
+      Assert (Testee.Code /= null, "Should have data");
       Assert
         (Testee.Code (0) = Chunk.Op_Return, "Should contain appended element");
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
@@ -62,6 +65,8 @@ package body Chunk_Tests is
 
       Chunk.Free (Testee);
       Assert (Testee.Count = 0, "Should be empty");
+      Assert (Testee.Capacity = 0, "Should not have a capacity");
+      Assert (Testee.Code = null, "Should not have data");
    end Test_Free;
 
    overriding
