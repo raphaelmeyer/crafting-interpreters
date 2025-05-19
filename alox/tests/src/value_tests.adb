@@ -53,7 +53,7 @@ package body Value_Tests is
       Value.Init (Testee);
 
       for I in 1 .. 42 loop
-         Value.Write (Testee, Value.Value (I * 3.14));
+         Value.Write (Testee, Value.Value (Float (I) * 3.14));
       end loop;
 
       Assert (Testee.Count = 42, "Should appended elements");
