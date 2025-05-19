@@ -13,9 +13,9 @@ package body Value is
       VA.Value := null;
    end Init;
 
-   procedure Write (VA : in out Value_Array; V : in Value) is
+   procedure Write (VA : in out Value_Array; V : Value) is
    begin
-      if (VA.Capacity < VA.Count + 1) then
+      if VA.Capacity < VA.Count + 1 then
          Grow (VA);
       end if;
       VA.Value (VA.Count) := V;

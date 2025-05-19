@@ -13,7 +13,7 @@ package Value is
    end record;
 
    procedure Init (VA : in out Value_Array);
-   procedure Write (VA : in out Value_Array; V : in Value);
+   procedure Write (VA : in out Value_Array; V : Value);
    procedure Free (VA : in out Value_Array);
 
    overriding

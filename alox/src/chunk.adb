@@ -4,18 +4,17 @@ package body Chunk is
    procedure Free is new
      Ada.Unchecked_Deallocation (Code_Array, Code_Array_Access);
 
-   procedure Grow (C : in out Chunk);
-
    procedure Init (C : in out Chunk) is
    begin
       C.Capacity := 0;
       C.Count := 0;
       C.Code := null;
+      Value.Init (C.Constants);
    end Init;
 
    procedure Write (C : in out Chunk; B : Op_Code) is
    begin
-      if (C.Capacity < C.Count + 1) then
+      if C.Capacity < C.Count + 1 then
          Grow (C);
       end if;
       C.Code (C.Count) := B;
@@ -27,8 +26,15 @@ package body Chunk is
       if C.Code /= null then
          Free (C.Code);
       end if;
+      Value.Free (C.Constants);
       Init (C);
    end Free;
+
+   function Add_Constant (C : in out Chunk; V : Value.Value) return Natural is
+   begin
+      Value.Write (C.Constants, V);
+      return C.Constants.Count - 1;
+   end Add_Constant;
 
    overriding
    procedure Finalize (Obj : in out Chunk) is
