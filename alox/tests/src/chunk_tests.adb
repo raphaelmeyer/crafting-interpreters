@@ -93,9 +93,10 @@ package body Chunk_Tests is
       Index_Pi := Chunk.Add_Constant (Testee, 3.1415);
 
       Assert (Testee.Constants.Count = 2, "Should contain constant");
-      Assert (Testee.Constants.Value (Index_E) = 2.718, "Should add constant");
       Assert
-        (Testee.Constants.Value (Index_Pi) = 3.1415, "Should add constant");
+        (Testee.Constants.Values (Index_E) = 2.718, "Should add constant");
+      Assert
+        (Testee.Constants.Values (Index_Pi) = 3.1415, "Should add constant");
    end Test_Add_Constant;
 
    overriding

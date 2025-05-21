@@ -10,7 +10,7 @@ package body Value is
    begin
       VA.Capacity := 0;
       VA.Count := 0;
-      VA.Value := null;
+      VA.Values := null;
    end Init;
 
    procedure Write (VA : in out Value_Array; V : Value) is
@@ -18,14 +18,14 @@ package body Value is
       if VA.Capacity < VA.Count + 1 then
          Grow (VA);
       end if;
-      VA.Value (VA.Count) := V;
+      VA.Values (VA.Count) := V;
       VA.Count := VA.Count + 1;
    end Write;
 
    procedure Free (VA : in out Value_Array) is
    begin
-      if VA.Value /= null then
-         Free (VA.Value);
+      if VA.Values /= null then
+         Free (VA.Values);
       end if;
       Init (VA);
    end Free;
@@ -37,12 +37,12 @@ package body Value is
    end Finalize;
 
    procedure Grow (VA : in out Value_Array) is
-      Old_Code : Value_Array_Array_Access := VA.Value;
+      Old_Code : Value_Array_Array_Access := VA.Values;
    begin
       VA.Capacity := (if VA.Capacity < 8 then 8 else VA.Capacity * 2);
-      VA.Value := new Value_Array_Array (0 .. VA.Capacity - 1);
+      VA.Values := new Value_Array_Array (0 .. VA.Capacity - 1);
       if Old_Code /= null then
-         VA.Value (Old_Code'Range) := Old_Code.all (Old_Code'Range);
+         VA.Values (Old_Code'Range) := Old_Code.all (Old_Code'Range);
       end if;
       Free (Old_Code);
    end Grow;

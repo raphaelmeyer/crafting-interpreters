@@ -12,7 +12,7 @@ package body Value_Tests is
 
       Assert (Testee.Count = 0, "Should be empty");
       Assert (Testee.Capacity = 0, "Should not have a capacity");
-      Assert (Testee.Value = null, "Should not have data");
+      Assert (Testee.Values = null, "Should not have data");
    end Test_Empty;
 
    procedure Test_Append (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -23,8 +23,8 @@ package body Value_Tests is
       Value.Write (Testee, 3.14);
 
       Assert (Testee.Count = 1, "Should contain element");
-      Assert (Testee.Value /= null, "Should have data");
-      Assert (Testee.Value (0) = 3.14, "Should contain appended element");
+      Assert (Testee.Values /= null, "Should have data");
+      Assert (Testee.Values (0) = 3.14, "Should contain appended element");
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
    end Test_Append;
 
@@ -43,8 +43,10 @@ package body Value_Tests is
 
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
 
-      Assert (Testee.Value (Testee.Count - 2) = 2.0, "Should contain element");
-      Assert (Testee.Value (Testee.Count - 1) = 3.0, "Should contain element");
+      Assert
+        (Testee.Values (Testee.Count - 2) = 2.0, "Should contain element");
+      Assert
+        (Testee.Values (Testee.Count - 1) = 3.0, "Should contain element");
    end Test_Grow;
 
    procedure Test_Free (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -62,7 +64,7 @@ package body Value_Tests is
       Value.Free (Testee);
       Assert (Testee.Count = 0, "Should be empty");
       Assert (Testee.Capacity = 0, "Should not have a capacity");
-      Assert (Testee.Value = null, "Should not have data");
+      Assert (Testee.Values = null, "Should not have data");
    end Test_Free;
 
    overriding
