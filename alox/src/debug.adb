@@ -1,5 +1,7 @@
-with Ada.Text_IO;
+with Ada.Float_Text_IO;
 with Ada.Integer_Text_IO;
+with Ada.Strings.Fixed;
+with Ada.Text_IO;
 
 package body Debug is
 
@@ -17,12 +19,18 @@ package body Debug is
    is
       Instruction : Chunk.Byte;
    begin
-      Ada.Integer_Text_IO.Put (Offset, Width => 4);
-      Ada.Text_IO.Put (" ");
+
+      Ada.Text_IO.Put
+        (Ada.Strings.Fixed.Tail
+           (Ada.Strings.Fixed.Trim (Offset'Image, Ada.Strings.Left), 4, '0')
+         & " ");
 
       Instruction := C.Code (Offset);
-      case Chunk.Op_Code'Val (Instruction) is
-         when Chunk.Op_Return =>
+      case Instruction is
+         when Chunk.Op_Constant'Enum_Rep =>
+            return ConstantInstruction ("OP_CONSTANT", C, Offset);
+
+         when Chunk.Op_Return'Enum_Rep =>
             return SimpleInstruction ("OP_RETURN", Offset);
 
          when others =>
@@ -31,11 +39,30 @@ package body Debug is
       end case;
    end DisassembleInstruction;
 
+   function ConstantInstruction
+     (Name : String; C : Chunk.Chunk; Offset : Natural) return Natural
+   is
+      Index : Natural;
+   begin
+      Index := Natural (C.Code (Offset + 1));
+      Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
+      Ada.Integer_Text_IO.Put (Index, Width => 4);
+      Ada.Text_IO.Put (" '");
+      PrintValue (C.Constants.Values (Index));
+      Ada.Text_IO.Put_Line ("'");
+      return Offset + 2;
+   end ConstantInstruction;
+
    function SimpleInstruction (Name : String; Offset : Natural) return Natural
    is
    begin
       Ada.Text_IO.Put_Line (Name);
       return Offset + 1;
    end SimpleInstruction;
+
+   procedure PrintValue (V : Value.Value) is
+   begin
+      Ada.Float_Text_IO.Put (Float (V));
+   end PrintValue;
 
 end Debug;
