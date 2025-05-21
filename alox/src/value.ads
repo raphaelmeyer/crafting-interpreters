@@ -9,7 +9,7 @@ package Value is
    type Value_Array is new Ada.Finalization.Controlled with record
       Count    : Natural;
       Capacity : Natural;
-      Value    : Value_Array_Array_Access;
+      Values   : Value_Array_Array_Access;
    end record;
 
    procedure Init (VA : in out Value_Array);
