@@ -2,7 +2,7 @@ with Ada.Unchecked_Deallocation;
 
 package body Chunk is
    procedure Free is new
-     Ada.Unchecked_Deallocation (Code_Array, Code_Array_Access);
+     Ada.Unchecked_Deallocation (Byte_Array, Byte_Array_Access);
 
    procedure Init (C : in out Chunk) is
    begin
@@ -12,13 +12,18 @@ package body Chunk is
       Value.Init (C.Constants);
    end Init;
 
-   procedure Write (C : in out Chunk; B : Op_Code) is
+   procedure Write (C : in out Chunk; B : Byte) is
    begin
       if C.Capacity < C.Count + 1 then
          Grow (C);
       end if;
       C.Code (C.Count) := B;
       C.Count := C.Count + 1;
+   end Write;
+
+   procedure Write (C : in out Chunk; O : Op_Code) is
+   begin
+      Write (C, O'Enum_Rep);
    end Write;
 
    procedure Free (C : in out Chunk) is
@@ -43,10 +48,10 @@ package body Chunk is
    end Finalize;
 
    procedure Grow (C : in out Chunk) is
-      Old_Code : Code_Array_Access := C.Code;
+      Old_Code : Byte_Array_Access := C.Code;
    begin
       C.Capacity := (if C.Capacity < 8 then 8 else C.Capacity * 2);
-      C.Code := new Code_Array (0 .. C.Capacity - 1);
+      C.Code := new Byte_Array (0 .. C.Capacity - 1);
       if Old_Code /= null then
          C.Code (Old_Code'Range) := Old_Code.all (Old_Code'Range);
       end if;
