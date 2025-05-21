@@ -15,19 +15,18 @@ package body Debug is
    function DisassembleInstruction
      (C : Chunk.Chunk; Offset : Natural) return Natural
    is
-      Instruction : Chunk.Op_Code;
+      Instruction : Chunk.Byte;
    begin
       Ada.Integer_Text_IO.Put (Offset, Width => 4);
       Ada.Text_IO.Put (" ");
 
       Instruction := C.Code (Offset);
-      case Instruction is
+      case Chunk.Op_Code'Val (Instruction) is
          when Chunk.Op_Return =>
             return SimpleInstruction ("OP_RETURN", Offset);
 
          when others =>
-            Ada.Text_IO.Put_Line
-              ("Unknown opcode " & Chunk.Op_Code'Image (Instruction));
+            Ada.Text_IO.Put_Line ("Unknown opcode " & Instruction'Image);
             return Offset + 1;
       end case;
    end DisassembleInstruction;

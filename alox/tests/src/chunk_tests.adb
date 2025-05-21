@@ -1,7 +1,8 @@
 with AUnit.Assertions; use AUnit.Assertions;
 with Chunk;
+use type Chunk.Byte;
 use type Chunk.Op_Code;
-use type Chunk.Code_Array_Access;
+use type Chunk.Byte_Array_Access;
 with Value;
 use type Value.Value;
 
@@ -23,11 +24,14 @@ package body Chunk_Tests is
       Chunk.Init (Testee);
 
       Chunk.Write (Testee, Chunk.Op_Return);
+      Chunk.Write (Testee, 42);
 
-      Assert (Testee.Count = 1, "Should contain element");
+      Assert (Testee.Count = 2, "Should contain elements");
       Assert (Testee.Code /= null, "Should have data");
       Assert
-        (Testee.Code (0) = Chunk.Op_Return, "Should contain appended element");
+        (Testee.Code (0) = Chunk.Op_Return'Enum_Rep,
+         "Should contain appended op code");
+      Assert (Testee.Code (1) = 42, "Should contain appended value");
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
    end Test_Append;
 
@@ -47,10 +51,10 @@ package body Chunk_Tests is
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
 
       Assert
-        (Testee.Code (Testee.Count - 2) = Chunk.Op_Return,
+        (Testee.Code (Testee.Count - 2) = Chunk.Op_Return'Enum_Rep,
          "Should contain element");
       Assert
-        (Testee.Code (Testee.Count - 1) = Chunk.Op_Constant,
+        (Testee.Code (Testee.Count - 1) = Chunk.Op_Constant'Enum_Rep,
          "Should contain element");
    end Test_Grow;
 
