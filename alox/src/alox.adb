@@ -10,10 +10,10 @@ begin
    Chunk.Init (Test);
 
    Index := Chunk.Add_Constant (Test, 1.2);
-   Chunk.Write (Test, Chunk.Op_Constant);
-   Chunk.Write (Test, Chunk.Byte (Index));
+   Chunk.Write (Test, Chunk.Op_Constant, 123);
+   Chunk.Write (Test, Chunk.Byte (Index), 123);
 
-   Chunk.Write (Test, Chunk.Op_Return);
+   Chunk.Write (Test, Chunk.Op_Return, 123);
 
    Debug.DisassembleChunk (Test, "test chunk");
 
