@@ -3,6 +3,7 @@ with Chunk;
 use type Chunk.Byte;
 use type Chunk.Op_Code;
 use type Chunk.Byte_Array_Access;
+use type Chunk.Natural_Array_Access;
 with Value;
 use type Value.Value;
 
@@ -16,6 +17,7 @@ package body Chunk_Tests is
       Assert (Testee.Count = 0, "Should be empty");
       Assert (Testee.Capacity = 0, "Should not have a capacity");
       Assert (Testee.Code = null, "Should not have data");
+      Assert (Testee.Lines = null, "Should not have line information");
    end Test_Empty;
 
    procedure Test_Append (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -23,15 +25,20 @@ package body Chunk_Tests is
    begin
       Chunk.Init (Testee);
 
-      Chunk.Write (Testee, Chunk.Op_Return);
-      Chunk.Write (Testee, 42);
+      Chunk.Write (Testee, Chunk.Op_Return, 11);
+      Chunk.Write (Testee, 42, 23);
 
       Assert (Testee.Count = 2, "Should contain elements");
+
       Assert (Testee.Code /= null, "Should have data");
       Assert
         (Testee.Code (0) = Chunk.Op_Return'Enum_Rep,
          "Should contain appended op code");
       Assert (Testee.Code (1) = 42, "Should contain appended value");
+
+      Assert (Testee.Lines /= null, "Should have line information");
+      Assert (Testee.Lines (1) = 23, "Should contain the assigned line");
+
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
    end Test_Append;
 
@@ -39,14 +46,14 @@ package body Chunk_Tests is
       Testee : Chunk.Chunk;
    begin
       Chunk.Init (Testee);
-      Chunk.Write (Testee, Chunk.Op_Constant);
+      Chunk.Write (Testee, Chunk.Op_Constant, 7);
 
       for I in Testee.Count .. Testee.Capacity - 1 loop
-         Chunk.Write (Testee, Chunk.Op_Return);
+         Chunk.Write (Testee, Chunk.Op_Return, 13);
       end loop;
 
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
-      Chunk.Write (Testee, Chunk.Op_Constant);
+      Chunk.Write (Testee, Chunk.Op_Constant, 42);
 
       Assert (Testee.Capacity >= Testee.Count, "Should have enough capacity");
 
@@ -56,6 +63,14 @@ package body Chunk_Tests is
       Assert
         (Testee.Code (Testee.Count - 1) = Chunk.Op_Constant'Enum_Rep,
          "Should contain element");
+
+      Assert
+        (Testee.Lines (Testee.Count - 2) = 13,
+         "Should contain line information");
+
+      Assert
+        (Testee.Lines (Testee.Count - 1) = 42,
+         "Should contain line information");
    end Test_Grow;
 
    procedure Test_Free (T : in out AUnit.Test_Cases.Test_Case'Class) is
@@ -65,8 +80,8 @@ package body Chunk_Tests is
       Chunk.Init (Testee);
 
       for I in 1 .. 13 loop
-         Chunk.Write (Testee, Chunk.Op_Return);
-         Chunk.Write (Testee, Chunk.Op_Constant);
+         Chunk.Write (Testee, Chunk.Op_Return, 2);
+         Chunk.Write (Testee, Chunk.Op_Constant, 3);
       end loop;
 
       Assert (Testee.Count = 26, "Should appended elements");
@@ -79,8 +94,7 @@ package body Chunk_Tests is
       Assert (Testee.Count = 0, "Should be empty");
       Assert (Testee.Capacity = 0, "Should not have a capacity");
       Assert (Testee.Code = null, "Should not have data");
-
-      Assert (Testee.Constants.Count = 0, "Should free constants");
+      Assert (Testee.Lines = null, "Should not have line information");
    end Test_Free;
 
    procedure Test_Add_Constant (T : in out AUnit.Test_Cases.Test_Case'Class) is

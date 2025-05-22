@@ -8,16 +8,20 @@ package Chunk is
    type Byte_Array is array (Natural range <>) of Byte;
    type Byte_Array_Access is access all Byte_Array;
 
+   type Natural_Array is array (Natural range <>) of Natural;
+   type Natural_Array_Access is access all Natural_Array;
+
    type Chunk is new Ada.Finalization.Controlled with record
       Count     : Natural;
       Capacity  : Natural;
       Code      : Byte_Array_Access;
+      Lines     : Natural_Array_Access;
       Constants : Value.Value_Array;
    end record;
 
    procedure Init (C : in out Chunk);
-   procedure Write (C : in out Chunk; B : Byte);
-   procedure Write (C : in out Chunk; O : Op_Code);
+   procedure Write (C : in out Chunk; B : Byte; Line : Natural);
+   procedure Write (C : in out Chunk; O : Op_Code; Line : Natural);
    procedure Free (C : in out Chunk);
 
    function Add_Constant (C : in out Chunk; V : Value.Value) return Natural;
