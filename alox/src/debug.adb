@@ -1,5 +1,5 @@
-with Ada.Float_Text_IO;
 with Ada.Integer_Text_IO;
+with Ada.Strings;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
@@ -18,11 +18,12 @@ package body Debug is
      (C : Chunk.Chunk; Offset : Natural) return Natural
    is
       Instruction : Chunk.Byte;
+      Buffer      : String (1 .. 32);
    begin
-
+      Ada.Integer_Text_IO.Put (To => Buffer, Item => Offset);
       Ada.Text_IO.Put
         (Ada.Strings.Fixed.Tail
-           (Ada.Strings.Fixed.Trim (Offset'Image, Ada.Strings.Left), 4, '0')
+           (Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both), 4, '0')
          & " ");
 
       if Offset > 0 and then C.Lines (Offset) = C.Lines (Offset - 1) then
@@ -41,7 +42,9 @@ package body Debug is
             return SimpleInstruction ("OP_RETURN", Offset);
 
          when others =>
-            Ada.Text_IO.Put_Line ("Unknown opcode " & Instruction'Image);
+            Ada.Text_IO.Put ("Unknown opcode ");
+            Ada.Integer_Text_IO.Put (Integer (Instruction));
+            Ada.Text_IO.New_Line;
             return Offset + 1;
       end case;
    end DisassembleInstruction;
@@ -70,8 +73,7 @@ package body Debug is
    procedure PrintValue (V : Value.Value) is
       Buffer : String (1 .. 32);
    begin
-      Ada.Float_Text_IO.Put (To => Buffer, Item => Float (V));
-      Ada.Text_IO.Put (Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Left));
+      Ada.Text_IO.Put (Value.To_String (Float (V)));
    end PrintValue;
 
 end Debug;

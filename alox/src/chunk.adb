@@ -69,6 +69,7 @@ package body Chunk is
          C.Lines (Old_Lines'Range) := Old_Lines.all (Old_Lines'Range);
       end if;
       Free (Old_Code);
+      Free (Old_Lines);
    end Grow;
 
 end Chunk;
