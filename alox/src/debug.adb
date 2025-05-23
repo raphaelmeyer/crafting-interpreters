@@ -68,8 +68,10 @@ package body Debug is
    end SimpleInstruction;
 
    procedure PrintValue (V : Value.Value) is
+      Buffer : String (1 .. 32);
    begin
-      Ada.Float_Text_IO.Put (Float (V));
+      Ada.Float_Text_IO.Put (To => Buffer, Item => Float (V));
+      Ada.Text_IO.Put (Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Left));
    end PrintValue;
 
 end Debug;
