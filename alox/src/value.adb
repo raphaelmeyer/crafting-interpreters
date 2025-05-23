@@ -1,10 +1,11 @@
+with Ada.Float_Text_IO;
+with Ada.Strings;
+with Ada.Strings.Fixed;
 with Ada.Unchecked_Deallocation;
 
 package body Value is
    procedure Free is new
      Ada.Unchecked_Deallocation (Value_Array_Array, Value_Array_Array_Access);
-
-   procedure Grow (VA : in out Value_Array);
 
    procedure Init (VA : in out Value_Array) is
    begin
@@ -35,6 +36,37 @@ package body Value is
    begin
       Free (Obj);
    end Finalize;
+
+   function To_String (Value : Float) return String is
+      Buffer : String (1 .. 32);
+
+      function Trim_Trailing (S : String; C : Character) return String is
+         I : Natural;
+      begin
+         for I in reverse S'Range loop
+            if S (I) /= C then
+               return S (S'First .. I);
+            end if;
+         end loop;
+         return S;
+      end Trim_Trailing;
+
+   begin
+      if Value = 0.0 then
+         return "0";
+      elsif abs Value < 1.0E-4 or 1.0E+6 <= abs Value then
+         Ada.Float_Text_IO.Put (To => Buffer, Item => Value);
+         return Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both);
+      else
+         Ada.Float_Text_IO.Put
+           (To => Buffer, Item => Value, Aft => 6, Exp => 0);
+         return
+           Trim_Trailing
+             (Trim_Trailing
+                (Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both), '0'),
+              '.');
+      end if;
+   end To_String;
 
    procedure Grow (VA : in out Value_Array) is
       Old_Code : Value_Array_Array_Access := VA.Values;

@@ -19,4 +19,9 @@ package Value is
    overriding
    procedure Finalize (Obj : in out Value_Array);
 
+   function To_String (Value : Float) return String;
+
+private
+   procedure Grow (VA : in out Value_Array);
+
 end Value;
