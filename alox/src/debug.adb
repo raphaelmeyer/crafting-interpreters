@@ -25,6 +25,13 @@ package body Debug is
            (Ada.Strings.Fixed.Trim (Offset'Image, Ada.Strings.Left), 4, '0')
          & " ");
 
+      if Offset > 0 and then C.Lines (Offset) = C.Lines (Offset - 1) then
+         Ada.Text_IO.Put ("   | ");
+      else
+         Ada.Integer_Text_IO.Put (C.Lines (Offset), Width => 4);
+         Ada.Text_IO.Put (" ");
+      end if;
+
       Instruction := C.Code (Offset);
       case Instruction is
          when Chunk.Op_Constant'Enum_Rep =>
