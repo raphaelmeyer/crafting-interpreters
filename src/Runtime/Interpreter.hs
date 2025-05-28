@@ -18,7 +18,7 @@ import qualified Runtime.Types as Runtime
 
 type Interpreter a = Runtime.Interpreter IO a
 
-data Result = Continue | Return Runtime.Value
+data Result = Continue | Return Runtime.Value | Break
 
 interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
 interpret stmts = do
@@ -26,6 +26,7 @@ interpret stmts = do
   result <- State.evalStateT (Except.runExceptT $ execute stmts) globals
   case result of
     Left err -> pure $ Left [err]
+    Right Break -> pure $ Left [Lox.RuntimeError 0 "Cannot break out of nothing."]
     Right _ -> pure $ Right ()
 
 execute :: [Stmt.Stmt] -> Interpreter Result
@@ -35,6 +36,7 @@ execute (stmt : stmts) = do
   case result of
     Continue -> execute stmts
     Return value -> pure $ Return value
+    Break -> pure Break
 
 statement :: Stmt.Stmt -> Interpreter Result
 statement (Stmt.Expression expr) = do
@@ -66,6 +68,7 @@ statement stmt@(Stmt.While condition body) = do
       case result of
         Continue -> statement stmt
         Return value -> pure $ Return value
+        Break -> pure Continue
     else pure Continue
 statement (Stmt.Function name params body) = do
   closure <- Env.current
@@ -73,6 +76,7 @@ statement (Stmt.Function name params body) = do
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
+statement Stmt.Break = pure Break
 
 executeBlock :: [Stmt.Stmt] -> Interpreter Result
 executeBlock stmts = do
@@ -150,6 +154,7 @@ invoke (Runtime.Callable declaration) args loc = do
       case result of
         Continue -> pure Runtime.Nil
         Return value -> pure value
+        Break -> reportError loc "Can not break out of a function."
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()

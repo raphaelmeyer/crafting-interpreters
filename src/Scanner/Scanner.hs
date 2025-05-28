@@ -170,6 +170,7 @@ checkKeyword :: Text.Text -> Token.TokenType
 checkKeyword ident =
   case ident of
     "and" -> Token.And
+    "break" -> Token.Break
     "class" -> Token.Class
     "else" -> Token.Else
     "false" -> Token.False

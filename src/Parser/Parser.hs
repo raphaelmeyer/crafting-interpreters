@@ -101,8 +101,9 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
-  token <- match . anyOf $ [Token.For, Token.If, Token.Print, Token.Return, Token.While, Token.LeftBrace]
+  token <- match . anyOf $ [Token.Break, Token.For, Token.If, Token.Print, Token.Return, Token.While, Token.LeftBrace]
   case token of
+    Just Token.Break -> breakStatement
     Just Token.For -> forStatement
     Just Token.If -> ifStatement
     Just Token.Print -> printStatement
@@ -110,6 +111,11 @@ statement = do
     Just Token.While -> whileStatement
     Just Token.LeftBrace -> block
     _ -> expressionStatement
+
+breakStatement :: StmtParser
+breakStatement = do
+  expectToken Token.SemiColon "Expect ';' after 'break'."
+  pure Stmt.Break
 
 forStatement :: StmtParser
 forStatement = do

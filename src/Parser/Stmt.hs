@@ -4,6 +4,7 @@ import qualified Parser.Expr as Expr
 
 data Stmt
   = Block [Stmt]
+  | Break
   | Expression Expr.Expr
   | Function
       { funName :: Expr.Identifier,

@@ -28,6 +28,7 @@ data TokenType
   | String Text.Text
   | Number Double
   | And
+  | Break
   | Class
   | Else
   | False
