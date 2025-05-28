@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Interpreter (interpret) where
+module Runtime.Interpreter (interpret, makeEnvironment, Runtime.Environment) where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
@@ -20,14 +20,16 @@ type Interpreter a = Runtime.Interpreter IO a
 
 data Result = Continue | Return Runtime.Value | Break
 
-interpret :: [Stmt.Stmt] -> IO (Lox.Result ())
-interpret stmts = do
-  globals <- Env.make
+interpret :: [Stmt.Stmt] -> Runtime.Environment -> IO (Lox.Result ())
+interpret stmts globals = do
   result <- State.evalStateT (Except.runExceptT $ execute stmts) globals
   case result of
     Left err -> pure $ Left [err]
     Right Break -> pure $ Left [Lox.RuntimeError 0 "Cannot break out of nothing."]
     Right _ -> pure $ Right ()
+
+makeEnvironment :: IO Runtime.Environment
+makeEnvironment = Env.make
 
 execute :: [Stmt.Stmt] -> Interpreter Result
 execute [] = pure Continue

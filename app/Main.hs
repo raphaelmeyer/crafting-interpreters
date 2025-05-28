@@ -4,6 +4,7 @@ module Main where
 
 import Data.Text.IO as Text.IO
 import qualified HLox
+import qualified Runtime.Interpreter as Interpreter
 import qualified System.Environment as Environment
 import qualified System.Exit as Exit
 import qualified System.IO
@@ -28,10 +29,16 @@ usage = do
 runFile :: HLox.Debug -> String -> IO Exit.ExitCode
 runFile debug f = do
   script <- Text.IO.readFile f
-  HLox.run debug script
+  globals <- Interpreter.makeEnvironment
+  HLox.run debug script globals
 
 runPrompt :: HLox.Debug -> IO Exit.ExitCode
 runPrompt debug = do
+  globals <- Interpreter.makeEnvironment
+  whilePrompt debug globals
+
+whilePrompt :: HLox.Debug -> Interpreter.Environment -> IO Exit.ExitCode
+whilePrompt debug globals = do
   Text.IO.putStr "> "
   System.IO.hFlush System.IO.stdout
   done <- System.IO.isEOF
@@ -40,5 +47,5 @@ runPrompt debug = do
       pure Exit.ExitSuccess
     else do
       line <- Text.IO.getLine
-      _ <- HLox.run debug line
-      runPrompt debug
+      _ <- HLox.run debug line globals
+      whilePrompt debug globals

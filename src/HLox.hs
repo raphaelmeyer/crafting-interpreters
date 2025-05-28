@@ -13,13 +13,13 @@ import qualified System.IO as System
 
 data Debug = PrintStmts | Silent deriving (Eq, Show)
 
-run :: Debug -> Text.Text -> IO Exit.ExitCode
-run debug source = do
+run :: Debug -> Text.Text -> Interpreter.Environment -> IO Exit.ExitCode
+run debug source globals = do
   result <- Except.runExceptT $ do
     tokens <- Except.ExceptT . pure $ Scanner.scanTokens source
     stmts <- Except.ExceptT . pure $ Parser.parse tokens
     Monad.when (debug == PrintStmts) $ IOClass.liftIO $ mapM_ printStmt stmts
-    Except.ExceptT $ Interpreter.interpret stmts
+    Except.ExceptT $ Interpreter.interpret stmts globals
   case result of
     Left err -> exitCode err <$ mapM_ printError err
     Right _ -> pure Exit.ExitSuccess
