@@ -6,6 +6,7 @@ import qualified Control.Monad.IO.Class as IOClass
 import qualified Data.Text as Text
 import qualified Lox
 import qualified Parser.Parser as Parser
+import qualified Resolver.Resolver as Resolver
 import qualified Runtime.Interpreter as Interpreter
 import qualified Scanner.Scanner as Scanner
 import qualified System.Exit as Exit
@@ -18,8 +19,9 @@ run debug source globals = do
   result <- Except.runExceptT $ do
     tokens <- Except.ExceptT . pure $ Scanner.scanTokens source
     stmts <- Except.ExceptT . pure $ Parser.parse tokens
-    Monad.when (debug == PrintStmts) $ IOClass.liftIO $ mapM_ printStmt stmts
-    Except.ExceptT $ Interpreter.interpret stmts globals
+    resolved <- Except.ExceptT . pure $ Resolver.resolve stmts
+    Monad.when (debug == PrintStmts) $ IOClass.liftIO $ mapM_ printStmt resolved
+    Except.ExceptT $ Interpreter.interpret resolved globals
   case result of
     Left err -> exitCode err <$ mapM_ printError err
     Right _ -> pure Exit.ExitSuccess
