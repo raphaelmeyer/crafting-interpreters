@@ -14,6 +14,11 @@ data Error
         eLexeme :: Text.Text,
         eMessage :: Text.Text
       }
+  | ResolveError
+      { eLine :: Int,
+        eLexeme :: Text.Text,
+        eMessage :: Text.Text
+      }
   | RuntimeError
       { eLine :: Int,
         eMessage :: Text.Text
@@ -29,6 +34,13 @@ instance Show Error where
         ++ Text.unpack message
     ParseError line lexeme message ->
       "Parser [line "
+        ++ show line
+        ++ "] Error at '"
+        ++ Text.unpack lexeme
+        ++ "': "
+        ++ Text.unpack message
+    ResolveError line lexeme message ->
+      "Resolver [line "
         ++ show line
         ++ "] Error at '"
         ++ Text.unpack lexeme
