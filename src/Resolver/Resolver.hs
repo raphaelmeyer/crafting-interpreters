@@ -70,7 +70,25 @@ expression (Expr.Expr (Expr.Assign name expr _) loc) = do
   resolved <- expression expr
   d <- resolveLocal name
   pure $ Expr.Expr (Expr.Assign name resolved d) loc
-expression expr = pure expr
+expression (Expr.Expr (Expr.Binary op left right) loc) = do
+  resLeft <- expression left
+  resRight <- expression right
+  pure $ Expr.Expr (Expr.Binary op resLeft resRight) loc
+expression (Expr.Expr (Expr.Call callee args) loc) = do
+  resCallee <- expression callee
+  resArgs <- mapM expression args
+  pure $ Expr.Expr (Expr.Call resCallee resArgs) loc
+expression (Expr.Expr (Expr.Grouping expr) loc) = do
+  resolved <- expression expr
+  pure $ Expr.Expr (Expr.Grouping resolved) loc
+expression (Expr.Expr (Expr.Literal literal) loc) = pure $ Expr.Expr (Expr.Literal literal) loc
+expression (Expr.Expr (Expr.Logical op left right) loc) = do
+  resLeft <- expression left
+  resRight <- expression right
+  pure $ Expr.Expr (Expr.Logical op resLeft resRight) loc
+expression (Expr.Expr (Expr.Unary op expr) loc) = do
+  resolved <- expression expr
+  pure $ Expr.Expr (Expr.Unary op resolved) loc
 
 resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> Resolver Stmt.Stmt
 resolveFunction name params body = do
