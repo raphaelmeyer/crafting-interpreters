@@ -6,7 +6,7 @@ import qualified Parser.Literal as Literal
 data Expr = Expr Expression Location deriving (Eq, Show)
 
 data Expression
-  = Assign {assignName :: Identifier, assignExpr :: Expr}
+  = Assign {assignName :: Identifier, assignExpr :: Expr, assignDepth :: Maybe Int}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
   | Call {callCallee :: Expr, callArguments :: [Expr]}
   | Grouping Expr

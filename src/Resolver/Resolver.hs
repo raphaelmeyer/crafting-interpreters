@@ -48,7 +48,12 @@ statement stmt = pure stmt
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
   checkNoSelfReference loc name
-  resolveLocal loc name
+  d <- resolveLocal name
+  pure (Expr.Expr (Expr.Variable name d) loc)
+expression (Expr.Expr (Expr.Assign name expr _) loc) = do
+  resolved <- expression expr
+  d <- resolveLocal name
+  pure $ Expr.Expr (Expr.Assign name resolved d) loc
 expression expr = pure expr
 
 checkNoSelfReference :: Expr.Location -> Text.Text -> Resolver ()
@@ -60,11 +65,10 @@ checkNoSelfReference loc name = do
       Just False -> reportError loc name "Can't read local variable in its own initializer."
       _ -> pure ()
 
-resolveLocal :: Expr.Location -> Expr.Identifier -> Resolver Expr.Expr
-resolveLocal loc name = do
+resolveLocal :: Expr.Identifier -> Resolver (Maybe Int)
+resolveLocal name = do
   s <- State.get
-  let d = distance (rScopes s) name
-  pure $ Expr.Expr (Expr.Variable name d) loc
+  pure $ distance (rScopes s) name
 
 distance :: [Scope] -> Expr.Identifier -> Maybe Int
 distance [] _ = Nothing

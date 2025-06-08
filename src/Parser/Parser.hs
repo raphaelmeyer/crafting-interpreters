@@ -231,7 +231,7 @@ assignment = do
     Just assign -> do
       value <- assignment
       case expr of
-        Expr.Expr (Expr.Variable variable Nothing) loc -> pure $ Expr.Expr (Expr.Assign variable value) loc
+        Expr.Expr (Expr.Variable variable Nothing) loc -> pure $ Expr.Expr (Expr.Assign variable value Nothing) loc
         _ -> errorWithToken assign "Invalid assignment target." >>= throw
     Nothing -> pure expr
 
