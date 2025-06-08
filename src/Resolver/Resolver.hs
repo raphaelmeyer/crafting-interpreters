@@ -26,11 +26,7 @@ resolve stmts = case rErrors s of
     (resolved, s) = State.runState (program stmts) (ResolverState [] [])
 
 program :: [Stmt.Stmt] -> Resolver [Stmt.Stmt]
-program [] = pure []
-program (stmt : stmts) = do
-  resolved <- statement stmt
-  rs <- program stmts
-  pure (resolved : rs)
+program = mapM statement
 
 statement :: Stmt.Stmt -> Resolver Stmt.Stmt
 statement (Stmt.Block block) = do
