@@ -39,6 +39,10 @@ statement (Stmt.Variable name initializer) = do
   resolved <- expression initializer
   define name
   pure $ Stmt.Variable name resolved
+statement (Stmt.Function name params body) = do
+  declare name
+  define name
+  resolveFunction name params body
 statement stmt = pure stmt
 
 expression :: Expr.Expr -> Resolver Expr.Expr
@@ -51,6 +55,14 @@ expression (Expr.Expr (Expr.Assign name expr _) loc) = do
   d <- resolveLocal name
   pure $ Expr.Expr (Expr.Assign name resolved d) loc
 expression expr = pure expr
+
+resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> Resolver Stmt.Stmt
+resolveFunction name params body = do
+  beginScope
+  mapM_ (\p -> declare p >> define p) params
+  resolved <- program body
+  endScope
+  pure $ Stmt.Function name params resolved
 
 checkNoSelfReference :: Expr.Location -> Text.Text -> Resolver ()
 checkNoSelfReference loc name = do
