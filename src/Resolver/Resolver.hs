@@ -43,7 +43,23 @@ statement (Stmt.Function name params body) = do
   declare name
   define name
   resolveFunction name params body
-statement stmt = pure stmt
+statement (Stmt.Expression expr) = Stmt.Expression <$> expression expr
+statement (Stmt.If condition thenBranch elseBranch) = do
+  resCond <- expression condition
+  resThen <- statement thenBranch
+  resElse <- case elseBranch of
+    Just stmt -> Just <$> statement stmt
+    Nothing -> pure Nothing
+  pure $ Stmt.If resCond resThen resElse
+statement (Stmt.Print expr) = do
+  resolved <- expression expr
+  pure $ Stmt.Print resolved
+statement (Stmt.Return expr) = Stmt.Return <$> expression expr
+statement (Stmt.While condition body) = do
+  resCond <- expression condition
+  resBody <- statement body
+  pure $ Stmt.While resCond resBody
+statement Stmt.Break = pure Stmt.Break
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
