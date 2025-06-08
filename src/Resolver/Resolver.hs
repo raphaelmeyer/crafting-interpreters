@@ -1,7 +1,10 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Resolver.Resolver (resolve) where
 
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
 import qualified Lox
 import qualified Parser.Expr as Expr
 import qualified Parser.Stmt as Stmt
@@ -43,7 +46,31 @@ statement (Stmt.Variable name initializer) = do
 statement stmt = pure stmt
 
 expression :: Expr.Expr -> Resolver Expr.Expr
+expression (Expr.Expr (Expr.Variable name _) loc) = do
+  checkNoSelfReference loc name
+  resolveLocal loc name
 expression expr = pure expr
+
+checkNoSelfReference :: Expr.Location -> Text.Text -> Resolver ()
+checkNoSelfReference loc name = do
+  s <- State.get
+  case rScopes s of
+    [] -> pure ()
+    (scope : _) -> case Map.lookup name scope of
+      Just False -> reportError loc name "Can't read local variable in its own initializer."
+      _ -> pure ()
+
+resolveLocal :: Expr.Location -> Expr.Identifier -> Resolver Expr.Expr
+resolveLocal loc name = do
+  s <- State.get
+  let d = distance (rScopes s) name
+  pure $ Expr.Expr (Expr.Variable name d) loc
+
+distance :: [Scope] -> Expr.Identifier -> Maybe Int
+distance [] _ = Nothing
+distance (scope : scopes) name = case Map.lookup name scope of
+  Just _ -> Just 0
+  Nothing -> (+ 1) <$> distance scopes name
 
 declare :: Expr.Identifier -> Resolver ()
 declare name = do
@@ -69,3 +96,7 @@ endScope = do
   case rScopes s of
     [] -> pure ()
     (_ : scopes) -> State.put s {rScopes = scopes}
+
+reportError :: Expr.Location -> Text.Text -> Text.Text -> Resolver ()
+reportError loc lexeme message = do
+  State.modify $ \s -> s {rErrors = Lox.ResolveError loc lexeme message : rErrors s}

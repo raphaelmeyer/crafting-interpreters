@@ -97,7 +97,7 @@ evaluate (Expr.Expr (Expr.Binary op l r) loc) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right loc
-evaluate (Expr.Expr (Expr.Variable name) loc) = Env.get (name, loc)
+evaluate (Expr.Expr (Expr.Variable name _) loc) = Env.get (name, loc)
 evaluate (Expr.Expr (Expr.Assign name expr) loc) = do
   value <- evaluate expr
   Env.assign (name, loc) value

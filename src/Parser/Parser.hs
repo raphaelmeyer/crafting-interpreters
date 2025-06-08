@@ -231,7 +231,7 @@ assignment = do
     Just assign -> do
       value <- assignment
       case expr of
-        Expr.Expr (Expr.Variable variable) loc -> pure $ Expr.Expr (Expr.Assign variable value) loc
+        Expr.Expr (Expr.Variable variable Nothing) loc -> pure $ Expr.Expr (Expr.Assign variable value) loc
         _ -> errorWithToken assign "Invalid assignment target." >>= throw
     Nothing -> pure expr
 
@@ -422,7 +422,7 @@ primary = do
     Nothing -> do
       maybeIdentifier <- match identifier
       case maybeIdentifier of
-        Just (name, loc) -> pure $ Expr.Expr (Expr.Variable name) loc
+        Just (name, loc) -> pure $ Expr.Expr (Expr.Variable name Nothing) loc
         Nothing -> grouping
 
 grouping :: ExprParser

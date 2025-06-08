@@ -13,7 +13,7 @@ data Expression
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
-  | Variable Identifier
+  | Variable {varName :: Identifier, varDepth :: Maybe Int}
   deriving (Eq, Show)
 
 data UnaryOp = Neg | Not deriving (Eq, Show)
