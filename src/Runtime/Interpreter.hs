@@ -97,10 +97,11 @@ evaluate (Expr.Expr (Expr.Binary op l r) loc) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right loc
-evaluate (Expr.Expr (Expr.Variable name _) loc) = Env.get (name, loc)
-evaluate (Expr.Expr (Expr.Assign name expr _) loc) = do
+evaluate (Expr.Expr (Expr.Variable name depth) loc) =
+  Env.getAt name depth loc
+evaluate (Expr.Expr (Expr.Assign name expr depth) loc) = do
   value <- evaluate expr
-  Env.assign (name, loc) value
+  Env.assignAt name depth loc value
   pure value
 evaluate (Expr.Expr (Expr.Logical op l r) _) = evalLogical op l r
 evaluate (Expr.Expr (Expr.Call calleeExpr args) loc) = do

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Environment (assign, current, define, get, globals, make, pop, push) where
+module Runtime.Environment (assignAt, current, define, globals, make, pop, push, getAt) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -24,10 +24,12 @@ globals = globals' <$> State.get
 current :: Interpreter Runtime.Environment
 current = State.get
 
-get :: (Text.Text, Int) -> Interpreter Runtime.Value
-get (name, loc) = do
+getAt :: Text.Text -> Maybe Int -> Int -> Interpreter Runtime.Value
+getAt name depth loc = do
   env <- State.get
-  maybeValue <- Trans.liftIO $ get' name env
+  maybeValue <- case ancestor env depth of
+    Just scope -> Trans.liftIO $ Runtime.Environment.lookup name scope
+    Nothing -> reportError loc $ Text.concat ["Unresolved Variable '", name, "'."]
   case maybeValue of
     Just value -> pure value
     Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
@@ -39,13 +41,16 @@ define name value = do
     Runtime.Global scope -> insert name value scope
     Runtime.Local scope _ -> insert name value scope
 
-assign :: (Text.Text, Int) -> Runtime.Value -> Interpreter ()
-assign (name, loc) value = do
+assignAt :: Text.Text -> Maybe Int -> Int -> Runtime.Value -> Interpreter ()
+assignAt name depth loc value = do
   env <- State.get
-  assigned <- Trans.liftIO $ assign' name value env
-  if assigned
-    then pure ()
-    else reportError loc $ Text.concat ["Undefined variable '", name, "'."]
+  case ancestor env depth of
+    Just scope -> do
+      exists <- Trans.liftIO $ Runtime.Environment.lookup name scope
+      case exists of
+        Just _ -> Trans.liftIO $ Runtime.Environment.insert name value scope
+        Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
+    Nothing -> reportError loc $ Text.concat ["Unresolved Variable '", name, "'."]
 
 push :: Interpreter ()
 push = do
@@ -61,35 +66,9 @@ pop = do
     Runtime.Global _ -> reportError 0 "Can not pop global environment."
 
 globals' :: Runtime.Environment -> Runtime.Environment
-globals' env = do
-  case env of
-    Runtime.Global scope -> Runtime.Global scope
-    Runtime.Local _ parent -> globals' parent
-
-get' :: Text.Text -> Runtime.Environment -> IO (Maybe Runtime.Value)
-get' name env = case env of
-  Runtime.Global scope -> Runtime.Environment.lookup name scope
-  Runtime.Local scope parent -> do
-    maybeValue <- Runtime.Environment.lookup name scope
-    case maybeValue of
-      Just value -> pure $ Just value
-      Nothing -> get' name parent
-
-assign' :: Text.Text -> Runtime.Value -> Runtime.Environment -> IO Bool
-assign' name value (Runtime.Global scope) = do
-  maybeValue <- Runtime.Environment.lookup name scope
-  case maybeValue of
-    Just _ -> do
-      insert name value scope
-      pure True
-    Nothing -> pure False
-assign' name value (Runtime.Local scope parent) = do
-  maybeValue <- Runtime.Environment.lookup name scope
-  case maybeValue of
-    Just _ -> do
-      insert name value scope
-      pure True
-    Nothing -> assign' name value parent
+globals' env = case env of
+  Runtime.Global scope -> Runtime.Global scope
+  Runtime.Local _ parent -> globals' parent
 
 insert :: Text.Text -> Runtime.Value -> Runtime.Scope -> IO ()
 insert name value scope = IORef.modifyIORef scope (Map.insert name value)
@@ -98,6 +77,20 @@ lookup :: Text.Text -> Runtime.Scope -> IO (Maybe Runtime.Value)
 lookup name scope = do
   storage <- IORef.readIORef scope
   pure $ Map.lookup name storage
+
+ancestor :: Runtime.Environment -> Maybe Int -> Maybe Runtime.Scope
+ancestor env depth = case depth of
+  Just d -> local env d
+  Nothing -> Just $ global env
+
+local :: Runtime.Environment -> Int -> Maybe Runtime.Scope
+local (Runtime.Global _) _ = Nothing
+local (Runtime.Local scope _) 0 = Just scope
+local (Runtime.Local _ parent) depth = local parent (depth - 1)
+
+global :: Runtime.Environment -> Runtime.Scope
+global (Runtime.Global scope) = scope
+global (Runtime.Local _ parent) = global parent
 
 reportError :: Int -> Text.Text -> Interpreter a
 reportError loc = Except.throwError . Lox.RuntimeError loc

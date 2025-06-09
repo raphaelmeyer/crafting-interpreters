@@ -140,7 +140,7 @@ endScope :: Resolver ()
 endScope = do
   s <- State.get
   case rScopes s of
-    [] -> pure ()
+    [] -> reportError 0 "" "Unmatched end scope."
     (_ : scopes) -> State.put s {rScopes = scopes}
 
 reportError :: Expr.Location -> Text.Text -> Text.Text -> Resolver ()
