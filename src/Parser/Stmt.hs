@@ -18,6 +18,9 @@ data Stmt
       }
   | Print Expr.Expr
   | Return Expr.Expr
-  | Variable Expr.Identifier Expr.Expr
+  | Variable
+      { varName :: Expr.Identifier,
+        varInitializer :: Expr.Expr
+      }
   | While Expr.Expr Stmt
   deriving (Eq, Show)

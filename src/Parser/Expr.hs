@@ -35,4 +35,8 @@ data LogicalOp = And | Or deriving (Eq, Show)
 
 type Location = Int
 
-type Identifier = Text.Text
+data Identifier = Identifier
+  { idName :: Text.Text,
+    idLocation :: Location
+  }
+  deriving (Eq, Show)

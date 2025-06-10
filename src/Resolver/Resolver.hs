@@ -9,7 +9,7 @@ import qualified Lox
 import qualified Parser.Expr as Expr
 import qualified Parser.Stmt as Stmt
 
-type Scope = Map.Map Expr.Identifier Bool
+type Scope = Map.Map Text.Text Bool
 
 data ResolverState = ResolverState
   { rScopes :: [Scope],
@@ -63,7 +63,7 @@ statement Stmt.Break = pure Stmt.Break
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
-  checkNoSelfReference loc name
+  checkNoSelfReference name
   d <- resolveLocal name
   pure (Expr.Expr (Expr.Variable name d) loc)
 expression (Expr.Expr (Expr.Assign name expr _) loc) = do
@@ -98,13 +98,13 @@ resolveFunction name params body = do
   endScope
   pure $ Stmt.Function name params resolved
 
-checkNoSelfReference :: Expr.Location -> Text.Text -> Resolver ()
-checkNoSelfReference loc name = do
+checkNoSelfReference :: Expr.Identifier -> Resolver ()
+checkNoSelfReference name = do
   s <- State.get
   case rScopes s of
     [] -> pure ()
-    (scope : _) -> case Map.lookup name scope of
-      Just False -> reportError loc name "Can't read local variable in its own initializer."
+    (scope : _) -> case Map.lookup (Expr.idName name) scope of
+      Just False -> reportError name "Can't read local variable in its own initializer."
       _ -> pure ()
 
 resolveLocal :: Expr.Identifier -> Resolver (Maybe Int)
@@ -114,7 +114,7 @@ resolveLocal name = do
 
 distance :: [Scope] -> Expr.Identifier -> Maybe Int
 distance [] _ = Nothing
-distance (scope : scopes) name = case Map.lookup name scope of
+distance (scope : scopes) name = case Map.lookup (Expr.idName name) scope of
   Just _ -> Just 0
   Nothing -> (+ 1) <$> distance scopes name
 
@@ -123,14 +123,14 @@ declare name = do
   s <- State.get
   case rScopes s of
     [] -> pure ()
-    (scope : scopes) -> State.put s {rScopes = Map.insert name False scope : scopes}
+    (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) False scope : scopes}
 
 define :: Expr.Identifier -> Resolver ()
 define name = do
   s <- State.get
   case rScopes s of
     [] -> pure ()
-    (scope : scopes) -> State.put s {rScopes = Map.insert name True scope : scopes}
+    (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) True scope : scopes}
 
 beginScope :: Resolver ()
 beginScope = do
@@ -140,9 +140,9 @@ endScope :: Resolver ()
 endScope = do
   s <- State.get
   case rScopes s of
-    [] -> reportError 0 "" "Unmatched end scope."
+    [] -> reportError (Expr.Identifier "atEnd" 0) "Unmatched end scope."
     (_ : scopes) -> State.put s {rScopes = scopes}
 
-reportError :: Expr.Location -> Text.Text -> Text.Text -> Resolver ()
-reportError loc lexeme message = do
-  State.modify $ \s -> s {rErrors = Lox.ResolveError loc lexeme message : rErrors s}
+reportError :: Expr.Identifier -> Text.Text -> Resolver ()
+reportError ident message = do
+  State.modify $ \s -> s {rErrors = Lox.ResolveError (Expr.idLocation ident) (Expr.idName ident) message : rErrors s}

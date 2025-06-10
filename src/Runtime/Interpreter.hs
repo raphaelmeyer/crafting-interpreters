@@ -50,7 +50,7 @@ statement (Stmt.Print expr) = do
   pure Continue
 statement (Stmt.Variable name expr) = do
   value <- evaluate expr
-  Env.define name value
+  Env.define (Expr.idName name) value
   pure Continue
 statement (Stmt.Block block) = do
   executeBlock block
@@ -74,7 +74,8 @@ statement stmt@(Stmt.While condition body) = do
     else pure Continue
 statement (Stmt.Function name params body) = do
   closure <- Env.current
-  Env.define name $ Runtime.Callable (Runtime.Function name params body closure)
+  let paramNames = map Expr.idName params
+  Env.define (Expr.idName name) $ Runtime.Callable (Runtime.Function (Expr.idName name) paramNames body closure)
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
@@ -97,11 +98,11 @@ evaluate (Expr.Expr (Expr.Binary op l r) loc) = do
   left <- evaluate l
   right <- evaluate r
   evalBinary op left right loc
-evaluate (Expr.Expr (Expr.Variable name depth) loc) =
-  Env.getAt name depth loc
-evaluate (Expr.Expr (Expr.Assign name expr depth) loc) = do
+evaluate (Expr.Expr (Expr.Variable name depth) _) =
+  Env.getAt (Expr.idName name) depth (Expr.idLocation name)
+evaluate (Expr.Expr (Expr.Assign name expr depth) _) = do
   value <- evaluate expr
-  Env.assignAt name depth loc value
+  Env.assignAt (Expr.idName name) depth (Expr.idLocation name) value
   pure value
 evaluate (Expr.Expr (Expr.Logical op l r) _) = evalLogical op l r
 evaluate (Expr.Expr (Expr.Call calleeExpr args) loc) = do

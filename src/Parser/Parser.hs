@@ -63,7 +63,7 @@ declaration = do
 
 function :: StmtParser
 function = do
-  (name, _) <- expect identifier "Expect function name."
+  name <- expect identifier "Expect function name."
   expectToken Token.LeftParen "Expect '(' after function name."
   params <- parameters
   expectToken Token.LeftBrace "Expect '{' before function body."
@@ -83,7 +83,7 @@ whileParameters :: Int -> Parser [Expr.Identifier]
 whileParameters count = do
   Monad.when (count >= 255) $
     errorCurrentToken "Can't have more than 255 parameters." >>= report
-  (param, _) <- expect identifier "Expect parameter name."
+  param <- expect identifier "Expect parameter name."
   isComma <- matchToken Token.Comma
   if isComma
     then do
@@ -93,9 +93,9 @@ whileParameters count = do
 
 variableDeclaration :: StmtParser
 variableDeclaration = do
-  (name, loc) <- expect identifier "Expect variable name."
+  name <- expect identifier "Expect variable name."
   isAssign <- matchToken Token.Equal
-  value <- if isAssign then expression else pure $ Expr.Expr (Expr.Literal Literal.Nil) loc
+  value <- if isAssign then expression else pure $ Expr.Expr (Expr.Literal Literal.Nil) (Expr.idLocation name)
   expectToken Token.SemiColon "Expect ';' after variable declaration."
   pure $ Stmt.Variable name value
 
@@ -422,7 +422,7 @@ primary = do
     Nothing -> do
       maybeIdentifier <- match identifier
       case maybeIdentifier of
-        Just (name, loc) -> pure $ Expr.Expr (Expr.Variable name Nothing) loc
+        Just name -> pure $ Expr.Expr (Expr.Variable name Nothing) (Expr.idLocation name)
         Nothing -> grouping
 
 grouping :: ExprParser
@@ -443,8 +443,8 @@ literal t = case Token.tType t of
   where
     mkLiteral l = Just (l, Token.tLine t)
 
-identifier :: Token.Token -> Maybe (Expr.Identifier, Expr.Location)
-identifier (Token.Token (Token.Identifier name) _ line) = Just (name, line)
+identifier :: Token.Token -> Maybe Expr.Identifier
+identifier (Token.Token (Token.Identifier name) _ line) = Just (Expr.Identifier name line)
 identifier _ = Nothing
 
 isToken :: Token.TokenType -> Token.Token -> Maybe Token.Token
