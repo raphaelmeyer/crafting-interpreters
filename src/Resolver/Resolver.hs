@@ -2,6 +2,7 @@
 
 module Resolver.Resolver (resolve) where
 
+import qualified Control.Monad as Monad
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
@@ -11,9 +12,12 @@ import qualified Parser.Stmt as Stmt
 
 type Scope = Map.Map Text.Text Bool
 
+data FunctionType = None | Function deriving (Eq)
+
 data ResolverState = ResolverState
   { rScopes :: [Scope],
-    rErrors :: [Lox.Error]
+    rErrors :: [Lox.Error],
+    rFunction :: FunctionType
   }
 
 type Resolver a = State.State ResolverState a
@@ -23,7 +27,7 @@ resolve stmts = case rErrors s of
   [] -> Right resolved
   errors -> Left errors
   where
-    (resolved, s) = State.runState (program stmts) (ResolverState [] [])
+    (resolved, s) = State.runState (program stmts) (ResolverState [] [] None)
 
 program :: [Stmt.Stmt] -> Resolver [Stmt.Stmt]
 program = mapM statement
@@ -42,7 +46,7 @@ statement (Stmt.Variable name initializer) = do
 statement (Stmt.Function name params body) = do
   declare name
   define name
-  resolveFunction name params body
+  resolveFunction name params body Function
 statement (Stmt.Expression expr) = Stmt.Expression <$> expression expr
 statement (Stmt.If condition thenBranch elseBranch) = do
   resCond <- expression condition
@@ -54,7 +58,10 @@ statement (Stmt.If condition thenBranch elseBranch) = do
 statement (Stmt.Print expr) = do
   resolved <- expression expr
   pure $ Stmt.Print resolved
-statement (Stmt.Return expr) = Stmt.Return <$> expression expr
+statement (Stmt.Return (Expr.Expr expr loc)) = do
+  fun <- rFunction <$> State.get
+  Monad.when (fun == None) $ reportError "return" loc "Can't return from top-level code."
+  Stmt.Return <$> expression (Expr.Expr expr loc)
 statement (Stmt.While condition body) = do
   resCond <- expression condition
   resBody <- statement body
@@ -90,12 +97,15 @@ expression (Expr.Expr (Expr.Unary op expr) loc) = do
   resolved <- expression expr
   pure $ Expr.Expr (Expr.Unary op resolved) loc
 
-resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> Resolver Stmt.Stmt
-resolveFunction name params body = do
+resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> FunctionType -> Resolver Stmt.Stmt
+resolveFunction name params body fun = do
+  enclosing <- rFunction <$> State.get
+  State.modify $ \s -> s {rFunction = fun}
   beginScope
   mapM_ (\p -> declare p >> define p) params
   resolved <- program body
   endScope
+  State.modify $ \s -> s {rFunction = enclosing}
   pure $ Stmt.Function name params resolved
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
@@ -104,7 +114,7 @@ checkNoSelfReference name = do
   case rScopes s of
     [] -> pure ()
     (scope : _) -> case Map.lookup (Expr.idName name) scope of
-      Just False -> reportError name "Can't read local variable in its own initializer."
+      Just False -> reportError (Expr.idName name) (Expr.idLocation name) "Can't read local variable in its own initializer."
       _ -> pure ()
 
 resolveLocal :: Expr.Identifier -> Resolver (Maybe Int)
@@ -125,7 +135,7 @@ declare name = do
     [] -> pure ()
     (scope : scopes) -> do
       if Map.member (Expr.idName name) scope
-        then reportError name "Already a variable with this name in this scope."
+        then reportError (Expr.idName name) (Expr.idLocation name) "Already a variable with this name in this scope."
         else State.put s {rScopes = Map.insert (Expr.idName name) False scope : scopes}
 
 define :: Expr.Identifier -> Resolver ()
@@ -143,9 +153,9 @@ endScope :: Resolver ()
 endScope = do
   s <- State.get
   case rScopes s of
-    [] -> reportError (Expr.Identifier "atEnd" 0) "Unmatched end scope."
+    [] -> reportError "atEnd" 0 "Unmatched end scope."
     (_ : scopes) -> State.put s {rScopes = scopes}
 
-reportError :: Expr.Identifier -> Text.Text -> Resolver ()
-reportError ident message = do
-  State.modify $ \s -> s {rErrors = Lox.ResolveError (Expr.idLocation ident) (Expr.idName ident) message : rErrors s}
+reportError :: Text.Text -> Expr.Location -> Text.Text -> Resolver ()
+reportError name loc message = do
+  State.modify $ \s -> s {rErrors = Lox.ResolveError loc name message : rErrors s}
