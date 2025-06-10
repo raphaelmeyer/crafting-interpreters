@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Environment (assignAt, current, define, globals, make, pop, push, getAt) where
+module Runtime.Environment (assignAt, current, define, make, pop, push, getAt) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -17,9 +17,6 @@ make :: IO Runtime.Environment
 make = do
   m <- IORef.newIORef $ Map.insert "clock" (Runtime.Callable Runtime.Clock) Map.empty
   pure $ Runtime.Global m
-
-globals :: Interpreter Runtime.Environment
-globals = globals' <$> State.get
 
 current :: Interpreter Runtime.Environment
 current = State.get
@@ -64,11 +61,6 @@ pop = do
   case env of
     Runtime.Local _ parent -> State.put parent
     Runtime.Global _ -> reportError 0 "Can not pop global environment."
-
-globals' :: Runtime.Environment -> Runtime.Environment
-globals' env = case env of
-  Runtime.Global scope -> Runtime.Global scope
-  Runtime.Local _ parent -> globals' parent
 
 insert :: Text.Text -> Runtime.Value -> Runtime.Scope -> IO ()
 insert name value scope = IORef.modifyIORef scope (Map.insert name value)
