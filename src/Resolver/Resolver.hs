@@ -123,7 +123,10 @@ declare name = do
   s <- State.get
   case rScopes s of
     [] -> pure ()
-    (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) False scope : scopes}
+    (scope : scopes) -> do
+      if Map.member (Expr.idName name) scope
+        then reportError name "Already a variable with this name in this scope."
+        else State.put s {rScopes = Map.insert (Expr.idName name) False scope : scopes}
 
 define :: Expr.Identifier -> Resolver ()
 define name = do
