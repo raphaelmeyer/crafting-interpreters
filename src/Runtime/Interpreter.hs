@@ -152,7 +152,7 @@ invoke (Runtime.Callable declaration) args loc = do
     Runtime.Function _ params body closure -> do
       result <- withEnvironment closure $ do
         bindParameters $ zip params args
-        executeBlock body
+        execute body
       case result of
         Continue -> pure Runtime.Nil
         Return value -> pure value
