@@ -5,6 +5,10 @@ import qualified Parser.Expr as Expr
 data Stmt
   = Block [Stmt]
   | Break
+  | Class
+      { cName :: Expr.Identifier,
+        cMethods :: [Function]
+      }
   | Expression Expr.Expr
   | Fun Function
   | If

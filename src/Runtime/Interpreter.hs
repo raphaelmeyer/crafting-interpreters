@@ -80,6 +80,7 @@ statement (Stmt.Fun (Stmt.Function name params body)) = do
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
 statement Stmt.Break = pure Break
+statement (Stmt.Class _ _) = pure Continue
 
 executeBlock :: [Stmt.Stmt] -> Interpreter Result
 executeBlock stmts = do
