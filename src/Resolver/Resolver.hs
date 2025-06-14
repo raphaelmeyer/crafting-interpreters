@@ -67,7 +67,10 @@ statement (Stmt.While condition body) = do
   resBody <- statement body
   pure $ Stmt.While resCond resBody
 statement Stmt.Break = pure Stmt.Break
-statement (Stmt.Class name methods) = pure (Stmt.Class name methods)
+statement (Stmt.Class name methods) = do
+  declare name
+  define name
+  pure (Stmt.Class name methods)
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do

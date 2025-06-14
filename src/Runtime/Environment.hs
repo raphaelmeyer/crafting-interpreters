@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Runtime.Environment (assignAt, current, define, make, pop, push, getAt) where
+module Runtime.Environment (assign, assignAt, current, define, make, pop, push, getAt) where
 
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
@@ -49,6 +49,14 @@ assignAt name depth loc value = do
         Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
     Nothing -> reportError loc $ Text.concat ["Unresolved Variable '", name, "'."]
 
+assign :: Text.Text -> Int -> Runtime.Value -> Interpreter ()
+assign name loc value = do
+  env <- State.get
+  maybeScope <- Trans.liftIO $ search name env
+  case maybeScope of
+    Just scope -> Trans.liftIO $ Runtime.Environment.insert name value scope
+    Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
+
 push :: Interpreter ()
 push = do
   env <- State.get
@@ -83,6 +91,18 @@ local (Runtime.Local _ parent) depth = local parent (depth - 1)
 global :: Runtime.Environment -> Runtime.Scope
 global (Runtime.Global scope) = scope
 global (Runtime.Local _ parent) = global parent
+
+search :: Text.Text -> Runtime.Environment -> IO (Maybe Runtime.Scope)
+search name (Runtime.Global scope) = do
+  storage <- IORef.readIORef scope
+  if Map.member name storage
+    then pure $ Just scope
+    else pure Nothing
+search name (Runtime.Local scope parent) = do
+  storage <- IORef.readIORef scope
+  if Map.member name storage
+    then pure $ Just scope
+    else search name parent
 
 reportError :: Int -> Text.Text -> Interpreter a
 reportError loc = Except.throwError . Lox.RuntimeError loc

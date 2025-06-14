@@ -26,6 +26,9 @@ data Declaration
         funBody :: [Stmt.Stmt],
         funClosure :: Environment
       }
+  | Class
+      { clName :: Text.Text
+      }
   deriving (Eq, Show)
 
 type Storage = Map.Map Text.Text Value
@@ -36,6 +39,7 @@ data Environment = Global Scope | Local Scope Environment deriving (Eq)
 
 arity :: Declaration -> Int
 arity Clock = 0
+arity Class {} = 0
 arity Function {funParameters = params} = length params
 
 type Interpreter m a = Except.ExceptT Lox.Error (State.StateT Environment m) a
