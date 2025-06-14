@@ -80,7 +80,10 @@ statement (Stmt.Fun (Stmt.Function name params body)) = do
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
 statement Stmt.Break = pure Break
-statement (Stmt.Class _ _) = pure Continue
+statement (Stmt.Class name _) = do
+  Env.define (Expr.idName name) Runtime.Nil
+  Env.assign (Expr.idName name) (Expr.idLocation name) $ Runtime.Class (Runtime.Definition (Expr.idName name))
+  pure Continue
 
 executeBlock :: [Stmt.Stmt] -> Interpreter Result
 executeBlock stmts = do
@@ -203,3 +206,4 @@ toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
 toString (Runtime.Callable (Runtime.Function name _ _ _)) = "<fn " ++ Text.unpack name ++ ">"
+toString (Runtime.Class (Runtime.Definition name)) = Text.unpack name
