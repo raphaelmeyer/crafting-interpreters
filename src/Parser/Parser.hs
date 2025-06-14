@@ -55,19 +55,40 @@ program = do
 
 declaration :: StmtParser
 declaration = do
-  token <- match . anyOf $ [Token.Fun, Token.Var]
+  token <- match . anyOf $ [Token.Class, Token.Fun, Token.Var]
   case token of
-    Just Token.Fun -> function
+    Just Token.Class -> classDeclaration
+    Just Token.Fun -> Stmt.Fun <$> function
     Just Token.Var -> variableDeclaration
     _ -> statement
 
-function :: StmtParser
+classDeclaration :: StmtParser
+classDeclaration = do
+  name <- expect identifier "Expect class name."
+  expectToken Token.LeftBrace "Expect '{' before class body."
+  Stmt.Class name <$> whileMethods
+
+whileMethods :: Parser [Stmt.Function]
+whileMethods = do
+  isClosing <- matchToken Token.RightBrace
+  if isClosing
+    then pure []
+    else do
+      atEnd <- State.gets isAtEnd
+      if atEnd
+        then errorCurrentToken "Expect '}' after class body." >>= throw
+        else do
+          method <- function
+          methods <- whileMethods
+          pure $ method : methods
+
+function :: Parser Stmt.Function
 function = do
   name <- expect identifier "Expect function name."
   expectToken Token.LeftParen "Expect '(' after function name."
   params <- parameters
   expectToken Token.LeftBrace "Expect '{' before function body."
-  Stmt.Fun . Stmt.Function name params <$> whileBlock
+  Stmt.Function name params <$> whileBlock
 
 parameters :: Parser [Expr.Identifier]
 parameters = do
