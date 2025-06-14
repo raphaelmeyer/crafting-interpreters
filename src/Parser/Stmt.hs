@@ -6,11 +6,7 @@ data Stmt
   = Block [Stmt]
   | Break
   | Expression Expr.Expr
-  | Function
-      { funName :: Expr.Identifier,
-        funParameters :: [Expr.Identifier],
-        funBody :: [Stmt]
-      }
+  | Fun Function
   | If
       { ifCondition :: Expr.Expr,
         thenStmt :: Stmt,
@@ -23,4 +19,11 @@ data Stmt
         varInitializer :: Expr.Expr
       }
   | While Expr.Expr Stmt
+  deriving (Eq, Show)
+
+data Function = Function
+  { funName :: Expr.Identifier,
+    funParameters :: [Expr.Identifier],
+    funBody :: [Stmt]
+  }
   deriving (Eq, Show)

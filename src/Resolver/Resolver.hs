@@ -43,7 +43,7 @@ statement (Stmt.Variable name initializer) = do
   resolved <- expression initializer
   define name
   pure $ Stmt.Variable name resolved
-statement (Stmt.Function name params body) = do
+statement (Stmt.Fun (Stmt.Function name params body)) = do
   declare name
   define name
   resolveFunction name params body Function
@@ -106,7 +106,7 @@ resolveFunction name params body fun = do
   resolved <- program body
   endScope
   State.modify $ \s -> s {rFunction = enclosing}
-  pure $ Stmt.Function name params resolved
+  pure . Stmt.Fun $ Stmt.Function name params resolved
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
 checkNoSelfReference name = do

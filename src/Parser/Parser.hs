@@ -67,7 +67,7 @@ function = do
   expectToken Token.LeftParen "Expect '(' after function name."
   params <- parameters
   expectToken Token.LeftBrace "Expect '{' before function body."
-  Stmt.Function name params <$> whileBlock
+  Stmt.Fun . Stmt.Function name params <$> whileBlock
 
 parameters :: Parser [Expr.Identifier]
 parameters = do

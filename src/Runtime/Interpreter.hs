@@ -72,7 +72,7 @@ statement stmt@(Stmt.While condition body) = do
         Return value -> pure $ Return value
         Break -> pure Continue
     else pure Continue
-statement (Stmt.Function name params body) = do
+statement (Stmt.Fun (Stmt.Function name params body)) = do
   closure <- Env.current
   let paramNames = map Expr.idName params
   Env.define (Expr.idName name) $ Runtime.Callable (Runtime.Function (Expr.idName name) paramNames body closure)
