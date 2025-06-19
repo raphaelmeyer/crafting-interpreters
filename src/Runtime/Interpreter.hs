@@ -119,6 +119,7 @@ evaluate (Expr.Expr (Expr.Get objectExpr name) loc) = do
   case object of
     Runtime.Instance clInst -> getField name clInst
     _ -> reportError loc "Only instances have properties."
+evaluate (Expr.Expr {}) = pure Runtime.Nil
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)

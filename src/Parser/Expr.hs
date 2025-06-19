@@ -13,6 +13,7 @@ data Expression
   | Grouping Expr
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
+  | Set {setObject :: Expr, setName :: Identifier, setValue :: Expr}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
   | Variable {varName :: Identifier, varDepth :: Maybe Int}
   deriving (Eq, Show)

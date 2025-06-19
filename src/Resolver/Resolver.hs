@@ -103,6 +103,10 @@ expression (Expr.Expr (Expr.Unary op expr) loc) = do
 expression (Expr.Expr (Expr.Get object name) loc) = do
   resolved <- expression object
   pure $ Expr.Expr (Expr.Get resolved name) loc
+expression (Expr.Expr (Expr.Set object name value) loc) = do
+  resValue <- expression value
+  resObject <- expression object
+  pure $ Expr.Expr (Expr.Set resObject name resValue) loc
 
 resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> FunctionType -> Resolver Stmt.Stmt
 resolveFunction name params body fun = do
