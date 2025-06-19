@@ -82,7 +82,7 @@ statement (Stmt.Return expr) = do
 statement Stmt.Break = pure Break
 statement (Stmt.Class name _) = do
   Env.define (Expr.idName name) Runtime.Nil
-  Env.assign (Expr.idName name) (Expr.idLocation name) $ Runtime.Callable (Runtime.Class (Expr.idName name))
+  Env.assign (Expr.idName name) (Expr.idLocation name) $ Runtime.Callable . Runtime.Class $ Runtime.ClassDecl (Expr.idName name)
   pure Continue
 
 executeBlock :: [Stmt.Stmt] -> Interpreter Result
@@ -163,7 +163,7 @@ invoke (Runtime.Callable declaration) args loc = do
         Continue -> pure Runtime.Nil
         Return value -> pure value
         Break -> reportError loc "Can not break out of a function."
-    Runtime.Class {} -> pure Runtime.Nil
+    Runtime.Class decl -> pure $ Runtime.Instance (Runtime.ClassInstance decl)
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()
@@ -207,4 +207,5 @@ toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
 toString (Runtime.Callable (Runtime.Function name _ _ _)) = "<fn " ++ Text.unpack name ++ ">"
-toString (Runtime.Callable (Runtime.Class name)) = Text.unpack name
+toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name))) = Text.unpack name
+toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name))) = Text.unpack name ++ " instance"

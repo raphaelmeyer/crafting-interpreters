@@ -13,6 +13,7 @@ import qualified Parser.Stmt as Stmt
 data Value
   = Boolean Bool
   | Callable Declaration
+  | Instance ClassInstance
   | Nil
   | Number Double
   | String Text.Text
@@ -26,9 +27,17 @@ data Declaration
         funBody :: [Stmt.Stmt],
         funClosure :: Environment
       }
-  | Class
-      { clName :: Text.Text
-      }
+  | Class ClassDecl
+  deriving (Eq, Show)
+
+data ClassDecl = ClassDecl
+  { clName :: Text.Text
+  }
+  deriving (Eq, Show)
+
+data ClassInstance = ClassInstance
+  { instClass :: ClassDecl
+  }
   deriving (Eq, Show)
 
 type Storage = Map.Map Text.Text Value
