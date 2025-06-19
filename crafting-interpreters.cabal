@@ -24,6 +24,7 @@ library
         Parser.Stmt,
         Resolver.Resolver,
         Runtime.Environment,
+        Runtime.Instance,
         Runtime.Interpreter,
         Runtime.Native,
         Runtime.Types,

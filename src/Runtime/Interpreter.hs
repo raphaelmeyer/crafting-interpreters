@@ -13,6 +13,7 @@ import qualified Parser.Expr as Expr
 import qualified Parser.Literal as Literal
 import qualified Parser.Stmt as Stmt
 import qualified Runtime.Environment as Env
+import qualified Runtime.Instance as Instance
 import qualified Runtime.Native as Native
 import qualified Runtime.Types as Runtime
 
@@ -113,7 +114,11 @@ evaluate (Expr.Expr (Expr.Call calleeExpr args) loc) = do
   callee <- evaluate calleeExpr
   argValues <- mapM evaluate args
   invoke callee argValues loc
-evaluate (Expr.Expr (Expr.Get {}) _) = pure Runtime.Nil
+evaluate (Expr.Expr (Expr.Get objectExpr name) loc) = do
+  object <- evaluate objectExpr
+  case object of
+    Runtime.Instance clInst -> getField name clInst
+    _ -> reportError loc "Only instances have properties."
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
@@ -164,7 +169,7 @@ invoke (Runtime.Callable declaration) args loc = do
         Continue -> pure Runtime.Nil
         Return value -> pure value
         Break -> reportError loc "Can not break out of a function."
-    Runtime.Class decl -> pure $ Runtime.Instance (Runtime.ClassInstance decl)
+    Runtime.Class decl -> pure $ Runtime.Instance $ Instance.mkInstance decl
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()
@@ -198,6 +203,11 @@ truthy Runtime.Nil = False
 truthy (Runtime.Boolean b) = b
 truthy _ = True
 
+getField :: Expr.Identifier -> Runtime.ClassInstance -> Interpreter Runtime.Value
+getField name inst = case Instance.getField (Expr.idName name) inst of
+  Just value -> pure value
+  Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
+
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc
 
@@ -209,4 +219,4 @@ toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
 toString (Runtime.Callable (Runtime.Function name _ _ _)) = "<fn " ++ Text.unpack name ++ ">"
 toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name))) = Text.unpack name
-toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name))) = Text.unpack name ++ " instance"
+toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name) _)) = Text.unpack name ++ " instance"

@@ -36,7 +36,8 @@ data ClassDecl = ClassDecl
   deriving (Eq, Show)
 
 data ClassInstance = ClassInstance
-  { instClass :: ClassDecl
+  { instClass :: ClassDecl,
+    instFields :: Map.Map Text.Text Value
   }
   deriving (Eq, Show)
 
