@@ -113,6 +113,7 @@ evaluate (Expr.Expr (Expr.Call calleeExpr args) loc) = do
   callee <- evaluate calleeExpr
   argValues <- mapM evaluate args
   invoke callee argValues loc
+evaluate (Expr.Expr (Expr.Get {}) _) = pure Runtime.Nil
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)

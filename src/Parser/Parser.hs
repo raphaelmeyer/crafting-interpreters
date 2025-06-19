@@ -406,12 +406,15 @@ call = do
 
 whileCall :: Expr.Expr -> ExprParser
 whileCall expr = do
-  isParen <- matchToken Token.LeftParen
-  if isParen
-    then do
+  token <- match . anyOf $ [Token.Dot, Token.LeftParen]
+  case token of
+    Just Token.LeftParen -> do
       (args, loc) <- arguments
       whileCall $ Expr.Expr (Expr.Call expr args) loc
-    else pure expr
+    Just Token.Dot -> do
+      name <- expect identifier "Expect property name after '.'."
+      whileCall $ Expr.Expr (Expr.Get expr name) (Expr.idLocation name)
+    _ -> pure expr
 
 arguments :: Parser ([Expr.Expr], Expr.Location)
 arguments = do

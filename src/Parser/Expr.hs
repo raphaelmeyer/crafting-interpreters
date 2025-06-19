@@ -9,6 +9,7 @@ data Expression
   = Assign {assignName :: Identifier, assignExpr :: Expr, assignDepth :: Maybe Int}
   | Binary {binaryOp :: BinaryOp, binaryLeft :: Expr, binaryRight :: Expr}
   | Call {callCallee :: Expr, callArguments :: [Expr]}
+  | Get {getObject :: Expr, getName :: Identifier}
   | Grouping Expr
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
