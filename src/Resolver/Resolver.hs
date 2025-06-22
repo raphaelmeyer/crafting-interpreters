@@ -12,7 +12,7 @@ import qualified Parser.Stmt as Stmt
 
 type Scope = Map.Map Text.Text Bool
 
-data FunctionType = None | Function deriving (Eq)
+data FunctionType = None | Function | Method deriving (Eq)
 
 data ResolverState = ResolverState
   { rScopes :: [Scope],
@@ -43,10 +43,10 @@ statement (Stmt.Variable name initializer) = do
   resolved <- expression initializer
   define name
   pure $ Stmt.Variable name resolved
-statement (Stmt.Fun (Stmt.Function name params body)) = do
-  declare name
-  define name
-  resolveFunction name params body Function
+statement (Stmt.Fun function) = do
+  declare (Stmt.funName function)
+  define (Stmt.funName function)
+  Stmt.Fun <$> resolveFunction Function function
 statement (Stmt.Expression expr) = Stmt.Expression <$> expression expr
 statement (Stmt.If condition thenBranch elseBranch) = do
   resCond <- expression condition
@@ -70,7 +70,8 @@ statement Stmt.Break = pure Stmt.Break
 statement (Stmt.Class name methods) = do
   declare name
   define name
-  pure (Stmt.Class name methods)
+  resolved <- mapM (resolveFunction Method) methods
+  pure (Stmt.Class name resolved)
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
@@ -108,16 +109,16 @@ expression (Expr.Expr (Expr.Set object name value) loc) = do
   resObject <- expression object
   pure $ Expr.Expr (Expr.Set resObject name resValue) loc
 
-resolveFunction :: Expr.Identifier -> [Expr.Identifier] -> [Stmt.Stmt] -> FunctionType -> Resolver Stmt.Stmt
-resolveFunction name params body fun = do
+resolveFunction :: FunctionType -> Stmt.Function -> Resolver Stmt.Function
+resolveFunction functionType (Stmt.Function name params body) = do
   enclosing <- rFunction <$> State.get
-  State.modify $ \s -> s {rFunction = fun}
+  State.modify $ \s -> s {rFunction = functionType}
   beginScope
   mapM_ (\p -> declare p >> define p) params
   resolved <- program body
   endScope
   State.modify $ \s -> s {rFunction = enclosing}
-  pure . Stmt.Fun $ Stmt.Function name params resolved
+  pure $ Stmt.Function name params resolved
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
 checkNoSelfReference name = do
