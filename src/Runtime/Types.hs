@@ -17,7 +17,7 @@ data Value
   | Nil
   | Number Double
   | String Text.Text
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data Declaration
   = Clock
@@ -28,18 +28,18 @@ data Declaration
         funClosure :: Environment
       }
   | Class ClassDecl
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data ClassDecl = ClassDecl
   { clName :: Text.Text
   }
-  deriving (Eq, Show)
+  deriving (Eq)
 
 data ClassInstance = ClassInstance
   { instClass :: ClassDecl,
-    instFields :: Map.Map Text.Text Value
+    instFields :: IORef.IORef (Map.Map Text.Text Value)
   }
-  deriving (Eq, Show)
+  deriving (Eq)
 
 type Storage = Map.Map Text.Text Value
 
@@ -53,8 +53,3 @@ arity Class {} = 0
 arity Function {funParameters = params} = length params
 
 type Interpreter m a = Except.ExceptT Lox.Error (State.StateT Environment m) a
-
-instance Show Environment where
-  show :: Environment -> String
-  show (Global _) = "Global"
-  show (Local _ parent) = "Local { " ++ show parent ++ " }"

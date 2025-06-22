@@ -119,7 +119,14 @@ evaluate (Expr.Expr (Expr.Get objectExpr name) loc) = do
   case object of
     Runtime.Instance clInst -> getField name clInst
     _ -> reportError loc "Only instances have properties."
-evaluate (Expr.Expr {}) = pure Runtime.Nil
+evaluate (Expr.Expr (Expr.Set objectExpr name valueExpr) loc) = do
+  object <- evaluate objectExpr
+  case object of
+    Runtime.Instance clInst -> do
+      value <- evaluate valueExpr
+      setField name value clInst
+      pure value
+    _ -> reportError loc "Only instances have fields."
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
@@ -170,7 +177,9 @@ invoke (Runtime.Callable declaration) args loc = do
         Continue -> pure Runtime.Nil
         Return value -> pure value
         Break -> reportError loc "Can not break out of a function."
-    Runtime.Class decl -> pure $ Runtime.Instance $ Instance.mkInstance decl
+    Runtime.Class decl -> do
+      inst <- Trans.liftIO $ Instance.mkInstance decl
+      pure $ Runtime.Instance inst
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()
@@ -205,9 +214,14 @@ truthy (Runtime.Boolean b) = b
 truthy _ = True
 
 getField :: Expr.Identifier -> Runtime.ClassInstance -> Interpreter Runtime.Value
-getField name inst = case Instance.getField (Expr.idName name) inst of
-  Just value -> pure value
-  Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
+getField name inst = do
+  maybeValue <- Trans.liftIO $ Instance.getField (Expr.idName name) inst
+  case maybeValue of
+    Just value -> pure value
+    Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
+
+setField :: Expr.Identifier -> Runtime.Value -> Runtime.ClassInstance -> Interpreter ()
+setField name value inst = Trans.liftIO $ Instance.setField (Expr.idName name) value inst
 
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc
