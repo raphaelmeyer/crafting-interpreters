@@ -21,17 +21,21 @@ data Value
 
 data Declaration
   = Clock
-  | Function
-      { funName :: Text.Text,
-        funParameters :: [Text.Text],
-        funBody :: [Stmt.Stmt],
-        funClosure :: Environment
-      }
+  | Function FunctionDecl
   | Class ClassDecl
   deriving (Eq)
 
 data ClassDecl = ClassDecl
-  { clName :: Text.Text
+  { clName :: Text.Text,
+    clMethods :: IORef.IORef (Map.Map Text.Text FunctionDecl)
+  }
+  deriving (Eq)
+
+data FunctionDecl = FunctionDecl
+  { funName :: Text.Text,
+    funParameters :: [Text.Text],
+    funBody :: [Stmt.Stmt],
+    funClosure :: Environment
   }
   deriving (Eq)
 
@@ -50,6 +54,6 @@ data Environment = Global Scope | Local Scope Environment deriving (Eq)
 arity :: Declaration -> Int
 arity Clock = 0
 arity Class {} = 0
-arity Function {funParameters = params} = length params
+arity (Function FunctionDecl {funParameters = params}) = length params
 
 type Interpreter m a = Except.ExceptT Lox.Error (State.StateT Environment m) a
