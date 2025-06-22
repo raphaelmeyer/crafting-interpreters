@@ -25,3 +25,8 @@ mkClass clName methods closure = do
   where
     mkMethods (Stmt.Function fnName params body) =
       (Expr.idName fnName, Runtime.FunctionDecl (Expr.idName fnName) (map Expr.idName params) body closure)
+
+getMethod :: Text.Text -> Runtime.ClassInstance -> IO (Maybe Runtime.Value)
+getMethod name inst = do
+  methods <- IORef.readIORef (Runtime.clMethods . Runtime.instClass $ inst)
+  pure $ Runtime.Callable . Runtime.Function <$> Map.lookup name methods

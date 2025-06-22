@@ -217,10 +217,14 @@ truthy _ = True
 
 getField :: Expr.Identifier -> Runtime.ClassInstance -> Interpreter Runtime.Value
 getField name inst = do
-  maybeValue <- Trans.liftIO $ Instance.getField (Expr.idName name) inst
-  case maybeValue of
+  maybeField <- Trans.liftIO $ Instance.getField (Expr.idName name) inst
+  case maybeField of
     Just value -> pure value
-    Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
+    Nothing -> do
+      maybeMethod <- Trans.liftIO $ Instance.getMethod (Expr.idName name) inst
+      case maybeMethod of
+        Just method -> pure method
+        Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
 
 setField :: Expr.Identifier -> Runtime.Value -> Runtime.ClassInstance -> Interpreter ()
 setField name value inst = Trans.liftIO $ Instance.setField (Expr.idName name) value inst
