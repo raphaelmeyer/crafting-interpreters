@@ -14,6 +14,7 @@ data Expression
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
   | Set {setObject :: Expr, setName :: Identifier, setValue :: Expr}
+  | This {thisDepth :: Maybe Int}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
   | Variable {varName :: Identifier, varDepth :: Maybe Int}
   deriving (Eq, Show)
@@ -42,3 +43,6 @@ data Identifier = Identifier
     idLocation :: Location
   }
   deriving (Eq, Show)
+
+this :: Text.Text
+this = Text.pack "this"

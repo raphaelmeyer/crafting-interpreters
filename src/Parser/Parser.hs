@@ -447,10 +447,14 @@ primary = do
   case maybeLiteral of
     Just (l, loc) -> pure $ Expr.Expr (Expr.Literal l) loc
     Nothing -> do
-      maybeIdentifier <- match identifier
-      case maybeIdentifier of
-        Just name -> pure $ Expr.Expr (Expr.Variable name Nothing) (Expr.idLocation name)
-        Nothing -> grouping
+      maybeThis <- matchTokenAt Token.This
+      case maybeThis of
+        Just loc -> pure $ Expr.Expr (Expr.This Nothing) loc
+        Nothing -> do
+          maybeIdentifier <- match identifier
+          case maybeIdentifier of
+            Just name -> pure $ Expr.Expr (Expr.Variable name Nothing) (Expr.idLocation name)
+            Nothing -> grouping
 
 grouping :: ExprParser
 grouping = do

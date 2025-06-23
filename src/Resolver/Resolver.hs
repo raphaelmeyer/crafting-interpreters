@@ -70,7 +70,9 @@ statement Stmt.Break = pure Stmt.Break
 statement (Stmt.Class name methods) = do
   declare name
   define name
+  beginClassScope
   resolved <- mapM (resolveFunction Method) methods
+  endScope
   pure (Stmt.Class name resolved)
 
 expression :: Expr.Expr -> Resolver Expr.Expr
@@ -108,6 +110,9 @@ expression (Expr.Expr (Expr.Set object name value) loc) = do
   resValue <- expression value
   resObject <- expression object
   pure $ Expr.Expr (Expr.Set resObject name resValue) loc
+expression (Expr.Expr (Expr.This _) loc) = do
+  d <- resolveLocal (Expr.Identifier Expr.this loc)
+  pure $ Expr.Expr (Expr.This d) loc
 
 resolveFunction :: FunctionType -> Stmt.Function -> Resolver Stmt.Function
 resolveFunction functionType (Stmt.Function name params body) = do
@@ -156,6 +161,9 @@ define name = do
   case rScopes s of
     [] -> pure ()
     (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) True scope : scopes}
+
+beginClassScope :: Resolver ()
+beginClassScope = State.modify $ \s -> s {rScopes = Map.singleton Expr.this True : rScopes s}
 
 beginScope :: Resolver ()
 beginScope = do
