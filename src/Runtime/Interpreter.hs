@@ -224,11 +224,19 @@ getField name inst = do
     Nothing -> do
       maybeMethod <- Trans.liftIO $ Instance.getMethod (Expr.idName name) inst
       case maybeMethod of
-        Just method -> pure method
+        Just method -> bind inst method
         Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
 
 setField :: Expr.Identifier -> Runtime.Value -> Runtime.ClassInstance -> Interpreter ()
 setField name value inst = Trans.liftIO $ Instance.setField (Expr.idName name) value inst
+
+bind :: Runtime.ClassInstance -> Runtime.Value -> Interpreter Runtime.Value
+bind inst (Runtime.Callable (Runtime.Function method)) =
+  withEnvironment (Runtime.funClosure method) $ do
+    Env.define "this" $ Runtime.Instance inst
+    closure <- Env.current
+    pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
+bind _ _ = reportError 0 "Can only bind callables."
 
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc
