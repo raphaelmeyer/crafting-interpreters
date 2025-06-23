@@ -12,12 +12,15 @@ import qualified Parser.Stmt as Stmt
 
 type Scope = Map.Map Text.Text Bool
 
-data FunctionType = None | Function | Method deriving (Eq)
+data FunctionType = NotFunction | Function | Method deriving (Eq)
+
+data ClassType = NotClass | Class deriving (Eq)
 
 data ResolverState = ResolverState
   { rScopes :: [Scope],
     rErrors :: [Lox.Error],
-    rFunction :: FunctionType
+    rFunction :: FunctionType,
+    rClass :: ClassType
   }
 
 type Resolver a = State.State ResolverState a
@@ -27,7 +30,7 @@ resolve stmts = case rErrors s of
   [] -> Right resolved
   errors -> Left errors
   where
-    (resolved, s) = State.runState (program stmts) (ResolverState [] [] None)
+    (resolved, s) = State.runState (program stmts) (ResolverState [] [] NotFunction NotClass)
 
 program :: [Stmt.Stmt] -> Resolver [Stmt.Stmt]
 program = mapM statement
@@ -60,20 +63,14 @@ statement (Stmt.Print expr) = do
   pure $ Stmt.Print resolved
 statement (Stmt.Return (Expr.Expr expr loc)) = do
   fun <- rFunction <$> State.get
-  Monad.when (fun == None) $ reportError "return" loc "Can't return from top-level code."
+  Monad.when (fun == NotFunction) $ reportError "return" loc "Can't return from top-level code."
   Stmt.Return <$> expression (Expr.Expr expr loc)
 statement (Stmt.While condition body) = do
   resCond <- expression condition
   resBody <- statement body
   pure $ Stmt.While resCond resBody
 statement Stmt.Break = pure Stmt.Break
-statement (Stmt.Class name methods) = do
-  declare name
-  define name
-  beginClassScope
-  resolved <- mapM (resolveFunction Method) methods
-  endScope
-  pure (Stmt.Class name resolved)
+statement (Stmt.Class name methods) = resolveClass name methods
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
@@ -111,6 +108,8 @@ expression (Expr.Expr (Expr.Set object name value) loc) = do
   resObject <- expression object
   pure $ Expr.Expr (Expr.Set resObject name resValue) loc
 expression (Expr.Expr (Expr.This _) loc) = do
+  cl <- rClass <$> State.get
+  Monad.when (cl == NotClass) $ reportError Expr.this loc "Can't use 'this' outside of a class."
   d <- resolveLocal (Expr.Identifier Expr.this loc)
   pure $ Expr.Expr (Expr.This d) loc
 
@@ -124,6 +123,18 @@ resolveFunction functionType (Stmt.Function name params body) = do
   endScope
   State.modify $ \s -> s {rFunction = enclosing}
   pure $ Stmt.Function name params resolved
+
+resolveClass :: Expr.Identifier -> [Stmt.Function] -> Resolver Stmt.Stmt
+resolveClass name methods = do
+  enclosing <- rClass <$> State.get
+  State.modify $ \s -> s {rClass = Class}
+  declare name
+  define name
+  beginClassScope
+  resolved <- mapM (resolveFunction Method) methods
+  endScope
+  State.modify $ \s -> s {rClass = enclosing}
+  pure (Stmt.Class name resolved)
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
 checkNoSelfReference name = do
