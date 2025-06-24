@@ -43,6 +43,3 @@ data Identifier = Identifier
     idLocation :: Location
   }
   deriving (Eq, Show)
-
-this :: Text.Text
-this = Text.pack "this"

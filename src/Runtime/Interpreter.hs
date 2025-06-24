@@ -129,7 +129,7 @@ evaluate (Expr.Expr (Expr.Set objectExpr name valueExpr) loc) = do
       setField name value clInst
       pure value
     _ -> reportError loc "Only instances have fields."
-evaluate (Expr.Expr (Expr.This depth) loc) = Env.getAt Expr.this depth loc
+evaluate (Expr.Expr (Expr.This depth) loc) = Env.getAt Lox.this depth loc
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
@@ -182,12 +182,18 @@ invoke (Runtime.Callable declaration) args loc = do
         Break -> reportError loc "Can not break out of a function."
     Runtime.Class decl -> do
       inst <- Trans.liftIO $ Instance.mkInstance decl
+      maybeInit <- findMethod Lox.initializer inst
+      Monad.void $ case maybeInit of
+        Just initializer -> do
+          bound <- bind inst initializer
+          invoke bound args loc
+        Nothing -> pure Runtime.Nil
       pure $ Runtime.Instance inst
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
 checkArity :: Runtime.Declaration -> [a] -> Expr.Location -> Interpreter ()
 checkArity declaration args loc = do
-  let arity = Runtime.arity declaration
+  let arity = getArity declaration
   Monad.when (arity /= length args) $
     reportError loc $
       Text.concat
@@ -222,7 +228,7 @@ getField name inst = do
   case maybeField of
     Just value -> pure value
     Nothing -> do
-      maybeMethod <- Trans.liftIO $ Instance.getMethod (Expr.idName name) inst
+      maybeMethod <- findMethod (Expr.idName name) inst
       case maybeMethod of
         Just method -> bind inst method
         Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
@@ -230,13 +236,21 @@ getField name inst = do
 setField :: Expr.Identifier -> Runtime.Value -> Runtime.ClassInstance -> Interpreter ()
 setField name value inst = Trans.liftIO $ Instance.setField (Expr.idName name) value inst
 
+findMethod :: Text.Text -> Runtime.ClassInstance -> Interpreter (Maybe Runtime.Value)
+findMethod name inst = Trans.liftIO $ Instance.getMethod name inst
+
 bind :: Runtime.ClassInstance -> Runtime.Value -> Interpreter Runtime.Value
 bind inst (Runtime.Callable (Runtime.Function method)) =
   withEnvironment (Runtime.funClosure method) $ do
-    Env.define "this" $ Runtime.Instance inst
+    Env.define Lox.this $ Runtime.Instance inst
     closure <- Env.current
     pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
 bind _ _ = reportError 0 "Can only bind callables."
+
+getArity :: Runtime.Declaration -> Int
+getArity Runtime.Clock = 0
+getArity (Runtime.Class (Runtime.ClassDecl {Runtime.clArity = arity})) = arity
+getArity (Runtime.Function Runtime.FunctionDecl {Runtime.funParameters = params}) = length params
 
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc
@@ -248,5 +262,5 @@ toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
 toString (Runtime.Callable (Runtime.Function (Runtime.FunctionDecl name _ _ _))) = "<fn " ++ Text.unpack name ++ ">"
-toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name _))) = Text.unpack name
-toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name _) _)) = Text.unpack name ++ " instance"
+toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name _ _))) = Text.unpack name
+toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name _ _) _)) = Text.unpack name ++ " instance"

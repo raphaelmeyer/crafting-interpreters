@@ -51,3 +51,9 @@ instance Show Error where
         ++ "\n[line "
         ++ show line
         ++ "]"
+
+this :: Text.Text
+this = Text.pack "this"
+
+initializer :: Text.Text
+initializer = Text.pack "init"

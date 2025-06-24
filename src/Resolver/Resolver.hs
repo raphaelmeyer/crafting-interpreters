@@ -109,8 +109,8 @@ expression (Expr.Expr (Expr.Set object name value) loc) = do
   pure $ Expr.Expr (Expr.Set resObject name resValue) loc
 expression (Expr.Expr (Expr.This _) loc) = do
   cl <- rClass <$> State.get
-  Monad.when (cl == NotClass) $ reportError Expr.this loc "Can't use 'this' outside of a class."
-  d <- resolveLocal (Expr.Identifier Expr.this loc)
+  Monad.when (cl == NotClass) $ reportError Lox.this loc "Can't use 'this' outside of a class."
+  d <- resolveLocal (Expr.Identifier Lox.this loc)
   pure $ Expr.Expr (Expr.This d) loc
 
 resolveFunction :: FunctionType -> Stmt.Function -> Resolver Stmt.Function
@@ -174,7 +174,7 @@ define name = do
     (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) True scope : scopes}
 
 beginClassScope :: Resolver ()
-beginClassScope = State.modify $ \s -> s {rScopes = Map.singleton Expr.this True : rScopes s}
+beginClassScope = State.modify $ \s -> s {rScopes = Map.singleton Lox.this True : rScopes s}
 
 beginScope :: Resolver ()
 beginScope = do

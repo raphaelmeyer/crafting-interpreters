@@ -3,6 +3,7 @@ module Runtime.Instance where
 import qualified Data.IORef as IORef
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
+import qualified Lox
 import qualified Parser.Expr as Expr
 import qualified Parser.Stmt as Stmt
 import qualified Runtime.Types as Runtime
@@ -21,7 +22,12 @@ setField name value inst = do
 
 mkClass :: Text.Text -> [Stmt.Function] -> Runtime.Environment -> IO Runtime.ClassDecl
 mkClass clName methods closure = do
-  Runtime.ClassDecl clName <$> (IORef.newIORef . Map.fromList . map mkMethods) methods
+  let clMethods = (Map.fromList . map mkMethods) methods
+  let arity = case Map.lookup Lox.initializer clMethods of
+        Just (Runtime.FunctionDecl {Runtime.funParameters = params}) -> length params
+        Nothing -> 0
+  methodsRef <- IORef.newIORef clMethods
+  pure $ Runtime.ClassDecl clName methodsRef arity
   where
     mkMethods (Stmt.Function fnName params body) =
       (Expr.idName fnName, Runtime.FunctionDecl (Expr.idName fnName) (map Expr.idName params) body closure)

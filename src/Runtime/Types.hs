@@ -27,7 +27,8 @@ data Declaration
 
 data ClassDecl = ClassDecl
   { clName :: Text.Text,
-    clMethods :: IORef.IORef (Map.Map Text.Text FunctionDecl)
+    clMethods :: IORef.IORef (Map.Map Text.Text FunctionDecl),
+    clArity :: Int
   }
   deriving (Eq)
 
@@ -50,10 +51,5 @@ type Storage = Map.Map Text.Text Value
 type Scope = IORef.IORef Storage
 
 data Environment = Global Scope | Local Scope Environment deriving (Eq)
-
-arity :: Declaration -> Int
-arity Clock = 0
-arity Class {} = 0
-arity (Function FunctionDecl {funParameters = params}) = length params
 
 type Interpreter m a = Except.ExceptT Lox.Error (State.StateT Environment m) a
