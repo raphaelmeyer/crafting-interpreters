@@ -553,10 +553,12 @@ errorCurrentToken msg = do
   p <- State.get
   case List.uncons . pTokens $ p of
     Just (t, _) -> errorWithToken t msg
-    Nothing -> pure $ Lox.ParseError 0 "EOF" msg
+    Nothing -> pure $ Lox.ParseError 0 "end" msg
 
 errorWithToken :: Token.Token -> Text.Text -> Parser Lox.Error
-errorWithToken t = errorAt (Token.tLine t) (Token.tLexeme t)
+errorWithToken t = case Token.tType t of
+  Token.EOF -> errorAt (Token.tLine t) "end"
+  _ -> errorAt (Token.tLine t) (Text.concat ["'", Token.tLexeme t, "'"])
 
 errorAt :: Expr.Location -> Text.Text -> Text.Text -> Parser Lox.Error
 errorAt loc lexeme msg = pure $ Lox.ParseError loc lexeme msg

@@ -35,9 +35,9 @@ instance Show Error where
     ParseError line lexeme message ->
       "Parser [line "
         ++ show line
-        ++ "] Error at '"
+        ++ "] Error at "
         ++ Text.unpack lexeme
-        ++ "': "
+        ++ ": "
         ++ Text.unpack message
     ResolveError line lexeme message ->
       "Resolver [line "
