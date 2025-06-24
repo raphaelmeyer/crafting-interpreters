@@ -167,6 +167,11 @@ literal (Literal.Boolean b) = Runtime.Boolean b
 literal (Literal.Number n) = Runtime.Number n
 literal (Literal.String s) = Runtime.String s
 
+truthy :: Runtime.Value -> Bool
+truthy Runtime.Nil = False
+truthy (Runtime.Boolean b) = b
+truthy _ = True
+
 invoke :: Runtime.Value -> [Runtime.Value] -> Expr.Location -> Interpreter Runtime.Value
 invoke (Runtime.Callable declaration) args loc = do
   checkArity declaration args loc
@@ -204,9 +209,10 @@ checkArity declaration args loc = do
           "."
         ]
 
-bindParameters :: [(Text.Text, Runtime.Value)] -> Interpreter ()
-bindParameters = do
-  mapM_ (uncurry Env.define)
+getArity :: Runtime.Declaration -> Int
+getArity Runtime.Clock = 0
+getArity (Runtime.Class (Runtime.ClassDecl {Runtime.clArity = arity})) = arity
+getArity (Runtime.Function Runtime.FunctionDecl {Runtime.funParameters = params}) = length params
 
 withEnvironment :: Runtime.Environment -> Interpreter a -> Interpreter a
 withEnvironment env action = do
@@ -217,10 +223,17 @@ withEnvironment env action = do
   State.put original
   pure result
 
-truthy :: Runtime.Value -> Bool
-truthy Runtime.Nil = False
-truthy (Runtime.Boolean b) = b
-truthy _ = True
+bindParameters :: [(Text.Text, Runtime.Value)] -> Interpreter ()
+bindParameters = do
+  mapM_ (uncurry Env.define)
+
+bind :: Runtime.ClassInstance -> Runtime.Value -> Interpreter Runtime.Value
+bind inst (Runtime.Callable (Runtime.Function method)) =
+  withEnvironment (Runtime.funClosure method) $ do
+    Env.define Lox.this $ Runtime.Instance inst
+    closure <- Env.current
+    pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
+bind _ _ = reportError 0 "Can only bind callables."
 
 getField :: Expr.Identifier -> Runtime.ClassInstance -> Interpreter Runtime.Value
 getField name inst = do
@@ -239,24 +252,11 @@ setField name value inst = Trans.liftIO $ Instance.setField (Expr.idName name) v
 findMethod :: Text.Text -> Runtime.ClassInstance -> Interpreter (Maybe Runtime.Value)
 findMethod name inst = Trans.liftIO $ Instance.getMethod name inst
 
-bind :: Runtime.ClassInstance -> Runtime.Value -> Interpreter Runtime.Value
-bind inst (Runtime.Callable (Runtime.Function method)) =
-  withEnvironment (Runtime.funClosure method) $ do
-    Env.define Lox.this $ Runtime.Instance inst
-    closure <- Env.current
-    pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
-bind _ _ = reportError 0 "Can only bind callables."
-
 returnThisIf :: Bool -> Expr.Location -> Result -> Interpreter Result
 returnThisIf isInitializer loc result =
   if isInitializer
     then Return <$> Env.getAt Lox.this (Just 1) loc
     else pure result
-
-getArity :: Runtime.Declaration -> Int
-getArity Runtime.Clock = 0
-getArity (Runtime.Class (Runtime.ClassDecl {Runtime.clArity = arity})) = arity
-getArity (Runtime.Function Runtime.FunctionDecl {Runtime.funParameters = params}) = length params
 
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc
