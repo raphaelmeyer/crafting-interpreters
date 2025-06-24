@@ -36,7 +36,8 @@ data FunctionDecl = FunctionDecl
   { funName :: Text.Text,
     funParameters :: [Text.Text],
     funBody :: [Stmt.Stmt],
-    funClosure :: Environment
+    funClosure :: Environment,
+    funIsInitializer :: Bool
   }
   deriving (Eq)
 

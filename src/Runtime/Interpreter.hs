@@ -76,7 +76,7 @@ statement stmt@(Stmt.While condition body) = do
 statement (Stmt.Fun (Stmt.Function name params body)) = do
   closure <- Env.current
   let paramNames = map Expr.idName params
-  Env.define (Expr.idName name) $ Runtime.Callable . Runtime.Function $ Runtime.FunctionDecl (Expr.idName name) paramNames body closure
+  Env.define (Expr.idName name) $ Runtime.Callable . Runtime.Function $ Runtime.FunctionDecl (Expr.idName name) paramNames body closure False
   pure Continue
 statement (Stmt.Return expr) = do
   Return <$> evaluate expr
@@ -172,10 +172,10 @@ invoke (Runtime.Callable declaration) args loc = do
   checkArity declaration args loc
   case declaration of
     Runtime.Clock -> Trans.liftIO Native.clock
-    Runtime.Function (Runtime.FunctionDecl _ params body closure) -> do
+    Runtime.Function (Runtime.FunctionDecl _ params body closure isInitializer) -> do
       result <- withEnvironment closure $ do
         bindParameters $ zip params args
-        execute body
+        execute body >>= returnThisIf isInitializer loc
       case result of
         Continue -> pure Runtime.Nil
         Return value -> pure value
@@ -183,11 +183,11 @@ invoke (Runtime.Callable declaration) args loc = do
     Runtime.Class decl -> do
       inst <- Trans.liftIO $ Instance.mkInstance decl
       maybeInit <- findMethod Lox.initializer inst
-      Monad.void $ case maybeInit of
+      case maybeInit of
         Just initializer -> do
           bound <- bind inst initializer
-          invoke bound args loc
-        Nothing -> pure Runtime.Nil
+          Monad.void $ invoke bound args loc
+        Nothing -> pure ()
       pure $ Runtime.Instance inst
 invoke _ _ loc = reportError loc "Can only call functions and classes."
 
@@ -247,6 +247,12 @@ bind inst (Runtime.Callable (Runtime.Function method)) =
     pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
 bind _ _ = reportError 0 "Can only bind callables."
 
+returnThisIf :: Bool -> Expr.Location -> Result -> Interpreter Result
+returnThisIf isInitializer loc result =
+  if isInitializer
+    then Return <$> Env.getAt Lox.this (Just 1) loc
+    else pure result
+
 getArity :: Runtime.Declaration -> Int
 getArity Runtime.Clock = 0
 getArity (Runtime.Class (Runtime.ClassDecl {Runtime.clArity = arity})) = arity
@@ -261,6 +267,6 @@ toString Runtime.Nil = "nil"
 toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
-toString (Runtime.Callable (Runtime.Function (Runtime.FunctionDecl name _ _ _))) = "<fn " ++ Text.unpack name ++ ">"
+toString (Runtime.Callable (Runtime.Function (Runtime.FunctionDecl name _ _ _ _))) = "<fn " ++ Text.unpack name ++ ">"
 toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name _ _))) = Text.unpack name
 toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name _ _) _)) = Text.unpack name ++ " instance"

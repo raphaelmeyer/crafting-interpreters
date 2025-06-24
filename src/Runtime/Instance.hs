@@ -22,15 +22,20 @@ setField name value inst = do
 
 mkClass :: Text.Text -> [Stmt.Function] -> Runtime.Environment -> IO Runtime.ClassDecl
 mkClass clName methods closure = do
-  let clMethods = (Map.fromList . map mkMethods) methods
+  let clMethods = Map.fromList . map (tuple . mkMethod closure) $ methods
   let arity = case Map.lookup Lox.initializer clMethods of
         Just (Runtime.FunctionDecl {Runtime.funParameters = params}) -> length params
         Nothing -> 0
   methodsRef <- IORef.newIORef clMethods
   pure $ Runtime.ClassDecl clName methodsRef arity
   where
-    mkMethods (Stmt.Function fnName params body) =
-      (Expr.idName fnName, Runtime.FunctionDecl (Expr.idName fnName) (map Expr.idName params) body closure)
+    tuple function = (Runtime.funName function, function)
+
+mkMethod :: Runtime.Environment -> Stmt.Function -> Runtime.FunctionDecl
+mkMethod closure (Stmt.Function name params body) =
+  Runtime.FunctionDecl fnName (map Expr.idName params) body closure (fnName == Lox.initializer)
+  where
+    fnName = Expr.idName name
 
 getMethod :: Text.Text -> Runtime.ClassInstance -> IO (Maybe Runtime.Value)
 getMethod name inst = do
