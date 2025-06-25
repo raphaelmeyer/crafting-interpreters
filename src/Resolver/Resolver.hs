@@ -12,7 +12,7 @@ import qualified Parser.Stmt as Stmt
 
 type Scope = Map.Map Text.Text Bool
 
-data FunctionType = NotFunction | Function | Method deriving (Eq)
+data FunctionType = NotFunction | Function | Initializer | Method deriving (Eq)
 
 data ClassType = NotClass | Class deriving (Eq)
 
@@ -65,7 +65,9 @@ statement (Stmt.Return loc value) = do
   fun <- rFunction <$> State.get
   Monad.when (fun == NotFunction) $ reportError "return" loc "Can't return from top-level code."
   case value of
-    Just expr -> Stmt.Return loc . Just <$> expression expr
+    Just expr -> do
+      Monad.when (fun == Initializer) $ reportError "return" loc "Can't return a value from an initializer."
+      Stmt.Return loc . Just <$> expression expr
     Nothing -> pure $ Stmt.Return loc Nothing
 statement (Stmt.While condition body) = do
   resCond <- expression condition
@@ -126,6 +128,14 @@ resolveFunction functionType (Stmt.Function name params body) = do
   State.modify $ \s -> s {rFunction = enclosing}
   pure $ Stmt.Function name params resolved
 
+resolveMethod :: Stmt.Function -> Resolver Stmt.Function
+resolveMethod method = resolveFunction methodType method
+  where
+    methodType =
+      if Expr.idName (Stmt.funName method) == Lox.initializer
+        then Initializer
+        else Method
+
 resolveClass :: Expr.Identifier -> [Stmt.Function] -> Resolver Stmt.Stmt
 resolveClass name methods = do
   enclosing <- rClass <$> State.get
@@ -133,7 +143,7 @@ resolveClass name methods = do
   declare name
   define name
   beginClassScope
-  resolved <- mapM (resolveFunction Method) methods
+  resolved <- mapM resolveMethod methods
   endScope
   State.modify $ \s -> s {rClass = enclosing}
   pure (Stmt.Class name resolved)
