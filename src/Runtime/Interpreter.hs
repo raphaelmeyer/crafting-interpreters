@@ -78,8 +78,9 @@ statement (Stmt.Fun (Stmt.Function name params body)) = do
   let paramNames = map Expr.idName params
   Env.define (Expr.idName name) $ Runtime.Callable . Runtime.Function $ Runtime.FunctionDecl (Expr.idName name) paramNames body closure False
   pure Continue
-statement (Stmt.Return expr) = do
-  Return <$> evaluate expr
+statement (Stmt.Return _ value) = case value of
+  Just expr -> Return <$> evaluate expr
+  Nothing -> pure $ Return Runtime.Nil
 statement Stmt.Break = pure Break
 statement (Stmt.Class name methods) = do
   closure <- Env.current

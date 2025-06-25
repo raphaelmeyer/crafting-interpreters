@@ -122,13 +122,14 @@ variableDeclaration = do
 
 statement :: StmtParser
 statement = do
+  loc <- nextLocation
   token <- match . anyOf $ [Token.Break, Token.For, Token.If, Token.Print, Token.Return, Token.While, Token.LeftBrace]
   case token of
     Just Token.Break -> breakStatement
     Just Token.For -> forStatement
     Just Token.If -> ifStatement
     Just Token.Print -> printStatement
-    Just Token.Return -> returnStatement
+    Just Token.Return -> returnStatement loc
     Just Token.While -> whileStatement
     Just Token.LeftBrace -> block
     _ -> expressionStatement
@@ -201,15 +202,15 @@ printStatement = do
   expectToken Token.SemiColon "Expect ';' after expression."
   pure $ Stmt.Print expr
 
-returnStatement :: StmtParser
-returnStatement = do
-  isEmpty <- matchTokenAt Token.SemiColon
-  case isEmpty of
-    Just loc -> pure . Stmt.Return $ Expr.Expr (Expr.Literal Literal.Nil) loc
-    Nothing -> do
+returnStatement :: Expr.Location -> StmtParser
+returnStatement loc = do
+  isEmpty <- matchToken Token.SemiColon
+  if isEmpty
+    then pure $ Stmt.Return loc Nothing
+    else do
       value <- expression
       expectToken Token.SemiColon "Expect ';' after return value."
-      pure $ Stmt.Return value
+      pure $ Stmt.Return loc (Just value)
 
 whileStatement :: StmtParser
 whileStatement = do
@@ -592,3 +593,10 @@ syncPoint t = case Token.tType t of
   Token.Print -> True
   Token.Return -> True
   _ -> False
+
+nextLocation :: Parser Expr.Location
+nextLocation = do
+  next <- List.uncons . pTokens <$> State.get
+  case next of
+    Just (t, _) -> pure $ Token.tLine t
+    Nothing -> pure 0

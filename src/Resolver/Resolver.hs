@@ -61,10 +61,12 @@ statement (Stmt.If condition thenBranch elseBranch) = do
 statement (Stmt.Print expr) = do
   resolved <- expression expr
   pure $ Stmt.Print resolved
-statement (Stmt.Return (Expr.Expr expr loc)) = do
+statement (Stmt.Return loc value) = do
   fun <- rFunction <$> State.get
   Monad.when (fun == NotFunction) $ reportError "return" loc "Can't return from top-level code."
-  Stmt.Return <$> expression (Expr.Expr expr loc)
+  case value of
+    Just expr -> Stmt.Return loc . Just <$> expression expr
+    Nothing -> pure $ Stmt.Return loc Nothing
 statement (Stmt.While condition body) = do
   resCond <- expression condition
   resBody <- statement body

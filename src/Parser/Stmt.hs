@@ -17,7 +17,10 @@ data Stmt
         elseStmt :: Maybe Stmt
       }
   | Print Expr.Expr
-  | Return Expr.Expr
+  | Return
+      { retLoc :: Expr.Location,
+        retValue :: Maybe Expr.Expr
+      }
   | Variable
       { varName :: Expr.Identifier,
         varInitializer :: Expr.Expr
