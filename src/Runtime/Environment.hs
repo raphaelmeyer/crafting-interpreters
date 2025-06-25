@@ -26,7 +26,7 @@ getAt name depth loc = do
   env <- State.get
   maybeValue <- case ancestor env depth of
     Just scope -> Trans.liftIO $ Runtime.Environment.lookup name scope
-    Nothing -> reportError loc $ Text.concat ["Unresolved Variable '", name, "'."]
+    Nothing -> reportError loc $ Text.concat ["Unresolved variable '", name, "'."]
   case maybeValue of
     Just value -> pure value
     Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
@@ -47,7 +47,7 @@ assignAt name depth loc value = do
       case exists of
         Just _ -> Trans.liftIO $ Runtime.Environment.insert name value scope
         Nothing -> reportError loc $ Text.concat ["Undefined variable '", name, "'."]
-    Nothing -> reportError loc $ Text.concat ["Unresolved Variable '", name, "'."]
+    Nothing -> reportError loc $ Text.concat ["Unresolved variable '", name, "'."]
 
 assign :: Text.Text -> Int -> Runtime.Value -> Interpreter ()
 assign name loc value = do
