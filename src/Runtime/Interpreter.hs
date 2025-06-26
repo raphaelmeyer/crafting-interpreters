@@ -180,6 +180,7 @@ invoke (Runtime.Callable declaration) args loc = do
     Runtime.Clock -> Trans.liftIO Native.clock
     Runtime.Function (Runtime.FunctionDecl _ params body closure isInitializer) -> do
       result <- withEnvironment closure $ do
+        Env.push
         bindParameters $ zip params args
         execute body >>= returnThisIf isInitializer loc
       case result of
@@ -219,7 +220,6 @@ withEnvironment :: Runtime.Environment -> Interpreter a -> Interpreter a
 withEnvironment env action = do
   original <- State.get
   State.put env
-  Env.push
   result <- action
   State.put original
   pure result
@@ -231,6 +231,7 @@ bindParameters = do
 bind :: Runtime.ClassInstance -> Runtime.Value -> Interpreter Runtime.Value
 bind inst (Runtime.Callable (Runtime.Function method)) =
   withEnvironment (Runtime.funClosure method) $ do
+    Env.push
     Env.define Lox.this $ Runtime.Instance inst
     closure <- Env.current
     pure $ Runtime.Callable (Runtime.Function method {Runtime.funClosure = closure})
