@@ -1,5 +1,3 @@
-{-# LANGUAGE InstanceSigs #-}
-
 module Runtime.Types where
 
 import qualified Control.Monad.Except as Except
@@ -27,6 +25,7 @@ data Declaration
 
 data ClassDecl = ClassDecl
   { clName :: Text.Text,
+    clSuper :: Maybe ClassDecl,
     clMethods :: IORef.IORef (Map.Map Text.Text FunctionDecl),
     clArity :: Int
   }

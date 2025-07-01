@@ -82,10 +82,11 @@ statement (Stmt.Return _ value) = case value of
   Just expr -> Return <$> evaluate expr
   Nothing -> pure $ Return Runtime.Nil
 statement Stmt.Break = pure Break
-statement (Stmt.Class name _ methods) = do
+statement (Stmt.Class name superName methods) = do
+  superclass <- mapM extend superName
   closure <- Env.current
   Env.define (Expr.idName name) Runtime.Nil
-  cl <- Trans.liftIO $ Instance.mkClass (Expr.idName name) methods closure
+  cl <- Trans.liftIO $ Instance.mkClass (Expr.idName name) superclass methods closure
   Env.assign (Expr.idName name) (Expr.idLocation name) $ Runtime.Callable . Runtime.Class $ cl
   pure Continue
 
@@ -95,6 +96,13 @@ executeBlock stmts = do
   result <- execute stmts
   Env.pop
   pure result
+
+extend :: Expr.Superclass -> Interpreter Runtime.ClassDecl
+extend (Expr.Superclass name depth) = do
+  superclass <- Env.getAt (Expr.idName name) depth (Expr.idLocation name)
+  case superclass of
+    Runtime.Callable (Runtime.Class decl) -> pure decl
+    _ -> reportError (Expr.idLocation name) "Superclass must be a class."
 
 evaluate :: Expr.Expr -> Interpreter Runtime.Value
 evaluate (Expr.Expr (Expr.Literal l) _) = pure $ literal l
@@ -270,5 +278,5 @@ toString (Runtime.Number n) = Numeric.showFFloat Nothing n ""
 toString (Runtime.String s) = Text.unpack s
 toString (Runtime.Callable Runtime.Clock) = "<native fn>"
 toString (Runtime.Callable (Runtime.Function (Runtime.FunctionDecl name _ _ _ _))) = "<fn " ++ Text.unpack name ++ ">"
-toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl name _ _))) = Text.unpack name
-toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl name _ _) _)) = Text.unpack name ++ " instance"
+toString (Runtime.Callable (Runtime.Class (Runtime.ClassDecl {Runtime.clName = name}))) = Text.unpack name
+toString (Runtime.Instance (Runtime.ClassInstance (Runtime.ClassDecl {Runtime.clName = name}) _)) = Text.unpack name ++ " instance"

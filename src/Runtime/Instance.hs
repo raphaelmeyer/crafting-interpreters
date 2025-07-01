@@ -11,14 +11,14 @@ import qualified Runtime.Types as Runtime
 mkInstance :: Runtime.ClassDecl -> IO Runtime.ClassInstance
 mkInstance decl = Runtime.ClassInstance decl <$> IORef.newIORef Map.empty
 
-mkClass :: Text.Text -> [Stmt.Function] -> Runtime.Environment -> IO Runtime.ClassDecl
-mkClass clName methods closure = do
+mkClass :: Text.Text -> Maybe Runtime.ClassDecl -> [Stmt.Function] -> Runtime.Environment -> IO Runtime.ClassDecl
+mkClass clName superclass methods closure = do
   let clMethods = Map.fromList . map (tuple . mkMethod closure) $ methods
   let arity = case Map.lookup Lox.initializer clMethods of
         Just (Runtime.FunctionDecl {Runtime.funParameters = params}) -> length params
         Nothing -> 0
   methodsRef <- IORef.newIORef clMethods
-  pure $ Runtime.ClassDecl clName methodsRef arity
+  pure $ Runtime.ClassDecl clName superclass methodsRef arity
   where
     tuple function = (Runtime.funName function, function)
 
