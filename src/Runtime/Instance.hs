@@ -39,5 +39,14 @@ setField name value inst = do
 
 getMethod :: Text.Text -> Runtime.ClassInstance -> IO (Maybe Runtime.Value)
 getMethod name inst = do
-  methods <- IORef.readIORef (Runtime.clMethods . Runtime.instClass $ inst)
-  pure $ Runtime.Callable . Runtime.Function <$> Map.lookup name methods
+  method <- findMethod name (Runtime.instClass inst)
+  pure $ Runtime.Callable . Runtime.Function <$> method
+
+findMethod :: Text.Text -> Runtime.ClassDecl -> IO (Maybe Runtime.FunctionDecl)
+findMethod name decl = do
+  methods <- IORef.readIORef (Runtime.clMethods decl)
+  case Map.lookup name methods of
+    Just method -> pure $ Just method
+    Nothing -> case Runtime.clSuper decl of
+      Just superclass -> findMethod name superclass
+      Nothing -> pure Nothing
