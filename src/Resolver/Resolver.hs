@@ -142,11 +142,19 @@ resolveClass name superclass methods = do
   State.modify $ \s -> s {rClass = Class}
   declare name
   define name
+  resSuperclass <- mapM (resolveSuperclass name) superclass
   beginClassScope
   resolved <- mapM resolveMethod methods
   endScope
   State.modify $ \s -> s {rClass = enclosing}
-  pure (Stmt.Class name superclass resolved)
+  pure (Stmt.Class name resSuperclass resolved)
+
+resolveSuperclass :: Expr.Identifier -> Expr.Superclass -> Resolver Expr.Superclass
+resolveSuperclass subclass (Expr.Superclass name _) = do
+  Monad.when (Expr.idName subclass == Expr.idName name) $
+    reportError (Expr.idName name) (Expr.idLocation name) "A class can't inherit from itself."
+  d <- resolveLocal name
+  pure $ Expr.Superclass name d
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
 checkNoSelfReference name = do
