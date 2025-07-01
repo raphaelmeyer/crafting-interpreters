@@ -43,3 +43,9 @@ data Identifier = Identifier
     idLocation :: Location
   }
   deriving (Eq, Show)
+
+data Superclass = Superclass
+  { supName :: Identifier,
+    supDepth :: Maybe Int
+  }
+  deriving (Eq, Show)

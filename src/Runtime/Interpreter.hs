@@ -82,7 +82,7 @@ statement (Stmt.Return _ value) = case value of
   Just expr -> Return <$> evaluate expr
   Nothing -> pure $ Return Runtime.Nil
 statement Stmt.Break = pure Break
-statement (Stmt.Class name methods) = do
+statement (Stmt.Class name _ methods) = do
   closure <- Env.current
   Env.define (Expr.idName name) Runtime.Nil
   cl <- Trans.liftIO $ Instance.mkClass (Expr.idName name) methods closure

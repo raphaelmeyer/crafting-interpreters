@@ -65,8 +65,19 @@ declaration = do
 classDeclaration :: StmtParser
 classDeclaration = do
   name <- expect identifier "Expect class name."
+  superclass <- extend
   expectToken Token.LeftBrace "Expect '{' before class body."
-  Stmt.Class name <$> whileMethods
+  Stmt.Class name superclass <$> whileMethods
+
+extend :: Parser (Maybe Expr.Superclass)
+extend = do
+  hasInheritance <- matchToken Token.Less
+  if hasInheritance
+    then do
+      name <- expect identifier "Expect superclass name."
+      pure $ Just (Expr.Superclass name Nothing)
+    else
+      pure Nothing
 
 whileMethods :: Parser [Stmt.Function]
 whileMethods = do

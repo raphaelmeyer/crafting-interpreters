@@ -74,7 +74,7 @@ statement (Stmt.While condition body) = do
   resBody <- statement body
   pure $ Stmt.While resCond resBody
 statement Stmt.Break = pure Stmt.Break
-statement (Stmt.Class name methods) = resolveClass name methods
+statement (Stmt.Class name superclass methods) = resolveClass name superclass methods
 
 expression :: Expr.Expr -> Resolver Expr.Expr
 expression (Expr.Expr (Expr.Variable name _) loc) = do
@@ -136,8 +136,8 @@ resolveMethod method = resolveFunction methodType method
         then Initializer
         else Method
 
-resolveClass :: Expr.Identifier -> [Stmt.Function] -> Resolver Stmt.Stmt
-resolveClass name methods = do
+resolveClass :: Expr.Identifier -> Maybe Expr.Superclass -> [Stmt.Function] -> Resolver Stmt.Stmt
+resolveClass name superclass methods = do
   enclosing <- rClass <$> State.get
   State.modify $ \s -> s {rClass = Class}
   declare name
@@ -146,7 +146,7 @@ resolveClass name methods = do
   resolved <- mapM resolveMethod methods
   endScope
   State.modify $ \s -> s {rClass = enclosing}
-  pure (Stmt.Class name resolved)
+  pure (Stmt.Class name superclass resolved)
 
 checkNoSelfReference :: Expr.Identifier -> Resolver ()
 checkNoSelfReference name = do

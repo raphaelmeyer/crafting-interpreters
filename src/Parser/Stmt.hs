@@ -7,6 +7,7 @@ data Stmt
   | Break
   | Class
       { cName :: Expr.Identifier,
+        cSuperclass :: Maybe Expr.Superclass,
         cMethods :: [Function]
       }
   | Expression Expr.Expr
