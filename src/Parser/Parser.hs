@@ -459,14 +459,21 @@ primary = do
   case maybeLiteral of
     Just (l, loc) -> pure $ Expr.Expr (Expr.Literal l) loc
     Nothing -> do
-      maybeThis <- matchTokenAt Token.This
-      case maybeThis of
-        Just loc -> pure $ Expr.Expr (Expr.This Nothing) loc
+      maybeSuper <- matchTokenAt Token.Super
+      case maybeSuper of
+        Just loc -> do
+          expectToken Token.Dot "Expect '.' after 'super'."
+          method <- expect identifier "Expect superclass method name."
+          pure $ Expr.Expr (Expr.Super method) loc
         Nothing -> do
-          maybeIdentifier <- match identifier
-          case maybeIdentifier of
-            Just name -> pure $ Expr.Expr (Expr.Variable name Nothing) (Expr.idLocation name)
-            Nothing -> grouping
+          maybeThis <- matchTokenAt Token.This
+          case maybeThis of
+            Just loc -> pure $ Expr.Expr (Expr.This Nothing) loc
+            Nothing -> do
+              maybeIdentifier <- match identifier
+              case maybeIdentifier of
+                Just name -> pure $ Expr.Expr (Expr.Variable name Nothing) (Expr.idLocation name)
+                Nothing -> grouping
 
 grouping :: ExprParser
 grouping = do

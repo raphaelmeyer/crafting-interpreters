@@ -116,6 +116,7 @@ expression (Expr.Expr (Expr.This _) loc) = do
   Monad.when (cl == NotClass) $ reportError Lox.this loc "Can't use 'this' outside of a class."
   d <- resolveLocal (Expr.Identifier Lox.this loc)
   pure $ Expr.Expr (Expr.This d) loc
+expression (Expr.Expr (Expr.Super method) loc) = pure (Expr.Expr (Expr.Super method) loc)
 
 resolveFunction :: FunctionType -> Stmt.Function -> Resolver Stmt.Function
 resolveFunction functionType (Stmt.Function name params body) = do

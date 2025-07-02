@@ -139,6 +139,7 @@ evaluate (Expr.Expr (Expr.Set objectExpr name valueExpr) loc) = do
       pure value
     _ -> reportError loc "Only instances have fields."
 evaluate (Expr.Expr (Expr.This depth) loc) = Env.getAt Lox.this depth loc
+evaluate (Expr.Expr (Expr.Super _) _) = pure Runtime.Nil
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
