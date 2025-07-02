@@ -14,7 +14,7 @@ data Expression
   | Literal Literal.Value
   | Logical {logicalOp :: LogicalOp, logicalLeft :: Expr, logicalRight :: Expr}
   | Set {setObject :: Expr, setName :: Identifier, setValue :: Expr}
-  | Super {superMethod :: Identifier}
+  | Super {superMethod :: Identifier, superDepth :: Maybe Int}
   | This {thisDepth :: Maybe Int}
   | Unary {unaryOp :: UnaryOp, unaryExpr :: Expr}
   | Variable {varName :: Identifier, varDepth :: Maybe Int}

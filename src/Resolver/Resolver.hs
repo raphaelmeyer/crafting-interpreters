@@ -5,6 +5,7 @@ module Resolver.Resolver (resolve) where
 import qualified Control.Monad as Monad
 import qualified Control.Monad.State.Strict as State
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Lox
 import qualified Parser.Expr as Expr
@@ -116,7 +117,9 @@ expression (Expr.Expr (Expr.This _) loc) = do
   Monad.when (cl == NotClass) $ reportError Lox.this loc "Can't use 'this' outside of a class."
   d <- resolveLocal (Expr.Identifier Lox.this loc)
   pure $ Expr.Expr (Expr.This d) loc
-expression (Expr.Expr (Expr.Super method) loc) = pure (Expr.Expr (Expr.Super method) loc)
+expression (Expr.Expr (Expr.Super method _) loc) = do
+  d <- resolveLocal (Expr.Identifier Lox.super loc)
+  pure (Expr.Expr (Expr.Super method d) loc)
 
 resolveFunction :: FunctionType -> Stmt.Function -> Resolver Stmt.Function
 resolveFunction functionType (Stmt.Function name params body) = do
@@ -144,9 +147,11 @@ resolveClass name superclass methods = do
   declare name
   define name
   resSuperclass <- mapM (resolveSuperclass name) superclass
-  beginClassScope
+  Monad.when (Maybe.isJust superclass) (beginScopeWith Lox.super)
+  beginScopeWith Lox.this
   resolved <- mapM resolveMethod methods
   endScope
+  Monad.when (Maybe.isJust superclass) endScope
   State.modify $ \s -> s {rClass = enclosing}
   pure (Stmt.Class name resSuperclass resolved)
 
@@ -194,8 +199,8 @@ define name = do
     [] -> pure ()
     (scope : scopes) -> State.put s {rScopes = Map.insert (Expr.idName name) True scope : scopes}
 
-beginClassScope :: Resolver ()
-beginClassScope = State.modify $ \s -> s {rScopes = Map.singleton Lox.this True : rScopes s}
+beginScopeWith :: Text.Text -> Resolver ()
+beginScopeWith name = State.modify $ \s -> s {rScopes = Map.singleton name True : rScopes s}
 
 beginScope :: Resolver ()
 beginScope = do

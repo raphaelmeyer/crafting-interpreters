@@ -55,5 +55,8 @@ instance Show Error where
 this :: Text.Text
 this = Text.pack "this"
 
+super :: Text.Text
+super = Text.pack "super"
+
 initializer :: Text.Text
 initializer = Text.pack "init"

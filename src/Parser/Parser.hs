@@ -464,7 +464,7 @@ primary = do
         Just loc -> do
           expectToken Token.Dot "Expect '.' after 'super'."
           method <- expect identifier "Expect superclass method name."
-          pure $ Expr.Expr (Expr.Super method) loc
+          pure $ Expr.Expr (Expr.Super method Nothing) loc
         Nothing -> do
           maybeThis <- matchTokenAt Token.This
           case maybeThis of
