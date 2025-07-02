@@ -6,6 +6,7 @@ import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans as Trans
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Lox
 import qualified Numeric
@@ -84,9 +85,11 @@ statement (Stmt.Return _ value) = case value of
 statement Stmt.Break = pure Break
 statement (Stmt.Class name superName methods) = do
   superclass <- mapM extend superName
-  closure <- Env.current
   Env.define (Expr.idName name) Runtime.Nil
+  mapM_ (\s -> Env.push >> Env.define Lox.super (Runtime.Callable (Runtime.Class s))) superclass
+  closure <- Env.current
   cl <- Trans.liftIO $ Instance.mkClass (Expr.idName name) superclass methods closure
+  Monad.when (Maybe.isJust superclass) Env.pop
   Env.assign (Expr.idName name) (Expr.idLocation name) $ Runtime.Callable . Runtime.Class $ cl
   pure Continue
 
@@ -139,7 +142,15 @@ evaluate (Expr.Expr (Expr.Set objectExpr name valueExpr) loc) = do
       pure value
     _ -> reportError loc "Only instances have fields."
 evaluate (Expr.Expr (Expr.This depth) loc) = Env.getAt Lox.this depth loc
-evaluate (Expr.Expr (Expr.Super _ _) _) = pure Runtime.Nil
+evaluate (Expr.Expr (Expr.Super name depth) loc) = case depth of
+  Just d -> do
+    superclass <- getClass Lox.super (Just d) loc
+    object <- getInstance Lox.this (Just (d - 1)) loc
+    maybeMethod <- Trans.liftIO $ Instance.findMethod (Expr.idName name) superclass
+    case maybeMethod of
+      Just method -> bind object (Runtime.Callable . Runtime.Function $ method)
+      Nothing -> reportError (Expr.idLocation name) $ Text.concat ["Undefined property '", Expr.idName name, "'."]
+  Nothing -> reportError loc "'super' can't be global."
 
 evalUnary :: Expr.UnaryOp -> Runtime.Value -> Expr.Location -> Interpreter Runtime.Value
 evalUnary Expr.Neg (Runtime.Number n) _ = pure $ Runtime.Number (-n)
@@ -268,6 +279,20 @@ returnThisIf isInitializer loc result =
   if isInitializer
     then Return <$> Env.getAt Lox.this (Just 1) loc
     else pure result
+
+getClass :: Text.Text -> Maybe Int -> Expr.Location -> Interpreter Runtime.ClassDecl
+getClass name depth loc = do
+  superclass <- Env.getAt name depth loc
+  case superclass of
+    (Runtime.Callable (Runtime.Class decl)) -> pure decl
+    _ -> reportError loc "Must be a class declaration."
+
+getInstance :: Text.Text -> Maybe Int -> Expr.Location -> Interpreter Runtime.ClassInstance
+getInstance name depth loc = do
+  object <- Env.getAt name depth loc
+  case object of
+    (Runtime.Instance inst) -> pure inst
+    _ -> reportError loc "Must be a class instance."
 
 reportError :: (Monad m) => Expr.Location -> Text.Text -> Except.ExceptT Lox.Error m a
 reportError loc = Except.throwError . Lox.RuntimeError loc

@@ -1,4 +1,4 @@
-module Runtime.Instance (getField, getMethod, mkClass, mkInstance, setField) where
+module Runtime.Instance (findMethod, getField, getMethod, mkClass, mkInstance, setField) where
 
 import qualified Data.IORef as IORef
 import qualified Data.Map.Strict as Map
