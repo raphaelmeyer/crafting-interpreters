@@ -15,7 +15,7 @@ type Scope = Map.Map Text.Text Bool
 
 data FunctionType = NotFunction | Function | Initializer | Method deriving (Eq)
 
-data ClassType = NotClass | Class deriving (Eq)
+data ClassType = NotClass | Class | SubClass deriving (Eq)
 
 data ResolverState = ResolverState
   { rScopes :: [Scope],
@@ -118,6 +118,9 @@ expression (Expr.Expr (Expr.This _) loc) = do
   d <- resolveLocal (Expr.Identifier Lox.this loc)
   pure $ Expr.Expr (Expr.This d) loc
 expression (Expr.Expr (Expr.Super method _) loc) = do
+  cl <- rClass <$> State.get
+  Monad.when (cl == NotClass) $ reportError Lox.super loc "Can't use 'super' outside of a class."
+  Monad.when (cl == Class) $ reportError Lox.super loc "Can't use 'super' in a class with no superclass."
   d <- resolveLocal (Expr.Identifier Lox.super loc)
   pure (Expr.Expr (Expr.Super method d) loc)
 
@@ -159,6 +162,7 @@ resolveSuperclass :: Expr.Identifier -> Expr.Superclass -> Resolver Expr.Supercl
 resolveSuperclass subclass (Expr.Superclass name _) = do
   Monad.when (Expr.idName subclass == Expr.idName name) $
     reportError (Expr.idName name) (Expr.idLocation name) "A class can't inherit from itself."
+  State.modify $ \s -> s {rClass = SubClass}
   d <- resolveLocal name
   pure $ Expr.Superclass name d
 
