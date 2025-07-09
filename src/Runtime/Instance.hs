@@ -15,8 +15,8 @@ mkClass :: Text.Text -> Maybe Runtime.ClassDecl -> [Stmt.Function] -> Runtime.En
 mkClass clName superclass methods closure = do
   let clMethods = Map.fromList . map (tuple . mkMethod closure) $ methods
   let arity = case Map.lookup Lox.initializer clMethods of
-        Just (Runtime.FunctionDecl {Runtime.funParameters = params}) -> length params
-        Nothing -> 0
+        Just (Runtime.FunctionDecl {Runtime.funParameters = params}) -> Just $ length params
+        Nothing -> Nothing
   methodsRef <- IORef.newIORef clMethods
   pure $ Runtime.ClassDecl clName superclass methodsRef arity
   where

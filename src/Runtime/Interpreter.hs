@@ -233,8 +233,13 @@ checkArity declaration args loc = do
 
 getArity :: Runtime.Declaration -> Int
 getArity Runtime.Clock = 0
-getArity (Runtime.Class (Runtime.ClassDecl {Runtime.clArity = arity})) = arity
+getArity (Runtime.Class decl) = getInitializerArity decl
 getArity (Runtime.Function Runtime.FunctionDecl {Runtime.funParameters = params}) = length params
+
+getInitializerArity :: Runtime.ClassDecl -> Int
+getInitializerArity decl = case Runtime.clArity decl of
+  Just arity -> arity
+  Nothing -> maybe 0 getInitializerArity (Runtime.clSuper decl)
 
 withEnvironment :: Runtime.Environment -> Interpreter a -> Interpreter a
 withEnvironment env action = do

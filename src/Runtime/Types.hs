@@ -27,7 +27,7 @@ data ClassDecl = ClassDecl
   { clName :: Text.Text,
     clSuper :: Maybe ClassDecl,
     clMethods :: IORef.IORef (Map.Map Text.Text FunctionDecl),
-    clArity :: Int
+    clArity :: Maybe Int
   }
   deriving (Eq)
 
