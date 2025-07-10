@@ -5,6 +5,7 @@ module Parser.Parser (parse) where
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
+import qualified Control.Monad.Trans as Trans
 import qualified Data.List as List
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
@@ -42,25 +43,29 @@ program = do
   if atEnd
     then pure []
     else do
-      result <- Except.runExceptT declaration
-      case result of
-        Right stmt -> do
+      maybeStmt <- declaration
+      case maybeStmt of
+        Just stmt -> do
           stmts <- program
           pure $ stmt : stmts
-        Left err -> do
-          p <- State.get
-          State.put p {pErrors = err : pErrors p}
-          synchronize
-          program
+        Nothing -> program
 
-declaration :: StmtParser
+declaration :: State.State ParserState (Maybe Stmt.Stmt)
 declaration = do
-  token <- match . anyOf $ [Token.Class, Token.Fun, Token.Var]
-  case token of
-    Just Token.Class -> classDeclaration
-    Just Token.Fun -> Stmt.Fun <$> function
-    Just Token.Var -> variableDeclaration
-    _ -> statement
+  result <- Except.runExceptT $ do
+    token <- match . anyOf $ [Token.Class, Token.Fun, Token.Var]
+    case token of
+      Just Token.Class -> classDeclaration
+      Just Token.Fun -> Stmt.Fun <$> function
+      Just Token.Var -> variableDeclaration
+      _ -> statement
+  case result of
+    Right stmt -> pure $ Just stmt
+    Left err -> do
+      p <- State.get
+      State.put p {pErrors = err : pErrors p}
+      synchronize
+      pure Nothing
 
 classDeclaration :: StmtParser
 classDeclaration = do
@@ -249,9 +254,12 @@ whileBlock = do
       if atEnd
         then errorCurrentToken "Expect '}' after block." >>= throw
         else do
-          stmt <- declaration
-          stmts <- whileBlock
-          pure $ stmt : stmts
+          maybeStmt <- Trans.lift declaration
+          case maybeStmt of
+            Just stmt -> do
+              stmts <- whileBlock
+              pure $ stmt : stmts
+            Nothing -> whileBlock
 
 expression :: ExprParser
 expression = assignment
@@ -586,7 +594,11 @@ synchronize :: State.State ParserState ()
 synchronize = do
   p <- State.get
   case List.uncons $ pTokens p of
-    Just (_, ts) -> State.put p {pTokens = consumeUntilSync ts}
+    Just (t, ts) -> do
+      let synchronized = case Token.tType t of
+            Token.SemiColon -> ts
+            _ -> consumeUntilSync ts
+      State.put p {pTokens = synchronized}
     Nothing -> pure ()
 
 consumeUntilSync :: [Token.Token] -> [Token.Token]
