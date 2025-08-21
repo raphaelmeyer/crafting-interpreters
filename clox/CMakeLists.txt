@@ -11,7 +11,11 @@ set(CMAKE_C_FLAGS_RELEASE "-O3")
 
 add_executable(clox)
 target_link_libraries(clox PRIVATE common)
-target_sources(clox PRIVATE src/main.c)
+target_sources(clox PRIVATE
+  src/chunk.c
+  src/main.c
+  src/memory.c
+)
 
 add_library(common INTERFACE)
 target_compile_options(common INTERFACE -Wall -Wextra -Werror)
