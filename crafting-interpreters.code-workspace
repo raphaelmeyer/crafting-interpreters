@@ -7,12 +7,15 @@
   "extensions": {
     "recommendations": [
       "haskell.haskell",
-      "streetsidesoftware.code-spell-checker"
+      "llvm-vs-code-extensions.vscode-clangd",
+      "streetsidesoftware.code-spell-checker",
+      "twxs.cmake"
     ]
   },
   "settings": {
     "editor.renderWhitespace": "boundary",
     "editor.formatOnSave": true,
+    "editor.tabSize": 2,
     "haskell.manageHLS": "GHCup",
     "haskell.upgradeGHCup": false,
     "haskell.toolchain": {
@@ -25,6 +28,20 @@
     },
     "[haskell]": {
       "editor.inlayHints.enabled": "offUnlessPressed"
-    }
+    },
+    "[c][cpp]": {
+      "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+      "editor.inlayHints.enabled": "off"
+    },
+    "cmake.sourceDirectory": "${workspaceFolder}/clox",
+    "cmake.useCMakePresets": "always",
+    "cmake.options.advanced": {
+      "workflow": {
+        "statusBarVisibility": "visible"
+      }
+    },
+    "clangd.arguments": [
+      "--header-insertion=never"
+    ]
   }
 }

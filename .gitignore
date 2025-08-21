@@ -1,1 +1,5 @@
 /hlox/dist*/
+/clox/build/
+
+# clangd
+.cache/
