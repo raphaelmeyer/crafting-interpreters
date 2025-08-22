@@ -1,11 +1,12 @@
+#include <doctest/doctest.h>
 
 #include "chunk.h"
 
-int main(int, const char *[]) {
+TEST_CASE("chunk") {
   Chunk chunk;
   init_chunk(&chunk);
   write_chunk(&chunk, OP_RETURN);
   free_chunk(&chunk);
 
-  return 0;
+  REQUIRE(chunk.capacity == 0);
 }

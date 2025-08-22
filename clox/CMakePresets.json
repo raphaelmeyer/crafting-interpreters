@@ -25,5 +25,33 @@
       "name": "default",
       "configurePreset": "default"
     }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "configurePreset": "default",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "default",
+      "steps": [
+        {
+          "name": "default",
+          "type": "configure"
+        },
+        {
+          "name": "default",
+          "type": "build"
+        },
+        {
+          "name": "default",
+          "type": "test"
+        }
+      ]
+    }
   ]
 }
