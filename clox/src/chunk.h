@@ -7,6 +7,7 @@ extern "C" {
 #endif
 
 typedef enum OpCode_t {
+  OP_CONSTANT,
   OP_RETURN,
 } OpCode;
 
