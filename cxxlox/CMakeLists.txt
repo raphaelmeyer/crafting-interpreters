@@ -12,5 +12,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 add_executable(cxxlox)
 target_compile_options(cxxlox PRIVATE -Wall -Wextra -Werror)
 target_sources(cxxlox PRIVATE
+  src/chunk.cc
   src/main.cc
 )
