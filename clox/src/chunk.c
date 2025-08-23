@@ -12,31 +12,45 @@ static inline uint8_t *grow_array(uint8_t *array, int32_t old_count,
                                sizeof(uint8_t) * new_count);
 }
 
+static inline int32_t *grow_lines(int32_t *lines, int32_t old_count,
+                                  int32_t new_count) {
+  return (int32_t *)reallocate(lines, sizeof(int32_t) * old_count,
+                               sizeof(int32_t) * new_count);
+}
+
 static inline void free_array(uint8_t *array, int32_t old_count) {
   reallocate(array, sizeof(uint8_t) * old_count, 0);
+}
+
+static inline void free_lines(int32_t *lines, int32_t old_count) {
+  reallocate(lines, sizeof(int32_t) * old_count, 0);
 }
 
 void init_chunk(Chunk *chunk) {
   chunk->count = 0;
   chunk->capacity = 0;
   chunk->code = NULL;
+  chunk->lines = NULL;
   init_value_array(&chunk->constants);
 }
 
 void free_chunk(Chunk *chunk) {
   free_array(chunk->code, chunk->capacity);
+  free_lines(chunk->lines, chunk->capacity);
   free_value_array(&chunk->constants);
   init_chunk(chunk);
 }
 
-void write_chunk(Chunk *chunk, uint8_t byte) {
+void write_chunk(Chunk *chunk, uint8_t byte, int32_t line) {
   if (chunk->capacity < chunk->count + 1) {
     int32_t const old_capacity = chunk->capacity;
     chunk->capacity = grow_capacity(old_capacity);
     chunk->code = grow_array(chunk->code, old_capacity, chunk->capacity);
+    chunk->lines = grow_lines(chunk->lines, old_capacity, chunk->capacity);
   }
 
   chunk->code[chunk->count] = byte;
+  chunk->lines[chunk->count] = line;
   chunk->count++;
 }
 
