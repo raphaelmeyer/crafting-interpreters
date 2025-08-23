@@ -10,7 +10,7 @@ int main(int, const char *[]) {
   write_chunk(&chunk, OP_CONSTANT, 123);
   write_chunk(&chunk, constant, 123);
 
-  write_chunk(&chunk, OP_RETURN, 125);
+  write_chunk(&chunk, OP_RETURN, 123);
 
   disassemble_chunk(&chunk, "test chunk");
 
