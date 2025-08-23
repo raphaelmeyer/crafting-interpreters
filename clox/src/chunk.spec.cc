@@ -4,7 +4,7 @@
 
 TEST_SUITE("chunk") {
 
-  TEST_CASE("initialized") {
+  TEST_CASE("code") {
     Chunk chunk;
     init_chunk(&chunk);
 
@@ -47,5 +47,34 @@ TEST_SUITE("chunk") {
     free_chunk(&chunk);
 
     SUBCASE("is re-initialized after free") { REQUIRE(chunk.count == 0); }
+  }
+
+  TEST_CASE("constants") {
+    Chunk chunk;
+    init_chunk(&chunk);
+
+    SUBCASE("contains added constant") {
+      int32_t const a = add_constant(&chunk, 12);
+
+      REQUIRE(chunk.constants.count == 1);
+      REQUIRE(chunk.constants.values[a] == 12);
+    }
+
+    SUBCASE("contains all added constants") {
+      int32_t const a = add_constant(&chunk, 23);
+      int32_t const b = add_constant(&chunk, 11);
+      int32_t const c = add_constant(&chunk, 29);
+
+      REQUIRE(chunk.constants.count == 3);
+      REQUIRE(chunk.constants.values[a] == 23);
+      REQUIRE(chunk.constants.values[b] == 11);
+      REQUIRE(chunk.constants.values[c] == 29);
+    }
+
+    free_chunk(&chunk);
+
+    SUBCASE("clean up constants after free") {
+      REQUIRE(chunk.constants.count == 0);
+    }
   }
 }
