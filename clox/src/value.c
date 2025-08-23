@@ -2,6 +2,8 @@
 
 #include "memory.h"
 
+#include <stdio.h>
+
 static inline int32_t grow_capacity(int32_t capacity) {
   return capacity < 8 ? 8 : capacity * 2;
 }
@@ -37,3 +39,5 @@ void write_value_array(ValueArray *array, Value value) {
   array->values[array->count] = value;
   array->count++;
 }
+
+void print_value(Value value) { printf("%g", value); }
