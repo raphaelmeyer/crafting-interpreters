@@ -24,6 +24,7 @@ target_sources(clox-sources INTERFACE
   src/chunk.c
   src/debug.c
   src/memory.c
+  src/value.c
 )
 
 add_executable(clox-test)
@@ -31,6 +32,7 @@ target_link_libraries(clox-test PRIVATE clox-sources doctest::doctest)
 target_sources(clox-test PRIVATE
   src/main.spec.cc
   src/chunk.spec.cc
+  src/value.spec.cc
 )
 target_compile_options(clox-test PRIVATE "-fsanitize=address" "-fno-omit-frame-pointer")
 target_link_options(clox-test PRIVATE "-fsanitize=address")
