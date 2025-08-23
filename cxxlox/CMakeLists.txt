@@ -15,4 +15,5 @@ target_sources(cxxlox PRIVATE
   src/chunk.cc
   src/debug.cc
   src/main.cc
+  src/value.cc
 )

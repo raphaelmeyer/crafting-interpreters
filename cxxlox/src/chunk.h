@@ -1,13 +1,18 @@
 #pragma once
 
+#include "value.h"
+
 #include <cstdint>
 #include <vector>
 
-enum class OpCode : std::uint8_t { RETURN };
+enum class OpCode : std::uint8_t { CONSTANT, RETURN };
 
 struct Chunk {
   std::vector<std::uint8_t> code;
+  ValueArray constants;
 };
 
 void write_chunk(Chunk &chunk, OpCode op_code);
 void write_chunk(Chunk &chunk, std::uint8_t byte);
+
+std::size_t add_constant(Chunk &chunk, Value value);
