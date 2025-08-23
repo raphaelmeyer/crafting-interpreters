@@ -2,7 +2,17 @@
   "folders": [
     {
       "path": ".",
+      "name": "root"
     },
+    {
+      "path": "hlox",
+    },
+    {
+      "path": "clox"
+    },
+    {
+      "path": "cxxlox"
+    }
   ],
   "extensions": {
     "recommendations": [
@@ -33,8 +43,6 @@
       "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
       "editor.inlayHints.enabled": "off"
     },
-    "cmake.sourceDirectory": "${workspaceFolder}/clox",
-    "cmake.useCMakePresets": "always",
     "cmake.options.advanced": {
       "workflow": {
         "statusBarVisibility": "visible"
