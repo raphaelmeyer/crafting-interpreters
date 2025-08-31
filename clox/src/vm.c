@@ -1,5 +1,7 @@
 #include "vm.h"
 
+#include "debug.h"
+
 #include <stdio.h>
 
 static VM vm;
@@ -16,6 +18,10 @@ static inline Value read_constant(VM *vm) {
 
 static InterpretResult run() {
   for (;;) {
+    if (DEBUG_TRACE_EXECUTION) {
+      disassemble_instruction(vm.chunk, (int32_t)(vm.ip - vm.chunk->code));
+    }
+
     uint8_t instruction;
     switch (instruction = read_byte(&vm)) {
     case OP_RETURN: {

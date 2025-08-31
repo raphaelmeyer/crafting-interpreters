@@ -3,7 +3,16 @@
 #include "debug.h"
 #include "vm.h"
 
-int main(int, const char *[]) {
+#include <string.h>
+
+int main(int argc, const char *argv[]) {
+  int32_t i = 0;
+  for (i = 1; i < argc; ++i) {
+    if (strcmp(argv[i], "--debug") == 0) {
+      DEBUG_TRACE_EXECUTION = true;
+    }
+  }
+
   init_vm();
 
   Chunk chunk;
@@ -14,8 +23,8 @@ int main(int, const char *[]) {
   write_chunk(&chunk, constant, 123);
 
   write_chunk(&chunk, OP_RETURN, 123);
-
   disassemble_chunk(&chunk, "test chunk");
+
   interpret(&chunk);
   free_vm();
 
