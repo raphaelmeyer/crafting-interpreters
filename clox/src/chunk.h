@@ -10,6 +10,7 @@ extern "C" {
 
 typedef enum OpCode_t {
   OP_CONSTANT,
+  OP_NEGATE,
   OP_RETURN,
 } OpCode;
 

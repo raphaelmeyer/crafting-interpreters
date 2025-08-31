@@ -45,6 +45,11 @@ static InterpretResult run() {
       return INTERPRET_OK;
     }
 
+    case OP_NEGATE: {
+      push(-pop());
+      break;
+    }
+
     case OP_CONSTANT: {
       Value const constant = read_constant(&vm);
       push(constant);
