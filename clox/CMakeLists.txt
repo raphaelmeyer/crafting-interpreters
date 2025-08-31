@@ -25,6 +25,7 @@ target_sources(clox-sources INTERFACE
   src/debug.c
   src/memory.c
   src/value.c
+  src/vm.c
 )
 
 add_executable(clox-test)
