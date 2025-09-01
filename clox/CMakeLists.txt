@@ -34,6 +34,7 @@ target_sources(clox-test PRIVATE
   src/main.spec.cc
   src/chunk.spec.cc
   src/value.spec.cc
+  src/vm.spec.cc
 )
 target_compile_options(clox-test PRIVATE "-fsanitize=address" "-fno-omit-frame-pointer")
 target_link_options(clox-test PRIVATE "-fsanitize=address")

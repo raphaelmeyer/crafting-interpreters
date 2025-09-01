@@ -4,6 +4,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 static constexpr size_t const STACK_MAX = 256;
 
 typedef struct VM_t {
@@ -22,3 +26,7 @@ typedef enum InterpretResult_t {
 void init_vm();
 void free_vm();
 InterpretResult interpret(Chunk const *chunk);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
