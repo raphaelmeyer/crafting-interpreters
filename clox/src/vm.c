@@ -30,6 +30,17 @@ static inline Value read_constant(VM *vm) {
   return vm->chunk->constants.values[read_byte(vm)];
 }
 
+static inline Value add(Value a, Value b) { return a + b; }
+static inline Value subtract(Value a, Value b) { return a - b; }
+static inline Value multiply(Value a, Value b) { return a * b; }
+static inline Value divide(Value a, Value b) { return a / b; }
+
+static inline void binray_op(Value (*op)(Value, Value)) {
+  double b = pop();
+  double a = pop();
+  push(op(a, b));
+}
+
 static InterpretResult run() {
   for (;;) {
     if (DEBUG_TRACE_EXECUTION) {
@@ -47,6 +58,23 @@ static InterpretResult run() {
 
     case OP_NEGATE: {
       push(-pop());
+      break;
+    }
+
+    case OP_ADD: {
+      binray_op(add);
+      break;
+    }
+    case OP_SUBTRACT: {
+      binray_op(subtract);
+      break;
+    }
+    case OP_MULTIPLY: {
+      binray_op(multiply);
+      break;
+    }
+    case OP_DIVIDE: {
+      binray_op(divide);
       break;
     }
 
