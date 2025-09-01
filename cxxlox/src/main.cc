@@ -16,9 +16,23 @@ int main(int argc, char *argv[]) {
 
   Chunk chunk{};
 
-  auto const constant = add_constant(chunk, 1.2);
+  auto constant = add_constant(chunk, 1.2);
   write_chunk(chunk, OpCode::CONSTANT, 123);
   write_chunk(chunk, constant, 123);
+
+  constant = add_constant(chunk, 3.4);
+  write_chunk(chunk, OpCode::CONSTANT, 123);
+  write_chunk(chunk, constant, 123);
+
+  write_chunk(chunk, OpCode::ADD, 123);
+
+  constant = add_constant(chunk, 5.6);
+  write_chunk(chunk, OpCode::CONSTANT, 123);
+  write_chunk(chunk, constant, 123);
+
+  write_chunk(chunk, OpCode::DIVIDE, 123);
+
+  write_chunk(chunk, OpCode::NEGATE, 123);
 
   write_chunk(chunk, OpCode::RETURN, 123);
 

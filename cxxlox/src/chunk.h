@@ -5,7 +5,15 @@
 #include <cstdint>
 #include <vector>
 
-enum class OpCode : std::uint8_t { CONSTANT, RETURN };
+enum class OpCode : std::uint8_t {
+  CONSTANT,
+  ADD,
+  SUBTRACT,
+  MULTIPLY,
+  DIVIDE,
+  NEGATE,
+  RETURN
+};
 
 struct Chunk {
   std::vector<std::uint8_t> code;

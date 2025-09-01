@@ -2,6 +2,7 @@
 
 #include "debug.h"
 
+#include <functional>
 #include <iostream>
 
 namespace {
@@ -23,6 +24,12 @@ Value pop() {
 template <typename T> T read_byte() { return static_cast<T>(*vm.ip++); }
 Value read_constant() { return vm.chunk->constants[read_byte<std::size_t>()]; }
 
+template <typename Op> void binary_op(Op op) {
+  auto const b = pop();
+  auto const a = pop();
+  push(op(a, b));
+}
+
 InterpretResult run() {
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
@@ -43,6 +50,28 @@ InterpretResult run() {
     case OpCode::CONSTANT: {
       Value constant = read_constant();
       push(constant);
+      break;
+    }
+
+    case OpCode::ADD: {
+      binary_op(std::plus());
+      break;
+    }
+    case OpCode::SUBTRACT: {
+      binary_op(std::minus());
+      break;
+    }
+    case OpCode::MULTIPLY: {
+      binary_op(std::multiplies());
+      break;
+    }
+    case OpCode::DIVIDE: {
+      binary_op(std::divides());
+      break;
+    }
+
+    case OpCode::NEGATE: {
+      push(-pop());
       break;
     }
 

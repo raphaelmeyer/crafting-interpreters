@@ -51,6 +51,16 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
   switch (instruction) {
   case OpCode::CONSTANT:
     return constant_instruction("OP_CONSTANT", chunk, offset);
+  case OpCode::ADD:
+    return simple_instruction("OP_ADD", offset);
+  case OpCode::SUBTRACT:
+    return simple_instruction("OP_SUBTRACT", offset);
+  case OpCode::MULTIPLY:
+    return simple_instruction("OP_MULTIPLY", offset);
+  case OpCode::DIVIDE:
+    return simple_instruction("OP_DIVIDE", offset);
+  case OpCode::NEGATE:
+    return simple_instruction("OP_NEGATE", offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:
