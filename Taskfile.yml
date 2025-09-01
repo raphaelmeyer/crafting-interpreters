@@ -1,0 +1,33 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  hlox:
+    dir: hlox
+    cmds:
+      - cabal build
+
+  clox:
+    dir: clox
+    cmds:
+      - cmake --workflow clox
+
+  clox:run:
+    dir: clox
+    deps:
+      - clox
+    cmds:
+      - build/clox --debug
+
+  cxxlox:
+    dir: cxxlox
+    cmds:
+      - cmake --workflow cxxlox
+
+  cxxlox:run:
+    dir: cxxlox
+    deps:
+      - cxxlox
+    cmds:
+      - build/cxxlox --debug

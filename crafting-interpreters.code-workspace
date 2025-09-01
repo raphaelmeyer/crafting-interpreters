@@ -43,6 +43,9 @@
       "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
       "editor.inlayHints.enabled": "off"
     },
+    "[yaml]": {
+      "editor.defaultFormatter": "redhat.vscode-yaml"
+    },
     "cmake.options.advanced": {
       "workflow": {
         "statusBarVisibility": "visible"
