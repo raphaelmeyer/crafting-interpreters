@@ -19,6 +19,23 @@ void init_scanner(const char *source) {
 
 static bool is_at_end() { return *scanner.current == '\0'; }
 
+static char advance() {
+  char current = *scanner.current;
+  scanner.current++;
+  return current;
+}
+
+static bool match(char expected) {
+  if (is_at_end()) {
+    return false;
+  }
+  if (*scanner.current != expected) {
+    return false;
+  }
+  scanner.current++;
+  return true;
+}
+
 static Token make_token(TokenType type) {
   Token token;
   token.type = type;
@@ -42,6 +59,41 @@ Token scan_token() {
 
   if (is_at_end()) {
     return make_token(TOKEN_EOF);
+  }
+
+  char c = advance();
+
+  switch (c) {
+  case '(':
+    return make_token(TOKEN_LEFT_PAREN);
+  case ')':
+    return make_token(TOKEN_RIGHT_PAREN);
+  case '{':
+    return make_token(TOKEN_LEFT_BRACE);
+  case '}':
+    return make_token(TOKEN_RIGHT_BRACE);
+  case ';':
+    return make_token(TOKEN_SEMICOLON);
+  case ',':
+    return make_token(TOKEN_COMMA);
+  case '.':
+    return make_token(TOKEN_DOT);
+  case '-':
+    return make_token(TOKEN_MINUS);
+  case '+':
+    return make_token(TOKEN_PLUS);
+  case '/':
+    return make_token(TOKEN_SLASH);
+  case '*':
+    return make_token(TOKEN_STAR);
+  case '!':
+    return make_token(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+  case '=':
+    return make_token(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+  case '<':
+    return make_token(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+  case '>':
+    return make_token(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
   }
 
   return error_token("Unexpected character.");
