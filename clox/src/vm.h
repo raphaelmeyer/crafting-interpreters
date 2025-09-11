@@ -25,7 +25,9 @@ typedef enum InterpretResult_t {
 
 void init_vm();
 void free_vm();
-InterpretResult interpret(Chunk const *chunk);
+InterpretResult interpret(char const *source);
+
+InterpretResult _interpret(Chunk const *chunk);
 
 #ifdef __cplusplus
 } // extern "C"

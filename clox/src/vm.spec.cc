@@ -18,7 +18,7 @@ TEST_SUITE("vm") {
       write_chunk(&chunk, constant, 1);
 
       write_chunk(&chunk, OP_RETURN, 2);
-      interpret(&chunk);
+      _interpret(&chunk);
     }
 
     SUBCASE("add") {
@@ -33,7 +33,7 @@ TEST_SUITE("vm") {
       write_chunk(&chunk, OP_ADD, 1);
 
       write_chunk(&chunk, OP_RETURN, 2);
-      interpret(&chunk);
+      _interpret(&chunk);
     }
 
     SUBCASE("subtract") {
@@ -48,7 +48,7 @@ TEST_SUITE("vm") {
       write_chunk(&chunk, OP_SUBTRACT, 1);
 
       write_chunk(&chunk, OP_RETURN, 2);
-      interpret(&chunk);
+      _interpret(&chunk);
     }
 
     free_vm();

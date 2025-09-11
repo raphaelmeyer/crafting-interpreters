@@ -22,8 +22,10 @@ add_library(clox-sources INTERFACE)
 target_link_libraries(clox-sources INTERFACE common)
 target_sources(clox-sources INTERFACE
   src/chunk.c
+  src/compiler.c
   src/debug.c
   src/memory.c
+  src/scanner.c
   src/value.c
   src/vm.c
 )
