@@ -1,5 +1,6 @@
 #include "vm.h"
 
+#include "compiler.h"
 #include "debug.h"
 
 #include <functional>
@@ -97,4 +98,9 @@ InterpretResult interpret(Chunk const *chunk) {
   vm.chunk = chunk;
   vm.ip = vm.chunk->code.data();
   return run();
+}
+
+InterpretResult interpret(std::string_view source) {
+  compile(source);
+  return InterpretResult::OK;
 }

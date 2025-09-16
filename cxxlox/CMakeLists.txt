@@ -13,8 +13,10 @@ add_executable(cxxlox)
 target_compile_options(cxxlox PRIVATE -Wall -Wextra -Werror)
 target_sources(cxxlox PRIVATE
   src/chunk.cc
+  src/compiler.cc
   src/debug.cc
   src/main.cc
+  src/scanner.cc
   src/value.cc
   src/vm.cc
 )
