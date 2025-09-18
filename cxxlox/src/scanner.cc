@@ -19,6 +19,8 @@ char advance() {
   return c;
 }
 
+char peek() { return *scanner.current; }
+
 bool match(char expected) {
   if (is_at_end()) {
     return false;
@@ -44,6 +46,25 @@ Token error_token(std::string_view message) {
           .line = scanner.line};
 }
 
+void skip_whitespace() {
+  for (;;) {
+    char c = peek();
+    switch (c) {
+    case ' ':
+    case '\r':
+    case '\t':
+      advance();
+      break;
+    case '\n':
+      scanner.line++;
+      advance();
+      break;
+    default:
+      return;
+    }
+  }
+}
+
 } // namespace
 
 void init_scanner(std::string_view source) {
@@ -54,6 +75,8 @@ void init_scanner(std::string_view source) {
 }
 
 Token scan_token() {
+  skip_whitespace();
+
   scanner.start = scanner.current;
 
   if (is_at_end()) {
