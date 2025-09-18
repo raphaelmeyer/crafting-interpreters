@@ -1,6 +1,8 @@
 #include "scanner.h"
 
+#include <algorithm>
 #include <cctype>
+#include <cstdint>
 
 namespace {
 
@@ -14,6 +16,8 @@ struct Scanner {
 Scanner scanner;
 
 bool is_digit(char c) { return std::isdigit(c); }
+
+bool is_alpha(char c) { return std::isalpha(c) || c == '_'; }
 
 bool is_at_end() { return scanner.current == scanner.end; }
 
@@ -86,6 +90,75 @@ void skip_whitespace() {
   }
 }
 
+TokenType check_keyword(std::int32_t offset, std::int32_t length,
+                        std::string_view rest, TokenType type) {
+  if (scanner.current - scanner.start == offset + length &&
+      std::equal(scanner.start + offset, scanner.current, rest.begin())) {
+    return type;
+  }
+
+  return TokenType::IDENTIFIER;
+}
+
+TokenType identifier_type() {
+
+  switch (*scanner.start) {
+  case 'a':
+    return check_keyword(1, 2, "nd", TokenType::AND);
+  case 'c':
+    return check_keyword(1, 4, "lass", TokenType::CLASS);
+  case 'e':
+    return check_keyword(1, 3, "lse", TokenType::ELSE);
+  case 'f':
+    if (scanner.current - scanner.start > 1) {
+      switch (*(scanner.start + 1)) {
+      case 'a':
+        return check_keyword(2, 3, "lse", TokenType::FALSE);
+      case 'o':
+        return check_keyword(2, 1, "r", TokenType::FOR);
+      case 'u':
+        return check_keyword(2, 1, "n", TokenType::FUN);
+      }
+    }
+    break;
+  case 'i':
+    return check_keyword(1, 1, "f", TokenType::IF);
+  case 'n':
+    return check_keyword(1, 2, "il", TokenType::NIL);
+  case 'o':
+    return check_keyword(1, 1, "r", TokenType::OR);
+  case 'p':
+    return check_keyword(1, 4, "rint", TokenType::PRINT);
+  case 'r':
+    return check_keyword(1, 5, "eturn", TokenType::RETURN);
+  case 's':
+    return check_keyword(1, 4, "uper", TokenType::SUPER);
+  case 't':
+    if (scanner.current - scanner.start > 1) {
+      switch (*(scanner.start + 1)) {
+      case 'h':
+        return check_keyword(2, 2, "is", TokenType::THIS);
+      case 'r':
+        return check_keyword(2, 2, "ue", TokenType::TRUE);
+      }
+    }
+    break;
+  case 'v':
+    return check_keyword(1, 2, "ar", TokenType::VAR);
+  case 'w':
+    return check_keyword(1, 4, "hile", TokenType::WHILE);
+  }
+
+  return TokenType::IDENTIFIER;
+}
+
+Token identifier() {
+  while (is_alpha(peek()) || is_digit(peek())) {
+    advance();
+  }
+  return make_token(identifier_type());
+}
+
 Token number() {
   while (is_digit(peek())) {
     advance();
@@ -137,6 +210,9 @@ Token scan_token() {
   }
 
   auto const c = advance();
+  if (is_alpha(c)) {
+    return identifier();
+  }
   if (is_digit(c)) {
     return number();
   }
