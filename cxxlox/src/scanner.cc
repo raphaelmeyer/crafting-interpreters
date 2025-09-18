@@ -1,5 +1,7 @@
 #include "scanner.h"
 
+#include <cctype>
+
 namespace {
 
 struct Scanner {
@@ -10,6 +12,8 @@ struct Scanner {
 };
 
 Scanner scanner;
+
+bool is_digit(char c) { return std::isdigit(c); }
 
 bool is_at_end() { return scanner.current == scanner.end; }
 
@@ -82,6 +86,38 @@ void skip_whitespace() {
   }
 }
 
+Token number() {
+  while (is_digit(peek())) {
+    advance();
+  }
+
+  if (peek() == '.' && is_digit(peek_next())) {
+    advance();
+
+    while (is_digit(peek())) {
+      advance();
+    }
+  }
+
+  return make_token(TokenType::NUMBER);
+}
+
+Token string() {
+  while (peek() != '"' && not is_at_end()) {
+    if (peek() == '\n') {
+      scanner.line++;
+    }
+    advance();
+  }
+
+  if (is_at_end()) {
+    return error_token("Unterminated string.");
+  }
+
+  advance();
+  return make_token(TokenType::STRING);
+}
+
 } // namespace
 
 void init_scanner(std::string_view source) {
@@ -101,6 +137,10 @@ Token scan_token() {
   }
 
   auto const c = advance();
+  if (is_digit(c)) {
+    return number();
+  }
+
   switch (c) {
   case '(':
     return make_token(TokenType::LEFT_PAREN);
@@ -133,6 +173,8 @@ Token scan_token() {
   case '>':
     return make_token(match('=') ? TokenType::GREATER_EQUAL
                                  : TokenType::GREATER);
+  case '"':
+    return string();
   }
 
   return error_token("Unexpected character.");
