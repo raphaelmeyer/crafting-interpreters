@@ -117,6 +117,29 @@ static void expression();
 static void parse_precedence(Precedence precedence);
 static ParseRule *get_rule(TokenType type);
 
+static void binary() {
+  TokenType operator_type = parser.previous.type;
+  ParseRule *rule = get_rule(operator_type);
+  parse_precedence(rule->precedence + 1);
+
+  switch (operator_type) {
+  case TOKEN_PLUS:
+    emit_byte(OP_ADD);
+    break;
+  case TOKEN_MINUS:
+    emit_byte(OP_SUBTRACT);
+    break;
+  case TOKEN_STAR:
+    emit_byte(OP_MULTIPLY);
+    break;
+  case TOKEN_SLASH:
+    emit_byte(OP_DIVIDE);
+    break;
+  default:
+    return;
+  }
+}
+
 static void grouping() {
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
@@ -143,7 +166,10 @@ static void unary() {
 
 static ParseRule rules[] = {
     [TOKEN_LEFT_PAREN] = {grouping, NULL, PREC_NONE},
-    [TOKEN_MINUS] = {unary, NULL, PREC_TERM},
+    [TOKEN_MINUS] = {unary, binary, PREC_TERM},
+    [TOKEN_PLUS] = {NULL, binary, PREC_TERM},
+    [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
+    [TOKEN_STAR] = {NULL, binary, PREC_FACTOR},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
     [TOKEN_EOF] = {NULL, NULL, PREC_NONE},
 };
