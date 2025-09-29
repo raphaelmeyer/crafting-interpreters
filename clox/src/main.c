@@ -74,6 +74,7 @@ int main(int argc, const char *argv[]) {
     if (strncmp(argv[i], "--", 2) == 0) {
       if (strcmp(argv[i], "--debug") == 0) {
         DEBUG_TRACE_EXECUTION = true;
+        DEBUG_PRINT_CODE = true;
       } else {
         usage();
       }

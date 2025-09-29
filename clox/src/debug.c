@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 bool DEBUG_TRACE_EXECUTION = false;
+bool DEBUG_PRINT_CODE = false;
 
 static int32_t constant_instruction(char const *name, Chunk const *chunk,
                                     int32_t offset);
