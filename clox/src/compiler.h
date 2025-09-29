@@ -1,10 +1,12 @@
 #pragma once
 
+#include "chunk.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void compile(char const *source);
+bool compile(char const *source, Chunk *chunk);
 
 #ifdef __cplusplus
 } // extern "C"
