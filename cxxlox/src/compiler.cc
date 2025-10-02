@@ -4,6 +4,8 @@
 
 #include <format>
 #include <iostream>
+#include <limits>
+#include <map>
 
 namespace {
 
@@ -14,7 +16,32 @@ struct Parser {
   bool panic_mode;
 };
 
+enum class Precedence {
+  NONE,
+  ASSIGNMENT, // =
+  OR,         // or
+  AND,        // and
+  EQUALITY,   // == !=
+  COMPARISON, // < > <= >=
+  TERM,       // + -
+  FACTOR,     // * /
+  UNARY,      // ! -
+  CALL,       // . ()
+  PRIMARY
+};
+
+using ParseFn = void (*)();
+
+struct ParseRule {
+  ParseFn prefix;
+  ParseFn infix;
+  Precedence precedence;
+};
+
 Parser parser;
+Chunk *compiling_chunk;
+
+Chunk *current_chunk() { return compiling_chunk; }
 
 void error_at(Token const &token, std::string_view message) {
   if (parser.panic_mode) {
@@ -38,7 +65,7 @@ void error_at(Token const &token, std::string_view message) {
   parser.had_error = true;
 }
 
-// void error(std::string_view message) { error_at(parser.previous, message); }
+void error(std::string_view message) { error_at(parser.previous, message); }
 
 void error_at_current(std::string_view message) {
   error_at(parser.current, message);
@@ -66,12 +93,82 @@ void consume(TokenType type, std::string_view message) {
   error_at_current(message);
 }
 
-void expression() {}
+void emit_byte(std::uint8_t byte) {
+  write_chunk(*current_chunk(), byte, parser.previous.line);
+}
+
+void emit_byte(OpCode op_code) {
+  emit_byte(static_cast<std::uint8_t>(op_code));
+}
+
+void emit_bytes(OpCode op_code, std::uint8_t byte) {
+  emit_byte(op_code);
+  emit_byte(byte);
+}
+
+void emit_return() { emit_byte(OpCode::RETURN); }
+
+uint8_t make_constant(Value value) {
+  auto const constant = add_constant(*current_chunk(), value);
+  if (constant > std::numeric_limits<std::uint8_t>::max()) {
+    error("Too many constants in one chunk.");
+    return 0;
+  }
+
+  return static_cast<uint8_t>(constant);
+}
+
+void emit_constant(Value value) {
+  emit_bytes(OpCode::CONSTANT, make_constant(value));
+}
+
+void end_compiler() { emit_return(); }
+
+void expression();
+void parse_precedence(Precedence precedence);
+
+void grouping() {
+  expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+void number() {
+  auto const value = std::stod(
+      std::string{parser.previous.start, parser.previous.length}, nullptr);
+  emit_constant(value);
+}
+
+void unary() {
+  auto const operator_type = parser.previous.type;
+
+  // Compile the operand.
+  parse_precedence(Precedence::UNARY);
+
+  // Emit the operator instruction.
+  switch (operator_type) {
+  case TokenType::MINUS:
+    emit_byte(OpCode::NEGATE);
+    break;
+
+  default:
+    return;
+  }
+}
+
+std::map<TokenType, ParseRule> const rules{
+    {TokenType::LEFT_PAREN, {grouping, nullptr, Precedence::NONE}},
+    {TokenType::MINUS, {unary, nullptr, Precedence::TERM}},
+    {TokenType::NUMBER, {number, nullptr, Precedence::NONE}}};
+
+void parse_precedence([[maybe_unused]] Precedence precedence) {}
+
+void expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
 } // namespace
 
-bool compile(std::string_view source, Chunk &) {
+bool compile(std::string_view source, Chunk &chunk) {
   init_scanner(source);
+  compiling_chunk = &chunk;
 
   parser.had_error = false;
   parser.panic_mode = false;
@@ -79,5 +176,8 @@ bool compile(std::string_view source, Chunk &) {
   advance();
   expression();
   consume(TokenType::END, "Expect end of expression.");
+
+  end_compiler();
+
   return not parser.had_error;
 }
