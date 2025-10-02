@@ -183,12 +183,67 @@ void unary() {
   }
 }
 
+// clang-format off
 std::map<TokenType, ParseRule> const rules{
-    {TokenType::LEFT_PAREN, {grouping, nullptr, Precedence::NONE}},
-    {TokenType::MINUS, {unary, binary, Precedence::TERM}},
-    {TokenType::NUMBER, {number, nullptr, Precedence::NONE}}};
+  {TokenType::LEFT_PAREN,    {grouping, nullptr,  Precedence::NONE}},
+  {TokenType::RIGHT_PAREN,   {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::LEFT_BRACE,    {nullptr,  nullptr,  Precedence::NONE}}, 
+  {TokenType::RIGHT_BRACE,   {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::COMMA,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::DOT,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::MINUS,         {unary,    binary,   Precedence::TERM}},
+  {TokenType::PLUS,          {nullptr,  binary,   Precedence::TERM}},
+  {TokenType::SEMICOLON,     {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::SLASH,         {nullptr,  binary,   Precedence::FACTOR}},
+  {TokenType::STAR,          {nullptr,  binary,   Precedence::FACTOR}},
+  {TokenType::BANG,          {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::BANG_EQUAL,    {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::EQUAL,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::EQUAL_EQUAL,   {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::GREATER,       {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::GREATER_EQUAL, {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::LESS,          {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::LESS_EQUAL,    {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::IDENTIFIER,    {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::STRING,        {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::NUMBER,        {number,   nullptr,  Precedence::NONE}},
+  {TokenType::AND,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::CLASS,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::ELSE,          {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::FALSE,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::FOR,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::FUN,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::IF,            {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::NIL,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::OR,            {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::PRINT,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::RETURN,        {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::SUPER,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::THIS,          {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::TRUE,          {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::VAR,           {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::WHILE,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::ERROR,         {nullptr,  nullptr,  Precedence::NONE}},
+  {TokenType::END,           {nullptr,  nullptr,  Precedence::NONE}}
+};
+// clang-format on
 
-void parse_precedence([[maybe_unused]] Precedence precedence) {}
+void parse_precedence(Precedence precedence) {
+  advance();
+  auto const prefix_rule = get_rule(parser.previous.type).prefix;
+  if (not prefix_rule) {
+    error("Expect expression.");
+    return;
+  }
+
+  prefix_rule();
+
+  while (precedence <= get_rule(parser.current.type).precedence) {
+    advance();
+    auto const infix_rule = get_rule(parser.previous.type).infix;
+    infix_rule();
+  }
+}
 
 ParseRule const &get_rule(TokenType type) { return rules.at(type); }
 
