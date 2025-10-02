@@ -94,13 +94,17 @@ void init_vm() { reset_stack(); }
 
 void free_vm() {}
 
-InterpretResult interpret(Chunk const *chunk) {
-  vm.chunk = chunk;
-  vm.ip = vm.chunk->code.data();
-  return run();
-}
-
 InterpretResult interpret(std::string_view source) {
-  compile(source);
-  return InterpretResult::OK;
+  Chunk chunk{};
+
+  if (not compile(source, chunk)) {
+    return InterpretResult::COMPILE_ERROR;
+  }
+
+  vm.chunk = &chunk;
+  vm.ip = vm.chunk->code.data();
+
+  auto const result = run();
+
+  return result;
 }
