@@ -126,6 +126,34 @@ void end_compiler() { emit_return(); }
 
 void expression();
 void parse_precedence(Precedence precedence);
+ParseRule const &get_rule(TokenType type);
+
+Precedence next_higher_precedence(Precedence precedence) {
+  return static_cast<Precedence>(static_cast<std::int32_t>(precedence) + 1);
+}
+
+void binary() {
+  auto const operator_type = parser.previous.type;
+  auto const rule = get_rule(operator_type);
+  parse_precedence(next_higher_precedence(rule.precedence));
+
+  switch (operator_type) {
+  case TokenType::PLUS:
+    emit_byte(OpCode::ADD);
+    break;
+  case TokenType::MINUS:
+    emit_byte(OpCode::SUBTRACT);
+    break;
+  case TokenType::STAR:
+    emit_byte(OpCode::MULTIPLY);
+    break;
+  case TokenType::SLASH:
+    emit_byte(OpCode::DIVIDE);
+    break;
+  default:
+    return;
+  }
+}
 
 void grouping() {
   expression();
@@ -157,10 +185,12 @@ void unary() {
 
 std::map<TokenType, ParseRule> const rules{
     {TokenType::LEFT_PAREN, {grouping, nullptr, Precedence::NONE}},
-    {TokenType::MINUS, {unary, nullptr, Precedence::TERM}},
+    {TokenType::MINUS, {unary, binary, Precedence::TERM}},
     {TokenType::NUMBER, {number, nullptr, Precedence::NONE}}};
 
 void parse_precedence([[maybe_unused]] Precedence precedence) {}
+
+ParseRule const &get_rule(TokenType type) { return rules.at(type); }
 
 void expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
