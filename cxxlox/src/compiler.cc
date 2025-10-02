@@ -1,5 +1,6 @@
 #include "compiler.h"
 
+#include "debug.h"
 #include "scanner.h"
 
 #include <format>
@@ -122,7 +123,15 @@ void emit_constant(Value value) {
   emit_bytes(OpCode::CONSTANT, make_constant(value));
 }
 
-void end_compiler() { emit_return(); }
+void end_compiler() {
+  emit_return();
+
+  if (Debug::PRINT_CODE) {
+    if (not parser.had_error) {
+      disassemble_chunk(*current_chunk(), "code");
+    }
+  }
+}
 
 void expression();
 void parse_precedence(Precedence precedence);

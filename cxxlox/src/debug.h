@@ -4,6 +4,7 @@
 
 struct Debug {
   static bool TRACE_EXECUTION;
+  static bool PRINT_CODE;
 };
 
 struct Chunk;

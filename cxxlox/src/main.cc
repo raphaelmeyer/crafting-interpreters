@@ -1,4 +1,3 @@
-#include "chunk.h"
 #include "debug.h"
 #include "vm.h"
 
@@ -70,6 +69,7 @@ int main(int argc, char *argv[]) {
     if (arg.starts_with("--"sv)) {
       if (arg == "--debug"sv) {
         Debug::TRACE_EXECUTION = true;
+        Debug::PRINT_CODE = true;
       } else {
         usage();
       }

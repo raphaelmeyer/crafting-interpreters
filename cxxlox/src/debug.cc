@@ -29,6 +29,7 @@ std::size_t constant_instruction(std::string name, Chunk const &chunk,
 } // namespace
 
 bool Debug::TRACE_EXECUTION = false;
+bool Debug::PRINT_CODE = false;
 
 void disassemble_chunk(Chunk const &chunk, std::string name) {
   std::cout << std::format("== {} ==\n", name);
