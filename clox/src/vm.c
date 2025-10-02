@@ -115,9 +115,3 @@ Value pop() {
   vm.stack_top--;
   return *vm.stack_top;
 }
-
-InterpretResult _interpret(Chunk const *chunk) {
-  vm.chunk = chunk;
-  vm.ip = vm.chunk->code;
-  return run();
-}

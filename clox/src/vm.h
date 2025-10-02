@@ -27,8 +27,6 @@ void init_vm();
 void free_vm();
 InterpretResult interpret(char const *source);
 
-InterpretResult _interpret(Chunk const *chunk);
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
