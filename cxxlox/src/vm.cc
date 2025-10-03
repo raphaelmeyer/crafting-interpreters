@@ -39,9 +39,10 @@ private:
 
   struct Context {
     Chunk const *chunk;
-    std::uint8_t const *ip;
+    Chunk::CodeIterator ip;
     std::array<Value, STACK_MAX> stack;
-    Value *stack_top;
+    using StackPointer = decltype(stack)::iterator;
+    StackPointer stack_top;
   };
 
   Context vm;
@@ -51,7 +52,7 @@ void LoxVM::init_vm() { reset_stack(); }
 
 void LoxVM::free_vm() {}
 
-void LoxVM::reset_stack() { vm.stack_top = vm.stack.data(); }
+void LoxVM::reset_stack() { vm.stack_top = vm.stack.begin(); }
 
 void LoxVM::push(Value value) {
   *vm.stack_top = value;
@@ -73,15 +74,14 @@ InterpretResult LoxVM::run() {
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
       std::cout << "          ";
-      for (auto const *slot = vm.stack.data(); slot < vm.stack_top; ++slot) {
+      for (auto slot = vm.stack.begin(); slot < vm.stack_top; ++slot) {
         std::cout << "[ ";
         print_value(*slot);
         std::cout << " ]";
       }
       std::cout << "\n";
 
-      disassemble_instruction(
-          *vm.chunk, static_cast<std::size_t>(vm.ip - vm.chunk->code.data()));
+      disassemble_instruction(*vm.chunk, vm.ip - vm.chunk->code.begin());
     }
 
     auto const instruction = read_opcode();
@@ -134,7 +134,7 @@ InterpretResult LoxVM::interpret(std::string_view source) {
   }
 
   vm.chunk = &chunk;
-  vm.ip = vm.chunk->code.data();
+  vm.ip = vm.chunk->code.begin();
 
   auto const result = run();
 
