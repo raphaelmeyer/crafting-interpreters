@@ -8,30 +8,68 @@
 
 namespace {
 
-VM vm{};
+class LoxVM final : public VM {
+public:
+  LoxVM() { init_vm(); }
+  ~LoxVM() { free_vm(); }
 
-void reset_stack() { vm.stack_top = vm.stack.data(); }
+  InterpretResult interpret(std::string_view source) override;
 
-void push(Value value) {
+private:
+  void init_vm();
+  void free_vm();
+
+  void reset_stack();
+  void push(Value value);
+  Value pop();
+
+  std::uint8_t read_byte();
+  Value read_constant();
+  OpCode read_opcode();
+
+  InterpretResult run();
+
+  template <typename Op> void binary_op(Op op) {
+    auto const b = pop();
+    auto const a = pop();
+    push(op(a, b));
+  }
+
+  constexpr static std::size_t const STACK_MAX = 256;
+
+  struct Context {
+    Chunk const *chunk;
+    std::uint8_t const *ip;
+    std::array<Value, STACK_MAX> stack;
+    Value *stack_top;
+  };
+
+  Context vm;
+};
+
+void LoxVM::init_vm() { reset_stack(); }
+
+void LoxVM::free_vm() {}
+
+void LoxVM::reset_stack() { vm.stack_top = vm.stack.data(); }
+
+void LoxVM::push(Value value) {
   *vm.stack_top = value;
   vm.stack_top++;
 }
 
-Value pop() {
+Value LoxVM::pop() {
   vm.stack_top--;
   return *vm.stack_top;
 }
 
-template <typename T> T read_byte() { return static_cast<T>(*vm.ip++); }
-Value read_constant() { return vm.chunk->constants[read_byte<std::size_t>()]; }
+std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
 
-template <typename Op> void binary_op(Op op) {
-  auto const b = pop();
-  auto const a = pop();
-  push(op(a, b));
-}
+Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
 
-InterpretResult run() {
+OpCode LoxVM::read_opcode() { return static_cast<OpCode>(read_byte()); }
+
+InterpretResult LoxVM::run() {
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
       std::cout << "          ";
@@ -46,7 +84,7 @@ InterpretResult run() {
           *vm.chunk, static_cast<std::size_t>(vm.ip - vm.chunk->code.data()));
     }
 
-    auto const instruction = read_byte<OpCode>();
+    auto const instruction = read_opcode();
     switch (instruction) {
     case OpCode::CONSTANT: {
       Value constant = read_constant();
@@ -88,13 +126,7 @@ InterpretResult run() {
   }
 }
 
-} // namespace
-
-void init_vm() { reset_stack(); }
-
-void free_vm() {}
-
-InterpretResult interpret(std::string_view source) {
+InterpretResult LoxVM::interpret(std::string_view source) {
   Chunk chunk{};
 
   if (not compile(source, chunk)) {
@@ -108,3 +140,7 @@ InterpretResult interpret(std::string_view source) {
 
   return result;
 }
+
+} // namespace
+
+std::unique_ptr<VM> VM::create() { return std::make_unique<LoxVM>(); }

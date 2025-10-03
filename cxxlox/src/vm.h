@@ -1,22 +1,14 @@
 #pragma once
 
-#include "chunk.h"
-
-#include <array>
+#include <memory>
 #include <string_view>
-
-constexpr std::size_t const STACK_MAX = 256;
-
-struct VM {
-  Chunk const *chunk;
-  std::uint8_t const *ip;
-  std::array<Value, STACK_MAX> stack;
-  Value *stack_top;
-};
 
 enum class InterpretResult { OK, COMPILE_ERROR, RUNTIME_ERROR };
 
-void init_vm();
-void free_vm();
+class VM {
+public:
+  virtual ~VM() = default;
+  virtual InterpretResult interpret(std::string_view source) = 0;
 
-InterpretResult interpret(std::string_view source);
+  static std::unique_ptr<VM> create();
+};

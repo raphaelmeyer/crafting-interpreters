@@ -12,7 +12,7 @@ namespace {
 
 void usage() { std::exit(64); }
 
-void repl() {
+void repl(VM &vm) {
   for (;;) {
     std::cout << "> " << std::flush;
 
@@ -22,7 +22,7 @@ void repl() {
       break;
     }
 
-    interpret(line);
+    vm.interpret(line);
   }
 }
 
@@ -46,9 +46,9 @@ std::string read_file(std::filesystem::path path) {
   return source;
 }
 
-void run_file(std::filesystem::path path) {
+void run_file(std::filesystem::path path, VM &vm) {
   auto const source = read_file(path);
-  auto const result = interpret(source);
+  auto const result = vm.interpret(source);
 
   if (result == InterpretResult::COMPILE_ERROR) {
     std::exit(65);
@@ -81,15 +81,13 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  init_vm();
+  auto const vm = VM::create();
 
   if (source_file.has_value()) {
-    run_file(source_file.value());
+    run_file(source_file.value(), *vm);
   } else {
-    repl();
+    repl(*vm);
   }
-
-  free_vm();
 
   return 0;
 }
