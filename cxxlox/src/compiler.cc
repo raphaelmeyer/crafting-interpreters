@@ -137,7 +137,7 @@ void LoxCompiler::consume(TokenType type, std::string_view message) {
 }
 
 void LoxCompiler::emit_byte(std::uint8_t byte) {
-  write_chunk(*current_chunk(), byte, parser.previous.line);
+  current_chunk()->write(byte, parser.previous.line);
 }
 
 void LoxCompiler::emit_byte(OpCode op_code) {
@@ -152,7 +152,7 @@ void LoxCompiler::emit_bytes(OpCode op_code, std::uint8_t byte) {
 void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
 
 uint8_t LoxCompiler::make_constant(Value value) {
-  auto const constant = add_constant(*current_chunk(), value);
+  auto const constant = current_chunk()->add_constant(value);
   if (constant > std::numeric_limits<std::uint8_t>::max()) {
     error("Too many constants in one chunk.");
     return 0;

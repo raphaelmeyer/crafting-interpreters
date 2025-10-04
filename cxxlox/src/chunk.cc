@@ -1,15 +1,11 @@
 #include "chunk.h"
 
-void write_chunk(Chunk &chunk, OpCode op_code, std::int32_t line) {
-  write_chunk(chunk, static_cast<std::uint8_t>(op_code), line);
+void Chunk::write(uint8_t byte, std::int32_t line) {
+  code.push_back(byte);
+  lines.push_back(line);
 }
 
-void write_chunk(Chunk &chunk, std::uint8_t byte, std::int32_t line) {
-  chunk.code.push_back(byte);
-  chunk.lines.push_back(line);
-}
-
-std::size_t add_constant(Chunk &chunk, Value value) {
-  chunk.constants.push_back(value);
-  return chunk.constants.size() - 1;
+std::size_t Chunk::add_constant(Value value) {
+  constants.push_back(value);
+  return constants.size() - 1;
 }

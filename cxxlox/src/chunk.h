@@ -21,9 +21,7 @@ struct Chunk {
   ValueArray constants;
 
   using CodeIterator = decltype(Chunk::code)::const_iterator;
+
+  void write(uint8_t byte, std::int32_t line);
+  std::size_t add_constant(Value value);
 };
-
-void write_chunk(Chunk &chunk, OpCode op_code, std::int32_t line);
-void write_chunk(Chunk &chunk, std::uint8_t byte, std::int32_t line);
-
-std::size_t add_constant(Chunk &chunk, Value value);
