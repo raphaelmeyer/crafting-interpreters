@@ -1,21 +1,16 @@
 #include "compiler.h"
 
+#include "chunk.h"
 #include "debug.h"
 #include "scanner.h"
 
 #include <format>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <map>
 
 namespace {
-
-struct Parser {
-  Token current;
-  Token previous;
-  bool had_error;
-  bool panic_mode;
-};
 
 enum class Precedence {
   NONE,
@@ -31,7 +26,52 @@ enum class Precedence {
   PRIMARY
 };
 
-using ParseFn = void (*)();
+class LoxCompiler final : public Compiler {
+public:
+  bool compile(std::string_view source, Chunk &chunk) override;
+
+  void binary();
+  void grouping();
+  void number();
+  void unary();
+
+private:
+  Chunk *current_chunk() { return compiling_chunk; }
+
+  void error_at(Token const &token, std::string_view message);
+  void error(std::string_view message);
+  void error_at_current(std::string_view message);
+
+  void advance();
+  void consume(TokenType type, std::string_view message);
+
+  void emit_byte(std::uint8_t byte);
+  void emit_byte(OpCode op_code);
+  void emit_bytes(OpCode op_code, std::uint8_t byte);
+  void emit_return();
+  uint8_t make_constant(Value value);
+  void emit_constant(Value value);
+
+  void end_compiler();
+
+  void parse_precedence(Precedence precedence);
+  Precedence next_higher_precedence(Precedence precedence);
+
+  void expression();
+
+private:
+  struct Parser {
+    Token current;
+    Token previous;
+    bool had_error;
+    bool panic_mode;
+  };
+
+  Parser parser{};
+  Chunk *compiling_chunk{};
+};
+
+using ParseFn = void (LoxCompiler::*)();
 
 struct ParseRule {
   ParseFn prefix;
@@ -39,12 +79,7 @@ struct ParseRule {
   Precedence precedence;
 };
 
-Parser parser;
-Chunk *compiling_chunk;
-
-Chunk *current_chunk() { return compiling_chunk; }
-
-void error_at(Token const &token, std::string_view message) {
+void LoxCompiler::error_at(Token const &token, std::string_view message) {
   if (parser.panic_mode) {
     return;
   }
@@ -66,13 +101,15 @@ void error_at(Token const &token, std::string_view message) {
   parser.had_error = true;
 }
 
-void error(std::string_view message) { error_at(parser.previous, message); }
+void LoxCompiler::error(std::string_view message) {
+  error_at(parser.previous, message);
+}
 
-void error_at_current(std::string_view message) {
+void LoxCompiler::error_at_current(std::string_view message) {
   error_at(parser.current, message);
 }
 
-void advance() {
+void LoxCompiler::advance() {
   parser.previous = parser.current;
 
   for (;;) {
@@ -85,7 +122,7 @@ void advance() {
   }
 }
 
-void consume(TokenType type, std::string_view message) {
+void LoxCompiler::consume(TokenType type, std::string_view message) {
   if (parser.current.type == type) {
     advance();
     return;
@@ -94,22 +131,22 @@ void consume(TokenType type, std::string_view message) {
   error_at_current(message);
 }
 
-void emit_byte(std::uint8_t byte) {
+void LoxCompiler::emit_byte(std::uint8_t byte) {
   write_chunk(*current_chunk(), byte, parser.previous.line);
 }
 
-void emit_byte(OpCode op_code) {
+void LoxCompiler::emit_byte(OpCode op_code) {
   emit_byte(static_cast<std::uint8_t>(op_code));
 }
 
-void emit_bytes(OpCode op_code, std::uint8_t byte) {
+void LoxCompiler::emit_bytes(OpCode op_code, std::uint8_t byte) {
   emit_byte(op_code);
   emit_byte(byte);
 }
 
-void emit_return() { emit_byte(OpCode::RETURN); }
+void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
 
-uint8_t make_constant(Value value) {
+uint8_t LoxCompiler::make_constant(Value value) {
   auto const constant = add_constant(*current_chunk(), value);
   if (constant > std::numeric_limits<std::uint8_t>::max()) {
     error("Too many constants in one chunk.");
@@ -119,11 +156,11 @@ uint8_t make_constant(Value value) {
   return static_cast<uint8_t>(constant);
 }
 
-void emit_constant(Value value) {
+void LoxCompiler::emit_constant(Value value) {
   emit_bytes(OpCode::CONSTANT, make_constant(value));
 }
 
-void end_compiler() {
+void LoxCompiler::end_compiler() {
   emit_return();
 
   if (Debug::PRINT_CODE) {
@@ -133,15 +170,13 @@ void end_compiler() {
   }
 }
 
-void expression();
-void parse_precedence(Precedence precedence);
-ParseRule const &get_rule(TokenType type);
-
-Precedence next_higher_precedence(Precedence precedence) {
+Precedence LoxCompiler::next_higher_precedence(Precedence precedence) {
   return static_cast<Precedence>(static_cast<std::int32_t>(precedence) + 1);
 }
 
-void binary() {
+ParseRule const &get_rule(TokenType type);
+
+void LoxCompiler::binary() {
   auto const operator_type = parser.previous.type;
   auto const rule = get_rule(operator_type);
   parse_precedence(next_higher_precedence(rule.precedence));
@@ -164,18 +199,18 @@ void binary() {
   }
 }
 
-void grouping() {
+void LoxCompiler::grouping() {
   expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void number() {
+void LoxCompiler::number() {
   auto const value = std::stod(
       std::string{parser.previous.start, parser.previous.length}, nullptr);
   emit_constant(value);
 }
 
-void unary() {
+void LoxCompiler::unary() {
   auto const operator_type = parser.previous.type;
 
   // Compile the operand.
@@ -192,52 +227,56 @@ void unary() {
   }
 }
 
+using L = LoxCompiler;
+
 // clang-format off
 std::map<TokenType, ParseRule> const rules{
-  {TokenType::LEFT_PAREN,    {grouping, nullptr,  Precedence::NONE}},
-  {TokenType::RIGHT_PAREN,   {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::LEFT_BRACE,    {nullptr,  nullptr,  Precedence::NONE}}, 
-  {TokenType::RIGHT_BRACE,   {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::COMMA,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::DOT,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::MINUS,         {unary,    binary,   Precedence::TERM}},
-  {TokenType::PLUS,          {nullptr,  binary,   Precedence::TERM}},
-  {TokenType::SEMICOLON,     {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::SLASH,         {nullptr,  binary,   Precedence::FACTOR}},
-  {TokenType::STAR,          {nullptr,  binary,   Precedence::FACTOR}},
-  {TokenType::BANG,          {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::BANG_EQUAL,    {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::EQUAL,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::EQUAL_EQUAL,   {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::GREATER,       {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::GREATER_EQUAL, {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::LESS,          {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::LESS_EQUAL,    {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::IDENTIFIER,    {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::STRING,        {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::NUMBER,        {number,   nullptr,  Precedence::NONE}},
-  {TokenType::AND,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::CLASS,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::ELSE,          {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::FALSE,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::FOR,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::FUN,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::IF,            {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::NIL,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::OR,            {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::PRINT,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::RETURN,        {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::SUPER,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::THIS,          {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::TRUE,          {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::VAR,           {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::WHILE,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::ERROR,         {nullptr,  nullptr,  Precedence::NONE}},
-  {TokenType::END,           {nullptr,  nullptr,  Precedence::NONE}}
+  {TokenType::LEFT_PAREN,    {&L::grouping, nullptr,      Precedence::NONE}},
+  {TokenType::RIGHT_PAREN,   {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::LEFT_BRACE,    {nullptr,      nullptr,      Precedence::NONE}}, 
+  {TokenType::RIGHT_BRACE,   {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::COMMA,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::DOT,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::MINUS,         {&L::unary,    &L::binary,   Precedence::TERM}},
+  {TokenType::PLUS,          {nullptr,      &L::binary,   Precedence::TERM}},
+  {TokenType::SEMICOLON,     {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::SLASH,         {nullptr,      &L::binary,   Precedence::FACTOR}},
+  {TokenType::STAR,          {nullptr,      &L::binary,   Precedence::FACTOR}},
+  {TokenType::BANG,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::BANG_EQUAL,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::EQUAL,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::EQUAL_EQUAL,   {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::GREATER,       {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::GREATER_EQUAL, {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::LESS,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::LESS_EQUAL,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::IDENTIFIER,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::STRING,        {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::NUMBER,        {&L::number,   nullptr,      Precedence::NONE}},
+  {TokenType::AND,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::CLASS,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::ELSE,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::FALSE,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::FOR,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::FUN,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::IF,            {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::NIL,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::OR,            {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::PRINT,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::RETURN,        {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::SUPER,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::THIS,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::TRUE,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::VAR,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::WHILE,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::ERROR,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::END,           {nullptr,      nullptr,      Precedence::NONE}}
 };
 // clang-format on
 
-void parse_precedence(Precedence precedence) {
+ParseRule const &get_rule(TokenType type) { return rules.at(type); }
+
+void LoxCompiler::parse_precedence(Precedence precedence) {
   advance();
   auto const prefix_rule = get_rule(parser.previous.type).prefix;
   if (not prefix_rule) {
@@ -245,22 +284,20 @@ void parse_precedence(Precedence precedence) {
     return;
   }
 
-  prefix_rule();
+  std::invoke(prefix_rule, *this);
 
   while (precedence <= get_rule(parser.current.type).precedence) {
     advance();
     auto const infix_rule = get_rule(parser.previous.type).infix;
-    infix_rule();
+    std::invoke(infix_rule, *this);
   }
 }
 
-ParseRule const &get_rule(TokenType type) { return rules.at(type); }
-
-void expression() { parse_precedence(Precedence::ASSIGNMENT); }
+void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
 } // namespace
 
-bool compile(std::string_view source, Chunk &chunk) {
+bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
   init_scanner(source);
   compiling_chunk = &chunk;
 
@@ -274,4 +311,8 @@ bool compile(std::string_view source, Chunk &chunk) {
   end_compiler();
 
   return not parser.had_error;
+}
+
+std::unique_ptr<Compiler> Compiler::create() {
+  return std::make_unique<LoxCompiler>();
 }

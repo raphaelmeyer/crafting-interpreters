@@ -1,5 +1,6 @@
 #include "vm.h"
 
+#include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
 
@@ -10,7 +11,10 @@ namespace {
 
 class LoxVM final : public VM {
 public:
-  LoxVM() { init_vm(); }
+  LoxVM(std::unique_ptr<Compiler> &&compiler_)
+      : compiler{std::move(compiler_)} {
+    init_vm();
+  }
   ~LoxVM() { free_vm(); }
 
   InterpretResult interpret(std::string_view source) override;
@@ -45,7 +49,8 @@ private:
     StackPointer stack_top;
   };
 
-  Context vm;
+  Context vm{};
+  std::unique_ptr<Compiler> compiler{Compiler::create()};
 };
 
 void LoxVM::init_vm() { reset_stack(); }
@@ -129,7 +134,7 @@ InterpretResult LoxVM::run() {
 InterpretResult LoxVM::interpret(std::string_view source) {
   Chunk chunk{};
 
-  if (not compile(source, chunk)) {
+  if (not compiler->compile(source, chunk)) {
     return InterpretResult::COMPILE_ERROR;
   }
 
@@ -143,4 +148,6 @@ InterpretResult LoxVM::interpret(std::string_view source) {
 
 } // namespace
 
-std::unique_ptr<VM> VM::create() { return std::make_unique<LoxVM>(); }
+std::unique_ptr<VM> VM::create() {
+  return std::make_unique<LoxVM>(Compiler::create());
+}
