@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <string_view>
 
 enum class TokenType {
@@ -60,5 +61,12 @@ struct Token {
   std::size_t line;
 };
 
-void init_scanner(std::string_view source);
-Token scan_token();
+class Scanner {
+public:
+  virtual ~Scanner() = default;
+
+  virtual void init_scanner(std::string_view source) = 0;
+  virtual Token scan_token() = 0;
+
+  static std::unique_ptr<Scanner> create();
+};

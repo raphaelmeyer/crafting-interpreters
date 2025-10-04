@@ -6,30 +6,58 @@
 
 namespace {
 
-struct Scanner {
-  std::string_view::const_iterator start;
-  std::string_view::const_iterator current;
-  std::string_view::const_iterator end;
-  std::size_t line;
+class LoxScanner final : public Scanner {
+public:
+  void init_scanner(std::string_view source) override;
+  Token scan_token() override;
+
+private:
+  bool is_digit(char c);
+  bool is_alpha(char c);
+  bool is_at_end();
+
+  char advance();
+  char peek();
+  char peek_next();
+  bool match(char expected);
+
+  Token make_token(TokenType type);
+  Token error_token(std::string_view message);
+
+  void skip_whitespace();
+
+  TokenType check_keyword(std::int32_t offset, std::int32_t length,
+                          std::string_view rest, TokenType type);
+  TokenType identifier_type();
+  Token identifier();
+  Token number();
+  Token string();
+
+  struct Context {
+    std::string_view::const_iterator start;
+    std::string_view::const_iterator current;
+    std::string_view::const_iterator end;
+    std::size_t line;
+  };
+
+  Context scanner;
 };
 
-Scanner scanner;
+bool LoxScanner::is_digit(char c) { return std::isdigit(c); }
 
-bool is_digit(char c) { return std::isdigit(c); }
+bool LoxScanner::is_alpha(char c) { return std::isalpha(c) || c == '_'; }
 
-bool is_alpha(char c) { return std::isalpha(c) || c == '_'; }
+bool LoxScanner::is_at_end() { return scanner.current == scanner.end; }
 
-bool is_at_end() { return scanner.current == scanner.end; }
-
-char advance() {
+char LoxScanner::advance() {
   auto const c = *scanner.current;
   scanner.current++;
   return c;
 }
 
-char peek() { return *scanner.current; }
+char LoxScanner::peek() { return *scanner.current; }
 
-char peek_next() {
+char LoxScanner::peek_next() {
   auto next = scanner.current + 1;
   if (next == scanner.end) {
     return '\0';
@@ -37,7 +65,7 @@ char peek_next() {
   return *next;
 }
 
-bool match(char expected) {
+bool LoxScanner::match(char expected) {
   if (is_at_end()) {
     return false;
   }
@@ -48,21 +76,21 @@ bool match(char expected) {
   return true;
 }
 
-Token make_token(TokenType type) {
+Token LoxScanner::make_token(TokenType type) {
   return {.type = type,
           .start = scanner.start,
           .length = static_cast<std::size_t>(scanner.current - scanner.start),
           .line = scanner.line};
 }
 
-Token error_token(std::string_view message) {
+Token LoxScanner::error_token(std::string_view message) {
   return {.type = TokenType::ERROR,
           .start = message.begin(),
           .length = message.size(),
           .line = scanner.line};
 }
 
-void skip_whitespace() {
+void LoxScanner::skip_whitespace() {
   for (;;) {
     char c = peek();
     switch (c) {
@@ -90,8 +118,8 @@ void skip_whitespace() {
   }
 }
 
-TokenType check_keyword(std::int32_t offset, std::int32_t length,
-                        std::string_view rest, TokenType type) {
+TokenType LoxScanner::check_keyword(std::int32_t offset, std::int32_t length,
+                                    std::string_view rest, TokenType type) {
   if (scanner.current - scanner.start == offset + length &&
       std::equal(scanner.start + offset, scanner.current, rest.begin())) {
     return type;
@@ -100,7 +128,7 @@ TokenType check_keyword(std::int32_t offset, std::int32_t length,
   return TokenType::IDENTIFIER;
 }
 
-TokenType identifier_type() {
+TokenType LoxScanner::identifier_type() {
 
   switch (*scanner.start) {
   case 'a':
@@ -152,14 +180,14 @@ TokenType identifier_type() {
   return TokenType::IDENTIFIER;
 }
 
-Token identifier() {
+Token LoxScanner::identifier() {
   while (is_alpha(peek()) || is_digit(peek())) {
     advance();
   }
   return make_token(identifier_type());
 }
 
-Token number() {
+Token LoxScanner::number() {
   while (is_digit(peek())) {
     advance();
   }
@@ -175,7 +203,7 @@ Token number() {
   return make_token(TokenType::NUMBER);
 }
 
-Token string() {
+Token LoxScanner::string() {
   while (peek() != '"' && not is_at_end()) {
     if (peek() == '\n') {
       scanner.line++;
@@ -191,16 +219,14 @@ Token string() {
   return make_token(TokenType::STRING);
 }
 
-} // namespace
-
-void init_scanner(std::string_view source) {
+void LoxScanner::init_scanner(std::string_view source) {
   scanner.start = source.begin();
   scanner.current = source.begin();
   scanner.end = source.end();
   scanner.line = 1;
 }
 
-Token scan_token() {
+Token LoxScanner::scan_token() {
   skip_whitespace();
 
   scanner.start = scanner.current;
@@ -254,4 +280,10 @@ Token scan_token() {
   }
 
   return error_token("Unexpected character.");
+}
+
+} // namespace
+
+std::unique_ptr<Scanner> Scanner::create() {
+  return std::make_unique<LoxScanner>();
 }

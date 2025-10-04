@@ -28,6 +28,9 @@ enum class Precedence {
 
 class LoxCompiler final : public Compiler {
 public:
+  LoxCompiler(std::unique_ptr<Scanner> &&scanner_)
+      : scanner{std::move(scanner_)} {}
+
   bool compile(std::string_view source, Chunk &chunk) override;
 
   void binary();
@@ -69,6 +72,8 @@ private:
 
   Parser parser{};
   Chunk *compiling_chunk{};
+
+  std::unique_ptr<Scanner> scanner{};
 };
 
 using ParseFn = void (LoxCompiler::*)();
@@ -113,7 +118,7 @@ void LoxCompiler::advance() {
   parser.previous = parser.current;
 
   for (;;) {
-    parser.current = scan_token();
+    parser.current = scanner->scan_token();
     if (parser.current.type != TokenType::ERROR) {
       break;
     }
@@ -295,10 +300,8 @@ void LoxCompiler::parse_precedence(Precedence precedence) {
 
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
-} // namespace
-
 bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
-  init_scanner(source);
+  scanner->init_scanner(source);
   compiling_chunk = &chunk;
 
   parser.had_error = false;
@@ -313,6 +316,8 @@ bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
   return not parser.had_error;
 }
 
+} // namespace
+
 std::unique_ptr<Compiler> Compiler::create() {
-  return std::make_unique<LoxCompiler>();
+  return std::make_unique<LoxCompiler>(Scanner::create());
 }
