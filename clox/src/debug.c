@@ -30,8 +30,12 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
   switch (instruction) {
   case OP_CONSTANT:
     return constant_instruction("OP_CONSTANT", chunk, offset);
-  case OP_NEGATE:
-    return simple_instruction("OP_NEGATE", offset);
+  case OP_NIL:
+    return simple_instruction("OP_NIL", offset);
+  case OP_TRUE:
+    return simple_instruction("OP_TRUE", offset);
+  case OP_FALSE:
+    return simple_instruction("OP_FALSE", offset);
   case OP_ADD:
     return simple_instruction("OP_ADD", offset);
   case OP_SUBTRACT:
@@ -40,6 +44,8 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return simple_instruction("OP_MULTIPLY", offset);
   case OP_DIVIDE:
     return simple_instruction("OP_DIVIDE", offset);
+  case OP_NEGATE:
+    return simple_instruction("OP_NEGATE", offset);
   case OP_RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

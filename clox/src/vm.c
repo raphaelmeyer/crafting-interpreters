@@ -82,6 +82,22 @@ static InterpretResult run() {
     uint8_t instruction;
     switch (instruction = read_byte(&vm)) {
 
+    case OP_CONSTANT: {
+      Value const constant = read_constant(&vm);
+      push(constant);
+      break;
+    }
+
+    case OP_NIL:
+      push(nil_value());
+      break;
+    case OP_TRUE:
+      push(bool_value(true));
+      break;
+    case OP_FALSE:
+      push(bool_value(false));
+      break;
+
     case OP_ADD: {
       InterpretResult result = binray_op(add);
       if (result != INTERPRET_OK) {
@@ -124,12 +140,6 @@ static InterpretResult run() {
       print_value(pop());
       printf("\n");
       return INTERPRET_OK;
-    }
-
-    case OP_CONSTANT: {
-      Value const constant = read_constant(&vm);
-      push(constant);
-      break;
     }
     }
   }

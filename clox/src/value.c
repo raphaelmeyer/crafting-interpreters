@@ -40,4 +40,16 @@ void write_value_array(ValueArray *array, Value value) {
   array->count++;
 }
 
-void print_value(Value value) { printf("%g", value.as.number); }
+void print_value(Value value) {
+  switch (value.type) {
+  case VAL_BOOL:
+    printf(value.as.boolean ? "true" : "false");
+    break;
+  case VAL_NIL:
+    printf("nil");
+    break;
+  case VAL_NUMBER:
+    printf("%g", value.as.number);
+    break;
+  }
+}
