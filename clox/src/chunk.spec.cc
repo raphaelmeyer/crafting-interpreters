@@ -71,21 +71,21 @@ TEST_SUITE("chunk") {
     init_chunk(&chunk);
 
     SUBCASE("contains added constant") {
-      int32_t const a = add_constant(&chunk, 12);
+      int32_t const a = add_constant(&chunk, number_value(12));
 
       REQUIRE(chunk.constants.count == 1);
-      REQUIRE(chunk.constants.values[a] == 12);
+      REQUIRE(chunk.constants.values[a].as.number == 12);
     }
 
     SUBCASE("contains all added constants") {
-      int32_t const a = add_constant(&chunk, 23);
-      int32_t const b = add_constant(&chunk, 11);
-      int32_t const c = add_constant(&chunk, 29);
+      int32_t const a = add_constant(&chunk, number_value(23));
+      int32_t const b = add_constant(&chunk, nil_value());
+      int32_t const c = add_constant(&chunk, number_value(29));
 
       REQUIRE(chunk.constants.count == 3);
-      REQUIRE(chunk.constants.values[a] == 23);
-      REQUIRE(chunk.constants.values[b] == 11);
-      REQUIRE(chunk.constants.values[c] == 29);
+      REQUIRE(chunk.constants.values[a].as.number == 23);
+      REQUIRE(is_nil(chunk.constants.values[b]));
+      REQUIRE(chunk.constants.values[c].as.number == 29);
     }
 
     free_chunk(&chunk);

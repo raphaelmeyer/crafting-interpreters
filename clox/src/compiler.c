@@ -156,7 +156,7 @@ static void grouping() {
 
 static void number() {
   double value = strtod(parser.previous.start, NULL);
-  emit_constant(value);
+  emit_constant(number_value(value));
 }
 
 static void unary() {

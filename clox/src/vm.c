@@ -3,11 +3,26 @@
 #include "compiler.h"
 #include "debug.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 
 static VM vm;
 
 static void reset_stack() { vm.stack_top = vm.stack; }
+
+static void runtime_error(char const *format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = vm.ip - vm.chunk->code - 1;
+  int line = vm.chunk->lines[instruction];
+  fprintf(stderr, "[line %d] in script\n", line);
+  reset_stack();
+}
+
 static void print_stack() {
   printf("          ");
   for (Value *slot = vm.stack; slot < vm.stack_top; ++slot) {
@@ -18,8 +33,17 @@ static void print_stack() {
   printf("\n");
 }
 
-static void push(Value value);
-static Value pop();
+static void push(Value value) {
+  *vm.stack_top = value;
+  vm.stack_top++;
+}
+
+static Value pop() {
+  vm.stack_top--;
+  return *vm.stack_top;
+}
+
+static Value peek(int distance) { return vm.stack_top[-1 - distance]; }
 
 void init_vm() { reset_stack(); }
 
@@ -31,15 +55,21 @@ static inline Value read_constant(VM *vm) {
   return vm->chunk->constants.values[read_byte(vm)];
 }
 
-static inline Value add(Value a, Value b) { return a + b; }
-static inline Value subtract(Value a, Value b) { return a - b; }
-static inline Value multiply(Value a, Value b) { return a * b; }
-static inline Value divide(Value a, Value b) { return a / b; }
+static inline Value add(double a, double b) { return number_value(a + b); }
+static inline Value subtract(double a, double b) { return number_value(a - b); }
+static inline Value multiply(double a, double b) { return number_value(a * b); }
+static inline Value divide(double a, double b) { return number_value(a / b); }
 
-static inline void binray_op(Value (*op)(Value, Value)) {
-  double b = pop();
-  double a = pop();
+static inline InterpretResult binray_op(Value (*op)(double, double)) {
+  if (!is_number(peek(0)) || !is_number(peek(1))) {
+    runtime_error("Operands must be numbers.");
+    return INTERPRET_RUNTIME_ERROR;
+  }
+  double b = pop().as.number;
+  double a = pop().as.number;
   push(op(a, b));
+
+  return INTERPRET_OK;
 }
 
 static InterpretResult run() {
@@ -51,32 +81,49 @@ static InterpretResult run() {
 
     uint8_t instruction;
     switch (instruction = read_byte(&vm)) {
+
+    case OP_ADD: {
+      InterpretResult result = binray_op(add);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
+    case OP_SUBTRACT: {
+      InterpretResult result = binray_op(subtract);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
+    case OP_MULTIPLY: {
+      InterpretResult result = binray_op(multiply);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
+    case OP_DIVIDE: {
+      InterpretResult result = binray_op(divide);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
+
+    case OP_NEGATE: {
+      if (!is_number(peek(0))) {
+        runtime_error("Operand must be a number.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(number_value(-pop().as.number));
+      break;
+    }
+
     case OP_RETURN: {
       print_value(pop());
       printf("\n");
       return INTERPRET_OK;
-    }
-
-    case OP_NEGATE: {
-      push(-pop());
-      break;
-    }
-
-    case OP_ADD: {
-      binray_op(add);
-      break;
-    }
-    case OP_SUBTRACT: {
-      binray_op(subtract);
-      break;
-    }
-    case OP_MULTIPLY: {
-      binray_op(multiply);
-      break;
-    }
-    case OP_DIVIDE: {
-      binray_op(divide);
-      break;
     }
 
     case OP_CONSTANT: {
@@ -104,14 +151,4 @@ InterpretResult interpret(char const *source) {
 
   free_chunk(&chunk);
   return result;
-}
-
-void push(Value value) {
-  *vm.stack_top = value;
-  vm.stack_top++;
-}
-
-Value pop() {
-  vm.stack_top--;
-  return *vm.stack_top;
 }
