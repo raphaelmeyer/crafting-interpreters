@@ -45,6 +45,10 @@ static Value pop() {
 
 static Value peek(int distance) { return vm.stack_top[-1 - distance]; }
 
+static bool is_falsey(Value value) {
+  return is_nil(value) || (is_bool(value) && !value.as.boolean);
+}
+
 void init_vm() { reset_stack(); }
 
 void free_vm() {}
@@ -124,6 +128,11 @@ static InterpretResult run() {
       if (result != INTERPRET_OK) {
         return result;
       }
+      break;
+    }
+
+    case OP_NOT: {
+      push(bool_value(is_falsey(pop())));
       break;
     }
 
