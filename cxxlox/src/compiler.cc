@@ -212,7 +212,7 @@ void LoxCompiler::grouping() {
 void LoxCompiler::number() {
   auto const value = std::stod(
       std::string{parser.previous.start, parser.previous.length}, nullptr);
-  emit_constant(value);
+  emit_constant(number_value(value));
 }
 
 void LoxCompiler::unary() {

@@ -4,6 +4,7 @@
 #include "compiler.h"
 #include "debug.h"
 
+#include <format>
 #include <functional>
 #include <iostream>
 
@@ -26,6 +27,18 @@ private:
   void reset_stack();
   void push(Value value);
   Value pop();
+  Value const &peek(size_t distance) const;
+
+  template <typename... Args>
+  void runtime_error(std::format_string<Args...> format, Args... args) {
+    std::cerr << std::format(format, args...) << "\n";
+
+    auto const instruction = std::distance(vm.chunk->code.begin(), vm.ip) - 1;
+    auto const line = vm.chunk->lines[instruction];
+    std::cerr << std::format("[line {:d}] in script", line) << "\n";
+
+    reset_stack();
+  }
 
   std::uint8_t read_byte();
   Value read_constant();
@@ -33,10 +46,16 @@ private:
 
   InterpretResult run();
 
-  template <typename Op> void binary_op(Op op) {
-    auto const b = pop();
-    auto const a = pop();
-    push(op(a, b));
+  template <typename Type, typename Op>
+  InterpretResult binary_op(Type value_type, Op op) {
+    if (not is_number(peek(0)) || not is_number(peek(1))) {
+      runtime_error("Operands must be numbers.");
+      return InterpretResult::RUNTIME_ERROR;
+    }
+    auto const b = pop().as.number;
+    auto const a = pop().as.number;
+    push(value_type(op(a, b)));
+    return InterpretResult::OK;
   }
 
   constexpr static std::size_t const STACK_MAX = 256;
@@ -69,6 +88,10 @@ Value LoxVM::pop() {
   return *vm.stack_top;
 }
 
+Value const &LoxVM::peek(size_t distance) const {
+  return *std::prev(vm.stack_top, 1 + distance);
+}
+
 std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
 
 Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
@@ -86,7 +109,8 @@ InterpretResult LoxVM::run() {
       }
       std::cout << "\n";
 
-      disassemble_instruction(*vm.chunk, vm.ip - vm.chunk->code.begin());
+      disassemble_instruction(*vm.chunk,
+                              std::distance(vm.chunk->code.begin(), vm.ip));
     }
 
     auto const instruction = read_opcode();
@@ -98,24 +122,40 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::ADD: {
-      binary_op(std::plus());
+      auto const result = binary_op(number_value, std::plus());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
       break;
     }
     case OpCode::SUBTRACT: {
-      binary_op(std::minus());
+      auto const result = binary_op(number_value, std::minus());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
       break;
     }
     case OpCode::MULTIPLY: {
-      binary_op(std::multiplies());
+      auto const result = binary_op(number_value, std::multiplies());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
       break;
     }
     case OpCode::DIVIDE: {
-      binary_op(std::divides());
+      auto const result = binary_op(number_value, std::divides());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
       break;
     }
 
     case OpCode::NEGATE: {
-      push(-pop());
+      if (not is_number(peek(0))) {
+        runtime_error("Operand must be a number.");
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      push(number_value(-pop().as.number));
       break;
     }
 
