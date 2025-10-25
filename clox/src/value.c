@@ -53,3 +53,20 @@ void print_value(Value value) {
     break;
   }
 }
+
+bool values_equal(Value a, Value b) {
+  if (a.type != b.type) {
+    return false;
+  }
+  switch (a.type) {
+  case VAL_BOOL:
+    return a.as.boolean == b.as.boolean;
+  case VAL_NIL:
+    return true;
+  case VAL_NUMBER:
+    return a.as.number == b.as.number;
+
+  default:
+    return false;
+  }
+}

@@ -36,6 +36,7 @@ inline Value number_value(double value) {
   return (Value){VAL_NUMBER, {.number = value}};
 }
 
+bool values_equal(Value a, Value b);
 void init_value_array(ValueArray *array);
 void write_value_array(ValueArray *array, Value value);
 void free_value_array(ValueArray *array);

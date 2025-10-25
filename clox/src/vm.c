@@ -59,12 +59,14 @@ static inline Value read_constant(VM *vm) {
   return vm->chunk->constants.values[read_byte(vm)];
 }
 
-static inline Value add(double a, double b) { return number_value(a + b); }
-static inline Value subtract(double a, double b) { return number_value(a - b); }
-static inline Value multiply(double a, double b) { return number_value(a * b); }
-static inline Value divide(double a, double b) { return number_value(a / b); }
+static Value add(double a, double b) { return number_value(a + b); }
+static Value subtract(double a, double b) { return number_value(a - b); }
+static Value multiply(double a, double b) { return number_value(a * b); }
+static Value divide(double a, double b) { return number_value(a / b); }
+static Value greater(double a, double b) { return bool_value(a > b); }
+static Value less(double a, double b) { return bool_value(a < b); }
 
-static inline InterpretResult binray_op(Value (*op)(double, double)) {
+static inline InterpretResult binary_op(Value (*op)(double, double)) {
   if (!is_number(peek(0)) || !is_number(peek(1))) {
     runtime_error("Operands must be numbers.");
     return INTERPRET_RUNTIME_ERROR;
@@ -102,29 +104,50 @@ static InterpretResult run() {
       push(bool_value(false));
       break;
 
+    case OP_EQUAL: {
+      Value b = pop();
+      Value a = pop();
+      push(bool_value(values_equal(a, b)));
+      break;
+    }
+
+    case OP_GREATER: {
+      InterpretResult result = binary_op(greater);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
+    case OP_LESS: {
+      InterpretResult result = binary_op(less);
+      if (result != INTERPRET_OK) {
+        return result;
+      }
+      break;
+    }
     case OP_ADD: {
-      InterpretResult result = binray_op(add);
+      InterpretResult result = binary_op(add);
       if (result != INTERPRET_OK) {
         return result;
       }
       break;
     }
     case OP_SUBTRACT: {
-      InterpretResult result = binray_op(subtract);
+      InterpretResult result = binary_op(subtract);
       if (result != INTERPRET_OK) {
         return result;
       }
       break;
     }
     case OP_MULTIPLY: {
-      InterpretResult result = binray_op(multiply);
+      InterpretResult result = binary_op(multiply);
       if (result != INTERPRET_OK) {
         return result;
       }
       break;
     }
     case OP_DIVIDE: {
-      InterpretResult result = binray_op(divide);
+      InterpretResult result = binary_op(divide);
       if (result != INTERPRET_OK) {
         return result;
       }
