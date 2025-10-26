@@ -240,6 +240,9 @@ void LoxCompiler::unary() {
 
   // Emit the operator instruction.
   switch (operator_type) {
+  case TokenType::BANG:
+    emit_byte(OpCode::NOT);
+    break;
   case TokenType::MINUS:
     emit_byte(OpCode::NEGATE);
     break;
@@ -264,7 +267,7 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::SEMICOLON,     {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::SLASH,         {nullptr,      &L::binary,   Precedence::FACTOR}},
   {TokenType::STAR,          {nullptr,      &L::binary,   Precedence::FACTOR}},
-  {TokenType::BANG,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::BANG,          {&L::unary,    nullptr,      Precedence::NONE}},
   {TokenType::BANG_EQUAL,    {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::EQUAL,         {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::EQUAL_EQUAL,   {nullptr,      nullptr,      Precedence::NONE}},

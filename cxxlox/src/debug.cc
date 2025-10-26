@@ -66,6 +66,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_MULTIPLY", offset);
   case OpCode::DIVIDE:
     return simple_instruction("OP_DIVIDE", offset);
+  case OpCode::NOT:
+    return simple_instruction("OP_NOT", offset);
   case OpCode::NEGATE:
     return simple_instruction("OP_NEGATE", offset);
   case OpCode::RETURN:

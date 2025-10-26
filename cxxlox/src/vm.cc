@@ -29,6 +29,8 @@ private:
   Value pop();
   Value const &peek(size_t distance) const;
 
+  bool is_falsey(Value const &value) const;
+
   template <typename... Args>
   void runtime_error(std::format_string<Args...> format, Args... args) {
     std::cerr << std::format(format, args...) << "\n";
@@ -90,6 +92,10 @@ Value LoxVM::pop() {
 
 Value const &LoxVM::peek(size_t distance) const {
   return *std::prev(vm.stack_top, 1 + distance);
+}
+
+bool LoxVM::is_falsey(Value const &value) const {
+  return is_nil(value) || (is_bool(value) && not value.as.boolean);
 }
 
 std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
@@ -159,6 +165,10 @@ InterpretResult LoxVM::run() {
       }
       break;
     }
+
+    case OpCode::NOT:
+      push(bool_value(is_falsey(pop())));
+      break;
 
     case OpCode::NEGATE: {
       if (not is_number(peek(0))) {
