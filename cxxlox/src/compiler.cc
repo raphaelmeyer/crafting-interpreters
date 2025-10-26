@@ -34,6 +34,7 @@ public:
   bool compile(std::string_view source, Chunk &chunk) override;
 
   void binary();
+  void literal();
   void grouping();
   void number();
   void unary();
@@ -204,6 +205,22 @@ void LoxCompiler::binary() {
   }
 }
 
+void LoxCompiler::literal() {
+  switch (parser.previous.type) {
+  case TokenType::FALSE:
+    emit_byte(OpCode::FALSE);
+    break;
+  case TokenType::NIL:
+    emit_byte(OpCode::NIL);
+    break;
+  case TokenType::TRUE:
+    emit_byte(OpCode::TRUE);
+    break;
+  default:
+    return;
+  }
+}
+
 void LoxCompiler::grouping() {
   expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
@@ -261,17 +278,17 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::AND,           {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::CLASS,         {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::ELSE,          {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::FALSE,         {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::FALSE,         {&L::literal,  nullptr,      Precedence::NONE}},
   {TokenType::FOR,           {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::FUN,           {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::IF,            {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::NIL,           {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::NIL,           {&L::literal,  nullptr,      Precedence::NONE}},
   {TokenType::OR,            {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::PRINT,         {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::RETURN,        {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::SUPER,         {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::THIS,          {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::TRUE,          {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::TRUE,          {&L::literal,  nullptr,      Precedence::NONE}},
   {TokenType::VAR,           {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::WHILE,         {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::ERROR,         {nullptr,      nullptr,      Precedence::NONE}},

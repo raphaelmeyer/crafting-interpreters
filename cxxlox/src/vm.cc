@@ -121,6 +121,16 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::NIL:
+      push(nil_value());
+      break;
+    case OpCode::TRUE:
+      push(bool_value(true));
+      break;
+    case OpCode::FALSE:
+      push(bool_value(false));
+      break;
+
     case OpCode::ADD: {
       auto const result = binary_op(number_value, std::plus());
       if (result != InterpretResult::OK) {

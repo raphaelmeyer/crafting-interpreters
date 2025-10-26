@@ -52,6 +52,12 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
   switch (instruction) {
   case OpCode::CONSTANT:
     return constant_instruction("OP_CONSTANT", chunk, offset);
+  case OpCode::NIL:
+    return simple_instruction("OP_NIL", offset);
+  case OpCode::TRUE:
+    return simple_instruction("OP_TRUE", offset);
+  case OpCode::FALSE:
+    return simple_instruction("OP_FALSE", offset);
   case OpCode::ADD:
     return simple_instruction("OP_ADD", offset);
   case OpCode::SUBTRACT:

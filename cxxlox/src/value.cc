@@ -4,5 +4,14 @@
 #include <iostream>
 
 void print_value(Value value) {
-  std::cout << std::format("{:g}", value.as.number);
+  switch (value.type) {
+  case ValueType::BOOL:
+    std::cout << (value.as.boolean ? "true" : "false");
+    break;
+  case ValueType::NIL:
+    std::cout << "nil";
+    break;
+  case ValueType::NUMBER:
+    std::cout << std::format("{:g}", value.as.number);
+  }
 }
