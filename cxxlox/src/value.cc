@@ -15,3 +15,19 @@ void print_value(Value value) {
     std::cout << std::format("{:g}", value.as.number);
   }
 }
+
+bool values_equal(Value const &a, Value const &b) {
+  if (a.type != b.type) {
+    return false;
+  }
+  switch (a.type) {
+  case ValueType::BOOL:
+    return a.as.boolean == b.as.boolean;
+  case ValueType::NIL:
+    return true;
+  case ValueType::NUMBER:
+    return a.as.number == b.as.number;
+  default:
+    return false;
+  }
+}

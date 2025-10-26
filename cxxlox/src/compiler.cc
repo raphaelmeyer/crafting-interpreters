@@ -52,6 +52,7 @@ private:
   void emit_byte(std::uint8_t byte);
   void emit_byte(OpCode op_code);
   void emit_bytes(OpCode op_code, std::uint8_t byte);
+  void emit_bytes(OpCode op_code_a, OpCode op_code_b);
   void emit_return();
   uint8_t make_constant(Value value);
   void emit_constant(Value value);
@@ -150,6 +151,11 @@ void LoxCompiler::emit_bytes(OpCode op_code, std::uint8_t byte) {
   emit_byte(byte);
 }
 
+void LoxCompiler::emit_bytes(OpCode op_code_a, OpCode op_code_b) {
+  emit_byte(op_code_a);
+  emit_byte(op_code_b);
+}
+
 void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
 
 uint8_t LoxCompiler::make_constant(Value value) {
@@ -188,6 +194,24 @@ void LoxCompiler::binary() {
   parse_precedence(next_higher_precedence(rule.precedence));
 
   switch (operator_type) {
+  case TokenType::BANG_EQUAL:
+    emit_bytes(OpCode::EQUAL, OpCode::NOT);
+    break;
+  case TokenType::EQUAL_EQUAL:
+    emit_byte(OpCode::EQUAL);
+    break;
+  case TokenType::GREATER:
+    emit_byte(OpCode::GREATER);
+    break;
+  case TokenType::GREATER_EQUAL:
+    emit_bytes(OpCode::LESS, OpCode::NOT);
+    break;
+  case TokenType::LESS:
+    emit_byte(OpCode::LESS);
+    break;
+  case TokenType::LESS_EQUAL:
+    emit_bytes(OpCode::GREATER, OpCode::NOT);
+    break;
   case TokenType::PLUS:
     emit_byte(OpCode::ADD);
     break;
@@ -268,13 +292,13 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::SLASH,         {nullptr,      &L::binary,   Precedence::FACTOR}},
   {TokenType::STAR,          {nullptr,      &L::binary,   Precedence::FACTOR}},
   {TokenType::BANG,          {&L::unary,    nullptr,      Precedence::NONE}},
-  {TokenType::BANG_EQUAL,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::BANG_EQUAL,    {nullptr,      &L::binary,   Precedence::EQUALITY}},
   {TokenType::EQUAL,         {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::EQUAL_EQUAL,   {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::GREATER,       {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::GREATER_EQUAL, {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::LESS,          {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::LESS_EQUAL,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::EQUAL_EQUAL,   {nullptr,      &L::binary,   Precedence::EQUALITY}},
+  {TokenType::GREATER,       {nullptr,      &L::binary,   Precedence::COMPARISON}},
+  {TokenType::GREATER_EQUAL, {nullptr,      &L::binary,   Precedence::COMPARISON}},
+  {TokenType::LESS,          {nullptr,      &L::binary,   Precedence::COMPARISON}},
+  {TokenType::LESS_EQUAL,    {nullptr,      &L::binary,   Precedence::COMPARISON}},
   {TokenType::IDENTIFIER,    {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::STRING,        {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::NUMBER,        {&L::number,   nullptr,      Precedence::NONE}},

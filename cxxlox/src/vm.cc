@@ -137,6 +137,28 @@ InterpretResult LoxVM::run() {
       push(bool_value(false));
       break;
 
+    case OpCode::EQUAL: {
+      auto const b = pop();
+      auto const a = pop();
+      push(bool_value(values_equal(a, b)));
+      break;
+    }
+
+    case OpCode::GREATER: {
+      auto const result = binary_op(bool_value, std::greater());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
+      break;
+    }
+    case OpCode::LESS: {
+      auto const result = binary_op(bool_value, std::less());
+      if (result != InterpretResult::OK) {
+        return result;
+      }
+      break;
+    }
+
     case OpCode::ADD: {
       auto const result = binary_op(number_value, std::plus());
       if (result != InterpretResult::OK) {

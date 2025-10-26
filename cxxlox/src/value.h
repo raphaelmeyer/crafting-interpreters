@@ -35,3 +35,5 @@ inline bool is_number(Value const &value) {
 using ValueArray = std::vector<Value>;
 
 void print_value(Value value);
+
+bool values_equal(Value const &a, Value const &b);
