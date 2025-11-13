@@ -54,8 +54,8 @@ private:
       runtime_error("Operands must be numbers.");
       return InterpretResult::RUNTIME_ERROR;
     }
-    auto const b = pop().as.number;
-    auto const a = pop().as.number;
+    auto const b = as_number(pop());
+    auto const a = as_number(pop());
     push(value_type(op(a, b)));
     return InterpretResult::OK;
   }
@@ -95,7 +95,7 @@ Value const &LoxVM::peek(size_t distance) const {
 }
 
 bool LoxVM::is_falsey(Value const &value) const {
-  return is_nil(value) || (is_bool(value) && not value.as.boolean);
+  return is_nil(value) || (is_bool(value) && not as_bool(value));
 }
 
 std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
@@ -197,7 +197,7 @@ InterpretResult LoxVM::run() {
         runtime_error("Operand must be a number.");
         return InterpretResult::RUNTIME_ERROR;
       }
-      push(number_value(-pop().as.number));
+      push(number_value(-as_number(pop())));
       break;
     }
 

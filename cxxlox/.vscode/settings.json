@@ -1,4 +1,4 @@
 {
   "cmake.useCMakePresets": "always",
-  "cmake.sourceDirectory": "${workspaceFolder}",
+  "cmake.sourceDirectory": "${workspaceFolder}"
 }

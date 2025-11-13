@@ -1,36 +1,33 @@
 #pragma once
 
+#include <variant>
 #include <vector>
 
-enum class ValueType { BOOL, NIL, NUMBER };
+struct Nil {};
 
-struct Value {
-  ValueType type;
-  union Storage {
-    bool boolean;
-    double number;
-  } as;
-};
+using Value = std::variant<Nil, bool, double>;
 
-inline Value bool_value(bool value) {
-  return {ValueType::BOOL, {.boolean = value}};
-}
+inline Value bool_value(bool value) { return {value}; }
 
-inline Value nil_value() { return {ValueType::NIL, {.number = 0}}; }
+inline Value nil_value() { return Nil{}; }
 
-inline Value number_value(double value) {
-  return {ValueType::NUMBER, {.number = value}};
-}
+inline Value number_value(double value) { return {value}; }
 
 inline bool is_bool(Value const &value) {
-  return value.type == ValueType::BOOL;
+  return std::holds_alternative<bool>(value);
 }
 
-inline bool is_nil(Value const &value) { return value.type == ValueType::NIL; }
+inline bool as_bool(Value const &value) { return std::get<bool>(value); }
+
+inline bool is_nil(Value const &value) {
+  return std::holds_alternative<Nil>(value);
+}
 
 inline bool is_number(Value const &value) {
-  return value.type == ValueType::NUMBER;
+  return std::holds_alternative<double>(value);
 }
+
+inline double as_number(Value const &value) { return std::get<double>(value); }
 
 using ValueArray = std::vector<Value>;
 
