@@ -58,6 +58,12 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_TRUE", offset);
   case OpCode::FALSE:
     return simple_instruction("OP_FALSE", offset);
+  case OpCode::EQUAL:
+    return simple_instruction("OP_EQUAL", offset);
+  case OpCode::GREATER:
+    return simple_instruction("OP_GREATER", offset);
+  case OpCode::LESS:
+    return simple_instruction("OP_LESS", offset);
   case OpCode::ADD:
     return simple_instruction("OP_ADD", offset);
   case OpCode::SUBTRACT:
