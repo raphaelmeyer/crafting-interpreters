@@ -4,6 +4,10 @@
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum ObjType_t {
   OBJ_STRING,
 } ObjType;
@@ -17,6 +21,8 @@ typedef struct ObjString_t {
   size_t length;
   char const *chars;
 } ObjString;
+
+ObjString *copy_string(char const *chars, size_t length);
 
 static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
 
@@ -35,3 +41,7 @@ static inline ObjString *as_string(Value const value) {
 static inline char const *as_cstring(Value const value) {
   return ((ObjString *)value.as.obj)->chars;
 }
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
