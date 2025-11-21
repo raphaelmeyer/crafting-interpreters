@@ -8,17 +8,17 @@ TEST_SUITE("vm") {
 
     init_vm();
 
-    SUBCASE("negate") {
+    SUBCASE("negate number") {
       auto const result = interpret("-1.25");
       REQUIRE(result == INTERPRET_OK);
     }
 
-    SUBCASE("add") {
+    SUBCASE("add number") {
       auto const result = interpret("1.25 + 0.75");
       REQUIRE(result == INTERPRET_OK);
     }
 
-    SUBCASE("subtract") {
+    SUBCASE("subtract number") {
       auto const result = interpret("1.25 - 0.75");
       REQUIRE(result == INTERPRET_OK);
     }
@@ -31,6 +31,16 @@ TEST_SUITE("vm") {
     SUBCASE("invalid") {
       auto const result = interpret("3 +* 4");
       REQUIRE(result == INTERPRET_COMPILE_ERROR);
+    }
+
+    SUBCASE("concatenate strings") {
+      auto const result = interpret("\"hello\" + \" \" + \"world\"");
+      REQUIRE(result == INTERPRET_OK);
+    }
+
+    SUBCASE("add incompatible types") {
+      auto const result = interpret("42 + \"universe\"");
+      REQUIRE(result == INTERPRET_RUNTIME_ERROR);
     }
 
     free_vm();
