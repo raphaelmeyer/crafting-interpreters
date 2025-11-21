@@ -1,6 +1,7 @@
 #include "value.h"
 
 #include "memory.h"
+#include "object.h"
 
 #include <stdio.h>
 
@@ -52,7 +53,7 @@ void print_value(Value value) {
     printf("%g", value.as.number);
     break;
   case VAL_OBJ:
-    printf("...");
+    print_object(value);
     break;
   }
 }

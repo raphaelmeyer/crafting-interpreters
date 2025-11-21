@@ -23,6 +23,7 @@ typedef struct ObjString_t {
 } ObjString;
 
 ObjString *copy_string(char const *chars, size_t length);
+void print_object(Value const value);
 
 static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
 

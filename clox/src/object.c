@@ -2,6 +2,7 @@
 
 #include "memory.h"
 
+#include <stdio.h>
 #include <string.h>
 
 static Obj *allocate_object(size_t size, ObjType type) {
@@ -23,4 +24,12 @@ ObjString *copy_string(char const *chars, size_t length) {
   memcpy(heap_chars, chars, length);
   heap_chars[length] = '\0';
   return allocate_string(heap_chars, length);
+}
+
+void print_object(Value const value) {
+  switch (obj_type(value)) {
+  case OBJ_STRING:
+    printf("%s", as_cstring(value));
+    break;
+  }
 }
