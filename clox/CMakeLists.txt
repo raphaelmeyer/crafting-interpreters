@@ -36,6 +36,7 @@ target_link_libraries(clox-test PRIVATE clox-sources doctest::doctest)
 target_sources(clox-test PRIVATE
   src/main.spec.cc
   src/chunk.spec.cc
+  src/object.spec.cc
   src/value.spec.cc
   src/vm.spec.cc
 )
