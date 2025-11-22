@@ -22,6 +22,7 @@ typedef struct ObjString_t {
   char const *chars;
 } ObjString;
 
+ObjString *take_string(char const *chars, size_t length);
 ObjString *copy_string(char const *chars, size_t length);
 void print_object(Value const value);
 

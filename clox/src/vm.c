@@ -2,9 +2,12 @@
 
 #include "compiler.h"
 #include "debug.h"
+#include "memory.h"
+#include "object.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 static VM vm;
 
@@ -49,6 +52,20 @@ static bool is_falsey(Value value) {
   return is_nil(value) || (is_bool(value) && !value.as.boolean);
 }
 
+static void concatenate() {
+  ObjString *b = as_string(pop());
+  ObjString *a = as_string(pop());
+
+  size_t length = a->length + b->length;
+  char *chars = allocate(sizeof(char), length + 1);
+  memcpy(chars, a->chars, a->length);
+  memcpy(chars + a->length, b->chars, b->length);
+  chars[length] = '\0';
+
+  ObjString *result = take_string(chars, length);
+  push(obj_value(result));
+}
+
 void init_vm() { reset_stack(); }
 
 void free_vm() {}
@@ -59,7 +76,6 @@ static inline Value read_constant(VM *vm) {
   return vm->chunk->constants.values[read_byte(vm)];
 }
 
-static Value add(double a, double b) { return number_value(a + b); }
 static Value subtract(double a, double b) { return number_value(a - b); }
 static Value multiply(double a, double b) { return number_value(a * b); }
 static Value divide(double a, double b) { return number_value(a / b); }
@@ -126,9 +142,15 @@ static InterpretResult run() {
       break;
     }
     case OP_ADD: {
-      InterpretResult result = binary_op(add);
-      if (result != INTERPRET_OK) {
-        return result;
+      if (is_string(peek(0)) && is_string(peek(1))) {
+        concatenate();
+      } else if (is_number(peek(0)) && is_number(peek(1))) {
+        const double b = pop().as.number;
+        const double a = pop().as.number;
+        push(number_value(a + b));
+      } else {
+        runtime_error("Operands must be two numbers or two strings.");
+        return INTERPRET_RUNTIME_ERROR;
       }
       break;
     }
