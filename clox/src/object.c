@@ -1,13 +1,19 @@
 #include "object.h"
 
 #include "memory.h"
+#include "vm.h"
 
 #include <stdio.h>
 #include <string.h>
 
+static VM *vm = NULL;
+
 static Obj *allocate_object(size_t size, ObjType type) {
   Obj *object = reallocate(NULL, 0, size);
   object->type = type;
+
+  object->next = vm->objects;
+  vm->objects = object;
   return object;
 }
 
@@ -37,3 +43,5 @@ void print_object(Value const value) {
     break;
   }
 }
+
+void init_object_allocation(VM *vm_instance) { vm = vm_instance; }

@@ -66,9 +66,13 @@ static void concatenate() {
   push(obj_value(result));
 }
 
-void init_vm() { reset_stack(); }
+void init_vm() {
+  reset_stack();
+  init_object_allocation(&vm);
+  vm.objects = NULL;
+}
 
-void free_vm() {}
+void free_vm() { free_objects(vm.objects); }
 
 static inline uint8_t read_byte(VM *vm) { return *vm->ip++; }
 

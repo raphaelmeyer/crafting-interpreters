@@ -8,13 +8,16 @@
 extern "C" {
 #endif
 
+typedef struct VM_t VM;
+
 typedef enum ObjType_t {
   OBJ_STRING,
 } ObjType;
 
-struct Obj_t {
+typedef struct Obj_t {
   ObjType type;
-};
+  Obj *next;
+} Obj;
 
 typedef struct ObjString_t {
   Obj obj;
@@ -25,6 +28,7 @@ typedef struct ObjString_t {
 ObjString *take_string(char const *chars, size_t length);
 ObjString *copy_string(char const *chars, size_t length);
 void print_object(Value const value);
+void init_object_allocation(VM *vm_instance);
 
 static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
 
