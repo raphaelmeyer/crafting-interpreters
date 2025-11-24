@@ -37,6 +37,7 @@ public:
   void literal();
   void grouping();
   void number();
+  void string();
   void unary();
 
 private:
@@ -256,6 +257,11 @@ void LoxCompiler::number() {
   emit_constant(number_value(value));
 }
 
+void LoxCompiler::string() {
+  emit_constant(string_value(
+      std::string{parser.previous.start + 1, parser.previous.length - 2}));
+}
+
 void LoxCompiler::unary() {
   auto const operator_type = parser.previous.type;
 
@@ -300,7 +306,7 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::LESS,          {nullptr,      &L::binary,   Precedence::COMPARISON}},
   {TokenType::LESS_EQUAL,    {nullptr,      &L::binary,   Precedence::COMPARISON}},
   {TokenType::IDENTIFIER,    {nullptr,      nullptr,      Precedence::NONE}},
-  {TokenType::STRING,        {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::STRING,        {&L::string,   nullptr,      Precedence::NONE}},
   {TokenType::NUMBER,        {&L::number,   nullptr,      Precedence::NONE}},
   {TokenType::AND,           {nullptr,      nullptr,      Precedence::NONE}},
   {TokenType::CLASS,         {nullptr,      nullptr,      Precedence::NONE}},

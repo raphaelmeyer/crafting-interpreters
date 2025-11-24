@@ -11,6 +11,8 @@ std::string to_string(Nil) { return "nil"; }
 
 std::string to_string(double value) { return std::format("{:g}", value); }
 
+std::string to_string(std::string value) { return value; }
+
 } // namespace
 
 void print_value(Value value) {
