@@ -30,6 +30,7 @@ private:
   Value const &peek(size_t distance) const;
 
   bool is_falsey(Value const &value) const;
+  void concatenate();
 
   template <typename... Args>
   void runtime_error(std::format_string<Args...> format, Args... args) {
@@ -98,6 +99,13 @@ bool LoxVM::is_falsey(Value const &value) const {
   return is_nil(value) || (is_bool(value) && not as_bool(value));
 }
 
+void LoxVM::concatenate() {
+  auto const b = as_string(pop());
+  auto const a = as_string(pop());
+
+  push(string_value(a + b));
+}
+
 std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
 
 Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
@@ -160,9 +168,15 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::ADD: {
-      auto const result = binary_op(number_value, std::plus());
-      if (result != InterpretResult::OK) {
-        return result;
+      if (is_string(peek(0)) && is_string(peek(1))) {
+        concatenate();
+      } else if (is_number(peek(0)) && is_number(peek(1))) {
+        auto const b = as_number(pop());
+        auto const a = as_number(pop());
+        push(a + b);
+      } else {
+        runtime_error("Operands must be two numbers or two strings.");
+        return InterpretResult::RUNTIME_ERROR;
       }
       break;
     }
