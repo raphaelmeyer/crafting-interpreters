@@ -23,6 +23,7 @@ typedef struct ObjString_t {
   Obj obj;
   size_t length;
   char const *chars;
+  uint32_t hash;
 } ObjString;
 
 ObjString *take_string(char const *chars, size_t length);
