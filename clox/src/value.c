@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static inline int32_t grow_capacity(int32_t capacity) {
-  return capacity < 8 ? 8 : capacity * 2;
-}
-
 static inline Value *grow_array(Value *array, int32_t old_count,
                                 int32_t new_count) {
   return (Value *)reallocate(array, sizeof(Value) * old_count,

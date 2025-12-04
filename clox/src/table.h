@@ -21,6 +21,7 @@ typedef struct Table_t {
 
 void init_table(Table *table);
 void free_table(Table *table);
+bool table_set(Table *table, ObjString *key, Value value);
 
 #ifdef __cplusplus
 } // extern "C"

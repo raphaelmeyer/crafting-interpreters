@@ -2,10 +2,6 @@
 
 #include "memory.h"
 
-static inline int32_t grow_capacity(int32_t capacity) {
-  return capacity < 8 ? 8 : capacity * 2;
-}
-
 static inline uint8_t *grow_array(uint8_t *array, int32_t old_count,
                                   int32_t new_count) {
   return (uint8_t *)reallocate(array, sizeof(uint8_t) * old_count,
