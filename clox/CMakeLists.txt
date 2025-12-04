@@ -27,6 +27,7 @@ target_sources(clox-sources INTERFACE
   src/memory.c
   src/object.c
   src/scanner.c
+  src/table.c
   src/value.c
   src/vm.c
 )
@@ -37,6 +38,7 @@ target_sources(clox-test PRIVATE
   src/main.spec.cc
   src/chunk.spec.cc
   src/object.spec.cc
+  src/table.spec.cc
   src/value.spec.cc
   src/vm.spec.cc
 )
