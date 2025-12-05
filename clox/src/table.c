@@ -21,8 +21,27 @@ static Entry *find_entry(Entry *entries, int capacity, ObjString *key) {
 }
 
 static void adjust_capacity(Table *table, size_t capacity) {
-  (void)table;
-  (void)capacity;
+  Entry *entries = allocate(sizeof(Entry), capacity);
+  for (size_t i = 0; i < capacity; ++i) {
+    entries[i].key = NULL;
+    entries[i].value = nil_value();
+  }
+
+  for (size_t i = 0; i < table->capacity; ++i) {
+    Entry *entry = &table->entries[i];
+    if (entry->key == NULL) {
+      continue;
+    }
+
+    Entry *dest = find_entry(entries, capacity, entry->key);
+    dest->key = entry->key;
+    dest->value = entry->value;
+  }
+
+  free_array(table->entries, table->capacity);
+
+  table->entries = entries;
+  table->capacity = capacity;
 }
 
 void init_table(Table *table) {
@@ -51,4 +70,13 @@ bool table_set(Table *table, ObjString *key, Value value) {
   entry->key = key;
   entry->value = value;
   return is_new_key;
+}
+
+void table_add_all(Table const *from, Table *to) {
+  for (size_t i = 0; i < from->capacity; ++i) {
+    Entry *entry = &from->entries[i];
+    if (entry->key != NULL) {
+      table_set(to, entry->key, entry->value);
+    }
+  }
 }

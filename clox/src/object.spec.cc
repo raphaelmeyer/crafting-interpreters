@@ -5,8 +5,6 @@
 
 #include <string_view>
 
-#include <cstdlib>
-
 using namespace std::string_view_literals;
 
 TEST_CASE("object") {
