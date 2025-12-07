@@ -8,7 +8,7 @@ static inline void free_array(Entry *array, int32_t old_count) {
   reallocate(array, sizeof(Value) * old_count, 0);
 }
 
-static Entry *find_entry(Entry *entries, int capacity, ObjString *key) {
+static Entry *find_entry(Entry *entries, int capacity, ObjString const *key) {
   uint32_t index = key->hash % capacity;
   for (;;) {
     Entry *entry = &entries[index];
@@ -53,6 +53,20 @@ void init_table(Table *table) {
 void free_table(Table *table) {
   free_array(table->entries, table->capacity);
   init_table(table);
+}
+
+bool table_get(Table const *table, ObjString const *key, Value *value) {
+  if (table->count == 0) {
+    return false;
+  }
+
+  Entry *entry = find_entry(table->entries, table->capacity, key);
+  if (entry->key == NULL) {
+    return false;
+  }
+
+  *value = entry->value;
+  return true;
 }
 
 bool table_set(Table *table, ObjString *key, Value value) {
