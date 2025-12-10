@@ -105,4 +105,30 @@ TEST_SUITE("hash table") {
     free_table(&table);
     free_vm();
   }
+
+  TEST_CASE("delete entries") {
+    init_vm();
+
+    Table table;
+    init_table(&table);
+
+    ObjString *e = copy_string("e", 1);
+    table_set(&table, e, number_value(2.718));
+
+    ObjString *pi = copy_string("pi", 2);
+    table_set(&table, pi, number_value(3.14));
+
+    REQUIRE(table.count == 2);
+
+    REQUIRE(table_delete(&table, e));
+
+    Value value = {};
+    REQUIRE_FALSE(table_get(&table, e, &value));
+    REQUIRE(table_get(&table, pi, &value));
+
+    REQUIRE_FALSE(table_delete(&table, e));
+
+    free_table(&table);
+    free_vm();
+  }
 }
