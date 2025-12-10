@@ -25,6 +25,8 @@ bool table_get(Table const *table, ObjString const *key, Value *value);
 bool table_set(Table *table, ObjString *key, Value value);
 bool table_delete(Table *table, ObjString const *key);
 void table_add_all(Table const *from, Table *to);
+ObjString *table_find_string(Table *table, char const *chars, size_t length,
+                             uint32_t hash);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -67,10 +67,7 @@ bool values_equal(Value a, Value b) {
   case VAL_NUMBER:
     return a.as.number == b.as.number;
   case VAL_OBJ: {
-    ObjString const *a_string = as_string(a);
-    ObjString const *b_string = as_string(b);
-    return (a_string->length == b_string->length) &&
-           memcmp(a_string->chars, b_string->chars, a_string->length);
+    return a.as.obj == b.as.obj;
   }
 
   default:

@@ -69,8 +69,8 @@ TEST_SUITE("hash table") {
     REQUIRE(is_string(value));
     REQUIRE(as_cstring(value) == "world"sv);
 
-    ObjString *hell = copy_string("hell", 5);
-    ObjString *helloo = copy_string("helloo", 5);
+    ObjString *hell = copy_string("hell", 4);
+    ObjString *helloo = copy_string("helloo", 6);
 
     REQUIRE_FALSE(table_get(&table, hell, &value));
     REQUIRE_FALSE(table_get(&table, helloo, &value));

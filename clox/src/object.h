@@ -26,7 +26,7 @@ typedef struct ObjString_t {
   uint32_t hash;
 } ObjString;
 
-ObjString *take_string(char const *chars, size_t length);
+ObjString *take_string(char *chars, size_t length);
 ObjString *copy_string(char const *chars, size_t length);
 void print_object(Value const value);
 void init_object_allocation(VM *vm_instance);

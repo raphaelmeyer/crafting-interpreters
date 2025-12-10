@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "table.h"
 
 #include <stddef.h>
 
@@ -15,6 +16,7 @@ typedef struct VM_t {
   uint8_t *ip;
   Value stack[STACK_MAX];
   Value *stack_top;
+  Table strings;
   Obj *objects;
 } VM;
 
