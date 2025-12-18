@@ -54,6 +54,8 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return simple_instruction("OP_NOT", offset);
   case OP_NEGATE:
     return simple_instruction("OP_NEGATE", offset);
+  case OP_PRINT:
+    return simple_instruction("OP_PRINT", offset);
   case OP_RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:
