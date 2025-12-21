@@ -4,6 +4,17 @@
 
 TEST_SUITE("vm") {
 
+  TEST_CASE("expression statement") {
+    init_vm();
+
+    SUBCASE("arithmetic") {
+      auto const result = interpret("(1 + 2) * (3 / 4) > (5 - 6);");
+      REQUIRE(result == INTERPRET_OK);
+    }
+
+    free_vm();
+  }
+
   TEST_CASE("print statement") {
 
     init_vm();
@@ -36,17 +47,17 @@ TEST_SUITE("vm") {
     free_vm();
   }
 
-  TEST_CASE("invalid statements" * doctest::skip(true)) {
+  TEST_CASE("invalid statements") {
 
     init_vm();
 
     SUBCASE("invalid") {
-      auto const result = interpret("print 3 +* 4;");
+      auto const result = interpret("3 +* 4;");
       REQUIRE(result == INTERPRET_COMPILE_ERROR);
     }
 
     SUBCASE("add incompatible types") {
-      auto const result = interpret("print 42 + \"universe\";");
+      auto const result = interpret("42 + \"universe\";");
       REQUIRE(result == INTERPRET_RUNTIME_ERROR);
     }
 

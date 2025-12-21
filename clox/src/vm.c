@@ -128,6 +128,10 @@ static InterpretResult run() {
       push(bool_value(false));
       break;
 
+    case OP_POP:
+      pop();
+      break;
+
     case OP_EQUAL: {
       Value b = pop();
       Value a = pop();
