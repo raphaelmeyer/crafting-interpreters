@@ -139,6 +139,17 @@ static InterpretResult run() {
       pop();
       break;
 
+    case OP_GET_GLOBAL: {
+      ObjString *name = read_string(&vm);
+      Value value;
+      if (!table_get(&vm.globals, name, &value)) {
+        runtime_error("Undefined variable '%s'.", name->chars);
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      push(value);
+      break;
+    }
+
     case OP_DEFINE_GLOBAL: {
       ObjString *const name = read_string(&vm);
       table_set(&vm.globals, name, peek(0));

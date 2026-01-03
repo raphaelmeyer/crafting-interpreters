@@ -139,6 +139,19 @@ static void declaration();
 static void parse_precedence(Precedence precedence);
 static ParseRule *get_rule(TokenType type);
 
+static uint8_t identifier_constant(Token const *name) {
+  return make_constant(obj_value(copy_string(name->start, name->length)));
+}
+
+static uint8_t parse_variable(char const *error_message) {
+  consume(TOKEN_IDENTIFIER, error_message);
+  return identifier_constant(&parser.previous);
+}
+
+static void define_variable(uint8_t global) {
+  emit_bytes(OP_DEFINE_GLOBAL, global);
+}
+
 static void binary() {
   TokenType operator_type = parser.previous.type;
   ParseRule *rule = get_rule(operator_type);
@@ -211,6 +224,13 @@ static void string() {
       copy_string(parser.previous.start + 1, parser.previous.length - 2)));
 }
 
+static void named_variable(Token name) {
+  uint8_t arg = identifier_constant(&name);
+  emit_bytes(OP_GET_GLOBAL, arg);
+}
+
+static void variable() { named_variable(parser.previous); }
+
 static void unary() {
   TokenType operator_type = parser.previous.type;
 
@@ -249,7 +269,7 @@ static ParseRule rules[] = {
     [TOKEN_GREATER_EQUAL] = {NULL,      binary, PREC_COMPARISON},
     [TOKEN_LESS]          = {NULL,      binary, PREC_COMPARISON},
     [TOKEN_LESS_EQUAL]    = {NULL,      binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER]    = {NULL,      NULL,   PREC_NONE},
+    [TOKEN_IDENTIFIER]    = {variable,  NULL,   PREC_NONE},
     [TOKEN_STRING]        = {string,    NULL,   PREC_NONE},
     [TOKEN_NUMBER]        = {number,    NULL,   PREC_NONE},
     [TOKEN_AND]           = {NULL,      NULL,   PREC_NONE},
@@ -291,19 +311,6 @@ static void parse_precedence(Precedence precedence) {
 }
 
 static ParseRule *get_rule(TokenType type) { return &rules[type]; }
-
-static uint8_t identifier_constant(Token const *name) {
-  return make_constant(obj_value(copy_string(name->start, name->length)));
-}
-
-static uint8_t parse_variable(char const *error_message) {
-  consume(TOKEN_IDENTIFIER, error_message);
-  return identifier_constant(&parser.previous);
-}
-
-static void define_variable(uint8_t global) {
-  emit_bytes(OP_DEFINE_GLOBAL, global);
-}
 
 static void expression() { parse_precedence(PREC_ASSIGNMENT); }
 
