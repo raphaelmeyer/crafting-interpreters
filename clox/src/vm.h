@@ -16,6 +16,7 @@ typedef struct VM_t {
   uint8_t *ip;
   Value stack[STACK_MAX];
   Value *stack_top;
+  Table globals;
   Table strings;
   Obj *objects;
 } VM;

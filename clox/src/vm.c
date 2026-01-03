@@ -70,10 +70,13 @@ void init_vm() {
   reset_stack();
   init_object_allocation(&vm);
   vm.objects = NULL;
+
+  init_table(&vm.globals);
   init_table(&vm.strings);
 }
 
 void free_vm() {
+  free_table(&vm.globals);
   free_table(&vm.strings);
   free_objects(vm.objects);
 }
@@ -82,6 +85,10 @@ static inline uint8_t read_byte(VM *vm) { return *vm->ip++; }
 
 static inline Value read_constant(VM *vm) {
   return vm->chunk->constants.values[read_byte(vm)];
+}
+
+static inline ObjString *read_string(VM *vm) {
+  return as_string(read_constant(vm));
 }
 
 static Value subtract(double a, double b) { return number_value(a - b); }
@@ -131,6 +138,13 @@ static InterpretResult run() {
     case OP_POP:
       pop();
       break;
+
+    case OP_DEFINE_GLOBAL: {
+      ObjString *const name = read_string(&vm);
+      table_set(&vm.globals, name, peek(0));
+      pop();
+      break;
+    }
 
     case OP_EQUAL: {
       Value b = pop();
