@@ -20,7 +20,9 @@ std::size_t constant_instruction(std::string name, Chunk const &chunk,
                                  std::size_t offset) {
   auto const constant = chunk.code.at(offset + 1);
   std::cout << std::format("{:16} {:4} '", name, constant);
-  print_value(chunk.constants.at(constant));
+  if (constant < chunk.constants.size()) {
+    print_value(chunk.constants.at(constant));
+  }
   std::cout << "'\n";
 
   return offset + 2;
@@ -60,6 +62,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_FALSE", offset);
   case OpCode::POP:
     return simple_instruction("OP_POP", offset);
+  case OpCode::GET_GLOBAL:
+    return constant_instruction("OP_GET_GLOBAL", chunk, offset);
   case OpCode::DEFINE_GLOBAL:
     return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OpCode::EQUAL:

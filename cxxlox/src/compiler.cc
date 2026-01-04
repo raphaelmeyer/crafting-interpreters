@@ -38,6 +38,7 @@ public:
   void grouping();
   void number();
   void string();
+  void variable();
   void unary();
 
 private:
@@ -75,6 +76,8 @@ private:
   void statement();
   void expression_statement();
   void print_statement();
+
+  void named_variable(Token const &name);
 
   void synchronize();
 
@@ -285,6 +288,8 @@ void LoxCompiler::string() {
       std::string{parser.previous.start + 1, parser.previous.length - 2}));
 }
 
+void LoxCompiler::variable() { named_variable(parser.previous); }
+
 void LoxCompiler::unary() {
   auto const operator_type = parser.previous.type;
 
@@ -328,7 +333,7 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::GREATER_EQUAL, {nullptr,      &L::binary,   Precedence::COMPARISON}},
   {TokenType::LESS,          {nullptr,      &L::binary,   Precedence::COMPARISON}},
   {TokenType::LESS_EQUAL,    {nullptr,      &L::binary,   Precedence::COMPARISON}},
-  {TokenType::IDENTIFIER,    {nullptr,      nullptr,      Precedence::NONE}},
+  {TokenType::IDENTIFIER,    {&L::variable, nullptr,      Precedence::NONE}},
   {TokenType::STRING,        {&L::string,   nullptr,      Precedence::NONE}},
   {TokenType::NUMBER,        {&L::number,   nullptr,      Precedence::NONE}},
   {TokenType::AND,           {nullptr,      nullptr,      Precedence::NONE}},
@@ -430,6 +435,11 @@ void LoxCompiler::statement() {
   } else {
     expression_statement();
   }
+}
+
+void LoxCompiler::named_variable(Token const &name) {
+  auto const arg = identifier_constant(name);
+  emit_bytes(OpCode::GET_GLOBAL, arg);
 }
 
 void LoxCompiler::synchronize() {
