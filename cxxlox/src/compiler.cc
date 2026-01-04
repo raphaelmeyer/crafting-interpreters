@@ -33,13 +33,13 @@ public:
 
   bool compile(std::string_view source, Chunk &chunk) override;
 
-  void binary();
-  void literal();
-  void grouping();
-  void number();
-  void string();
-  void variable();
-  void unary();
+  void binary(bool can_assign);
+  void literal(bool can_assign);
+  void grouping(bool can_assign);
+  void number(bool can_assign);
+  void string(bool can_assign);
+  void variable(bool can_assign);
+  void unary(bool can_assign);
 
 private:
   Chunk *current_chunk() { return compiling_chunk; }
@@ -77,7 +77,7 @@ private:
   void expression_statement();
   void print_statement();
 
-  void named_variable(Token const &name);
+  void named_variable(Token const &name, bool can_assign);
 
   void synchronize();
 
@@ -95,7 +95,7 @@ private:
   std::unique_ptr<Scanner> scanner{};
 };
 
-using ParseFn = void (LoxCompiler::*)();
+using ParseFn = void (LoxCompiler::*)(bool);
 
 struct ParseRule {
   ParseFn prefix;
@@ -215,7 +215,7 @@ Precedence LoxCompiler::next_higher_precedence(Precedence precedence) {
 
 ParseRule const &get_rule(TokenType type);
 
-void LoxCompiler::binary() {
+void LoxCompiler::binary(bool) {
   auto const operator_type = parser.previous.type;
   auto const rule = get_rule(operator_type);
   parse_precedence(next_higher_precedence(rule.precedence));
@@ -256,7 +256,7 @@ void LoxCompiler::binary() {
   }
 }
 
-void LoxCompiler::literal() {
+void LoxCompiler::literal(bool) {
   switch (parser.previous.type) {
   case TokenType::FALSE:
     emit_byte(OpCode::FALSE);
@@ -272,25 +272,27 @@ void LoxCompiler::literal() {
   }
 }
 
-void LoxCompiler::grouping() {
+void LoxCompiler::grouping(bool) {
   expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-void LoxCompiler::number() {
+void LoxCompiler::number(bool) {
   auto const value = std::stod(
       std::string{parser.previous.start, parser.previous.length}, nullptr);
   emit_constant(number_value(value));
 }
 
-void LoxCompiler::string() {
+void LoxCompiler::string(bool) {
   emit_constant(string_value(
       std::string{parser.previous.start + 1, parser.previous.length - 2}));
 }
 
-void LoxCompiler::variable() { named_variable(parser.previous); }
+void LoxCompiler::variable(bool can_assign) {
+  named_variable(parser.previous, can_assign);
+}
 
-void LoxCompiler::unary() {
+void LoxCompiler::unary(bool) {
   auto const operator_type = parser.previous.type;
 
   // Compile the operand.
@@ -367,12 +369,17 @@ void LoxCompiler::parse_precedence(Precedence precedence) {
     return;
   }
 
-  std::invoke(prefix_rule, *this);
+  bool can_assign = precedence <= Precedence::ASSIGNMENT;
+  std::invoke(prefix_rule, *this, can_assign);
 
   while (precedence <= get_rule(parser.current.type).precedence) {
     advance();
     auto const infix_rule = get_rule(parser.previous.type).infix;
-    std::invoke(infix_rule, *this);
+    std::invoke(infix_rule, *this, can_assign);
+  }
+
+  if (can_assign && match(TokenType::EQUAL)) {
+    error("Invalid assignment target.");
   }
 }
 
@@ -437,9 +444,15 @@ void LoxCompiler::statement() {
   }
 }
 
-void LoxCompiler::named_variable(Token const &name) {
+void LoxCompiler::named_variable(Token const &name, bool can_assign) {
   auto const arg = identifier_constant(name);
-  emit_bytes(OpCode::GET_GLOBAL, arg);
+
+  if (can_assign && match(TokenType::EQUAL)) {
+    expression();
+    emit_bytes(OpCode::SET_GLOBAL, arg);
+  } else {
+    emit_bytes(OpCode::GET_GLOBAL, arg);
+  }
 }
 
 void LoxCompiler::synchronize() {

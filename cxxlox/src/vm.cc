@@ -172,6 +172,16 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::SET_GLOBAL: {
+      auto const name = read_string();
+      if (not vm.globals.contains(name)) {
+        runtime_error("Undefined variable '{}'.", name);
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      vm.globals.at(name) = peek(0);
+      break;
+    }
+
     case OpCode::EQUAL: {
       auto const b = pop();
       auto const a = pop();
