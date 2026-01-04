@@ -76,6 +76,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_NOT", offset);
   case OpCode::NEGATE:
     return simple_instruction("OP_NEGATE", offset);
+  case OpCode::PRINT:
+    return simple_instruction("OP_PRINT", offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

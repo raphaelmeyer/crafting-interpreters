@@ -49,6 +49,8 @@ private:
 
   void advance();
   void consume(TokenType type, std::string_view message);
+  bool check(TokenType type);
+  bool match(TokenType type);
 
   void emit_byte(std::uint8_t byte);
   void emit_byte(OpCode op_code);
@@ -64,6 +66,9 @@ private:
   Precedence next_higher_precedence(Precedence precedence);
 
   void expression();
+  void declaration();
+  void statement();
+  void print_statement();
 
 private:
   struct Parser {
@@ -137,6 +142,16 @@ void LoxCompiler::consume(TokenType type, std::string_view message) {
   }
 
   error_at_current(message);
+}
+
+bool LoxCompiler::check(TokenType type) { return parser.current.type == type; }
+
+bool LoxCompiler::match(TokenType type) {
+  if (not check(type)) {
+    return false;
+  }
+  advance();
+  return true;
 }
 
 void LoxCompiler::emit_byte(std::uint8_t byte) {
@@ -350,6 +365,20 @@ void LoxCompiler::parse_precedence(Precedence precedence) {
 
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
+void LoxCompiler::print_statement() {
+  expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after value.");
+  emit_byte(OpCode::PRINT);
+}
+
+void LoxCompiler::declaration() { statement(); }
+
+void LoxCompiler::statement() {
+  if (match(TokenType::PRINT)) {
+    print_statement();
+  }
+}
+
 bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
   scanner->init_scanner(source);
   compiling_chunk = &chunk;
@@ -358,8 +387,10 @@ bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
   parser.panic_mode = false;
 
   advance();
-  expression();
-  consume(TokenType::END, "Expect end of expression.");
+
+  while (not match(TokenType::END)) {
+    declaration();
+  }
 
   end_compiler();
 

@@ -215,9 +215,13 @@ InterpretResult LoxVM::run() {
       break;
     }
 
-    case OpCode::RETURN: {
+    case OpCode::PRINT: {
       print_value(pop());
       std::cout << "\n";
+      break;
+    }
+
+    case OpCode::RETURN: {
       return InterpretResult::OK;
     }
 
