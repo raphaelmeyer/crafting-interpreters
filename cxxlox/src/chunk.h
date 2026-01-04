@@ -10,6 +10,7 @@ enum class OpCode : std::uint8_t {
   NIL,
   TRUE,
   FALSE,
+  POP,
   EQUAL,
   GREATER,
   LESS,

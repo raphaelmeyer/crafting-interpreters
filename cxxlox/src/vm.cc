@@ -145,6 +145,10 @@ InterpretResult LoxVM::run() {
       push(bool_value(false));
       break;
 
+    case OpCode::POP:
+      pop();
+      break;
+
     case OpCode::EQUAL: {
       auto const b = pop();
       auto const a = pop();

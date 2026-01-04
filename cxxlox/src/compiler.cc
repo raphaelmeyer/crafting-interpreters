@@ -68,6 +68,7 @@ private:
   void expression();
   void declaration();
   void statement();
+  void expression_statement();
   void print_statement();
 
 private:
@@ -365,6 +366,12 @@ void LoxCompiler::parse_precedence(Precedence precedence) {
 
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
+void LoxCompiler::expression_statement() {
+  expression();
+  consume(TokenType::SEMICOLON, "Expect ';' after expression.");
+  emit_byte(OpCode::POP);
+}
+
 void LoxCompiler::print_statement() {
   expression();
   consume(TokenType::SEMICOLON, "Expect ';' after value.");
@@ -376,6 +383,8 @@ void LoxCompiler::declaration() { statement(); }
 void LoxCompiler::statement() {
   if (match(TokenType::PRINT)) {
     print_statement();
+  } else {
+    expression_statement();
   }
 }
 
