@@ -71,6 +71,8 @@ private:
   void expression_statement();
   void print_statement();
 
+  void synchronize();
+
 private:
   struct Parser {
     Token current;
@@ -378,13 +380,46 @@ void LoxCompiler::print_statement() {
   emit_byte(OpCode::PRINT);
 }
 
-void LoxCompiler::declaration() { statement(); }
+void LoxCompiler::declaration() {
+  statement();
+
+  if (parser.panic_mode) {
+    synchronize();
+  }
+}
 
 void LoxCompiler::statement() {
   if (match(TokenType::PRINT)) {
     print_statement();
   } else {
     expression_statement();
+  }
+}
+
+void LoxCompiler::synchronize() {
+  parser.panic_mode = false;
+
+  while (parser.current.type != TokenType::END) {
+    if (parser.previous.type == TokenType::SEMICOLON) {
+      return;
+    }
+
+    switch (parser.current.type) {
+    case TokenType::CLASS:
+    case TokenType::FUN:
+    case TokenType::VAR:
+    case TokenType::FOR:
+    case TokenType::IF:
+    case TokenType::WHILE:
+    case TokenType::PRINT:
+    case TokenType::RETURN:
+      return;
+
+    default:
+      break;
+    }
+
+    advance();
   }
 }
 
