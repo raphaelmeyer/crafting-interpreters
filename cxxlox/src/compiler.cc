@@ -57,7 +57,7 @@ private:
   void emit_bytes(OpCode op_code, std::uint8_t byte);
   void emit_bytes(OpCode op_code_a, OpCode op_code_b);
   void emit_return();
-  uint8_t make_constant(Value value);
+  std::uint8_t make_constant(Value value);
   void emit_constant(Value value);
 
   void end_compiler();
@@ -65,8 +65,13 @@ private:
   void parse_precedence(Precedence precedence);
   Precedence next_higher_precedence(Precedence precedence);
 
+  std::uint8_t identifier_constant(Token const &name);
+  std::uint8_t parse_variable(std::string_view error_message);
+  void define_variable(std::uint8_t global);
+
   void expression();
   void declaration();
+  void var_declaration();
   void statement();
   void expression_statement();
   void print_statement();
@@ -366,6 +371,19 @@ void LoxCompiler::parse_precedence(Precedence precedence) {
   }
 }
 
+std::uint8_t LoxCompiler::identifier_constant(Token const &name) {
+  return make_constant(string_value({name.start, name.length}));
+}
+
+std::uint8_t LoxCompiler::parse_variable(std::string_view error_message) {
+  consume(TokenType::IDENTIFIER, error_message);
+  return identifier_constant(parser.previous);
+}
+
+void LoxCompiler::define_variable(std::uint8_t global) {
+  emit_bytes(OpCode::DEFINE_GLOBAL, global);
+}
+
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
 void LoxCompiler::expression_statement() {
@@ -381,11 +399,29 @@ void LoxCompiler::print_statement() {
 }
 
 void LoxCompiler::declaration() {
-  statement();
+  if (match(TokenType::VAR)) {
+    var_declaration();
+  } else {
+    statement();
+  }
 
   if (parser.panic_mode) {
     synchronize();
   }
+}
+
+void LoxCompiler::var_declaration() {
+  auto const global = parse_variable("Expect variable name.");
+
+  if (match(TokenType::EQUAL)) {
+    expression();
+  } else {
+    emit_byte(OpCode::NIL);
+  }
+
+  consume(TokenType::SEMICOLON, "Expect ';' after variable declaration.");
+
+  define_variable(global);
 }
 
 void LoxCompiler::statement() {

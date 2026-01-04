@@ -60,6 +60,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_FALSE", offset);
   case OpCode::POP:
     return simple_instruction("OP_POP", offset);
+  case OpCode::DEFINE_GLOBAL:
+    return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OpCode::EQUAL:
     return simple_instruction("OP_EQUAL", offset);
   case OpCode::GREATER:

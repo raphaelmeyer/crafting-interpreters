@@ -7,6 +7,7 @@
 #include <format>
 #include <functional>
 #include <iostream>
+#include <unordered_map>
 
 namespace {
 
@@ -33,7 +34,7 @@ private:
   void concatenate();
 
   template <typename... Args>
-  void runtime_error(std::format_string<Args...> format, Args... args) {
+  void runtime_error(std::format_string<Args...> format, Args &&...args) {
     std::cerr << std::format(format, args...) << "\n";
 
     auto const instruction = std::distance(vm.chunk->code.begin(), vm.ip) - 1;
@@ -46,6 +47,7 @@ private:
   std::uint8_t read_byte();
   Value read_constant();
   OpCode read_opcode();
+  std::string read_string();
 
   InterpretResult run();
 
@@ -69,6 +71,7 @@ private:
     std::array<Value, STACK_MAX> stack;
     using StackPointer = decltype(stack)::iterator;
     StackPointer stack_top;
+    std::unordered_map<std::string, Value> globals;
   };
 
   Context vm{};
@@ -112,6 +115,8 @@ Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
 
 OpCode LoxVM::read_opcode() { return static_cast<OpCode>(read_byte()); }
 
+std::string LoxVM::read_string() { return as_string(read_constant()); }
+
 InterpretResult LoxVM::run() {
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
@@ -148,6 +153,13 @@ InterpretResult LoxVM::run() {
     case OpCode::POP:
       pop();
       break;
+
+    case OpCode::DEFINE_GLOBAL: {
+      auto const name = read_string();
+      vm.globals.insert_or_assign(name, peek(0));
+      pop();
+      break;
+    }
 
     case OpCode::EQUAL: {
       auto const b = pop();
