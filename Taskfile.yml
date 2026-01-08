@@ -36,3 +36,15 @@ tasks:
     dir: alox
     cmds:
       - alr build
+      - task: alox:tests
+
+  alox:tests:
+    internal: true
+    dir: alox/tests
+    cmds:
+      - alr run
+
+  alox:run:
+    dir: alox
+    cmds:
+      - alr run

@@ -1,0 +1,10 @@
+name = "tests"
+description = "tests"
+version = "0.0.0-test"
+
+[[depends-on]]
+alox = "*"
+aunit = "25.0.0"
+
+[[pins]]
+alox = { path = ".." }
