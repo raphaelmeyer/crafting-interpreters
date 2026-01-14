@@ -65,6 +65,9 @@ private:
   void init_compiler(Context *compiler);
   void end_compiler();
 
+  void begin_scope();
+  void end_scope();
+
   void parse_precedence(Precedence precedence);
   Precedence next_higher_precedence(Precedence precedence);
 
@@ -73,6 +76,7 @@ private:
   void define_variable(std::uint8_t global);
 
   void expression();
+  void block();
   void declaration();
   void var_declaration();
   void statement();
@@ -231,6 +235,10 @@ void LoxCompiler::end_compiler() {
     }
   }
 }
+
+void LoxCompiler::begin_scope() { current->scope_depth++; }
+
+void LoxCompiler::end_scope() { current->scope_depth--; }
 
 Precedence LoxCompiler::next_higher_precedence(Precedence precedence) {
   return static_cast<Precedence>(static_cast<std::int32_t>(precedence) + 1);
@@ -421,6 +429,14 @@ void LoxCompiler::define_variable(std::uint8_t global) {
 
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
 
+void LoxCompiler::block() {
+  while (not check(TokenType::RIGHT_BRACE) && not check(TokenType::END)) {
+    declaration();
+  }
+
+  consume(TokenType::RIGHT_BRACE, "Expect '}' after block.");
+}
+
 void LoxCompiler::expression_statement() {
   expression();
   consume(TokenType::SEMICOLON, "Expect ';' after expression.");
@@ -462,6 +478,10 @@ void LoxCompiler::var_declaration() {
 void LoxCompiler::statement() {
   if (match(TokenType::PRINT)) {
     print_statement();
+  } else if (match(TokenType::LEFT_BRACE)) {
+    begin_scope();
+    block();
+    end_scope();
   } else {
     expression_statement();
   }
