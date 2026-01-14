@@ -61,6 +61,8 @@ private:
   std::uint8_t make_constant(Value value);
   void emit_constant(Value value);
 
+  struct Context;
+  void init_compiler(Context *compiler);
   void end_compiler();
 
   void parse_precedence(Precedence precedence);
@@ -89,7 +91,22 @@ private:
     bool panic_mode;
   };
 
+  struct Local {
+    Token name;
+    std::size_t depth;
+  };
+
+  constexpr static std::size_t const UINT8_COUNT =
+      std::numeric_limits<std::uint8_t>::max() + 1;
+
+  struct Context {
+    std::array<Local, UINT8_COUNT> locals;
+    std::size_t local_count;
+    std::size_t scope_depth;
+  };
+
   Parser parser{};
+  Context *current{};
   Chunk *compiling_chunk{};
 
   std::unique_ptr<Scanner> scanner{};
@@ -197,6 +214,12 @@ uint8_t LoxCompiler::make_constant(Value value) {
 
 void LoxCompiler::emit_constant(Value value) {
   emit_bytes(OpCode::CONSTANT, make_constant(value));
+}
+
+void LoxCompiler::init_compiler(Context *compiler) {
+  compiler->local_count = 0;
+  compiler->scope_depth = 0;
+  current = compiler;
 }
 
 void LoxCompiler::end_compiler() {
@@ -484,6 +507,8 @@ void LoxCompiler::synchronize() {
 
 bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
   scanner->init_scanner(source);
+  Context compiler{};
+  init_compiler(&compiler);
   compiling_chunk = &chunk;
 
   parser.had_error = false;
