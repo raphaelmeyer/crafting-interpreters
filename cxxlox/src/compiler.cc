@@ -4,6 +4,7 @@
 #include "debug.h"
 #include "scanner.h"
 
+#include <algorithm>
 #include <format>
 #include <functional>
 #include <iostream>
@@ -72,6 +73,9 @@ private:
   Precedence next_higher_precedence(Precedence precedence);
 
   std::uint8_t identifier_constant(Token const &name);
+  bool identifier_equals(Token const &a, Token const &b);
+  void add_local(Token const &name);
+  void declare_variable();
   std::uint8_t parse_variable(std::string_view error_message);
   void define_variable(std::uint8_t global);
 
@@ -97,7 +101,7 @@ private:
 
   struct Local {
     Token name;
-    std::size_t depth;
+    std::optional<std::size_t> depth;
   };
 
   constexpr static std::size_t const UINT8_COUNT =
@@ -238,7 +242,20 @@ void LoxCompiler::end_compiler() {
 
 void LoxCompiler::begin_scope() { current->scope_depth++; }
 
-void LoxCompiler::end_scope() { current->scope_depth--; }
+void LoxCompiler::end_scope() {
+  current->scope_depth--;
+
+  while (current->local_count > 0 &&
+         current->locals.at(current->local_count - 1)
+             .depth
+             .and_then([this](auto depth) {
+               return std::optional{depth > current->scope_depth};
+             })
+             .value_or(false)) {
+    emit_byte(OpCode::POP);
+    current->local_count--;
+  }
+}
 
 Precedence LoxCompiler::next_higher_precedence(Precedence precedence) {
   return static_cast<Precedence>(static_cast<std::int32_t>(precedence) + 1);
@@ -418,12 +435,65 @@ std::uint8_t LoxCompiler::identifier_constant(Token const &name) {
   return make_constant(string_value({name.start, name.length}));
 }
 
+bool LoxCompiler::identifier_equals(Token const &a, Token const &b) {
+  if (a.length != b.length) {
+    return false;
+  }
+  return std::ranges::equal(a.start, a.start + a.length, b.start,
+                            b.start + b.length);
+}
+
+void LoxCompiler::add_local(Token const &name) {
+  if (current->local_count == current->locals.max_size()) {
+    error("Too many local variables in function.");
+    return;
+  }
+
+  auto const local = &current->locals.at(current->local_count);
+  ++current->local_count;
+  local->name = name;
+  local->depth = current->scope_depth;
+}
+
+void LoxCompiler::declare_variable() {
+  if (current->scope_depth == 0) {
+    return;
+  }
+
+  auto const &name = parser.previous;
+
+  auto last = current->locals.rbegin() +
+              (current->locals.max_size() - current->local_count);
+  for (auto local = last; local != current->locals.rend(); ++local) {
+    if (local->depth.has_value() &&
+        local->depth.value() < current->scope_depth) {
+      break;
+    }
+
+    if (identifier_equals(name, local->name)) {
+      error("Already a variable with this name in this scope.");
+    }
+  }
+
+  add_local(name);
+}
+
 std::uint8_t LoxCompiler::parse_variable(std::string_view error_message) {
   consume(TokenType::IDENTIFIER, error_message);
+
+  declare_variable();
+  if (current->scope_depth > 0) {
+    return 0;
+  }
+
   return identifier_constant(parser.previous);
 }
 
 void LoxCompiler::define_variable(std::uint8_t global) {
+  if (current->scope_depth > 0) {
+    return;
+  }
+
   emit_bytes(OpCode::DEFINE_GLOBAL, global);
 }
 
