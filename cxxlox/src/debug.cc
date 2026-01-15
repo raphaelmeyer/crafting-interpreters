@@ -7,13 +7,16 @@
 
 namespace {
 
-std::size_t simple_instruction(std::string name, std::size_t offset);
-std::size_t constant_instruction(std::string name, Chunk const &chunk,
-                                 std::size_t offset);
-
 std::size_t simple_instruction(std::string name, std::size_t offset) {
   std::cout << name << "\n";
   return offset + 1;
+}
+
+std::size_t byte_instruction(std::string name, Chunk const &chunk,
+                             std::size_t offset) {
+  auto const slot = chunk.code.at(offset + 1);
+  std::cout << std::format("{:16} {:4}\n", name, slot);
+  return offset + 2;
 }
 
 std::size_t constant_instruction(std::string name, Chunk const &chunk,
@@ -62,6 +65,10 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_FALSE", offset);
   case OpCode::POP:
     return simple_instruction("OP_POP", offset);
+  case OpCode::GET_LOCAL:
+    return byte_instruction("OP_GET_LOCAL", chunk, offset);
+  case OpCode::SET_LOCAL:
+    return byte_instruction("OP_SET_LOCAL", chunk, offset);
   case OpCode::GET_GLOBAL:
     return constant_instruction("OP_GET_GLOBAL", chunk, offset);
   case OpCode::DEFINE_GLOBAL:

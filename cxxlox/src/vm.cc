@@ -154,6 +154,18 @@ InterpretResult LoxVM::run() {
       pop();
       break;
 
+    case OpCode::GET_LOCAL: {
+      auto const slot = read_byte();
+      push(vm.stack.at(slot));
+      break;
+    }
+
+    case OpCode::SET_LOCAL: {
+      auto const slot = read_byte();
+      vm.stack.at(slot) = peek(0);
+      break;
+    }
+
     case OpCode::GET_GLOBAL: {
       auto const name = read_string();
       if (not vm.globals.contains(name)) {

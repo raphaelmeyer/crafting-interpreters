@@ -10,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <optional>
 
 namespace {
 
@@ -74,9 +75,12 @@ private:
 
   std::uint8_t identifier_constant(Token const &name);
   bool identifier_equals(Token const &a, Token const &b);
+  std::optional<uint8_t> resolve_local(Context const &compiler,
+                                       Token const &name);
   void add_local(Token const &name);
   void declare_variable();
   std::uint8_t parse_variable(std::string_view error_message);
+  void mark_initialized();
   void define_variable(std::uint8_t global);
 
   void expression();
@@ -443,6 +447,21 @@ bool LoxCompiler::identifier_equals(Token const &a, Token const &b) {
                             b.start + b.length);
 }
 
+std::optional<uint8_t> LoxCompiler::resolve_local(Context const &compiler,
+                                                  Token const &name) {
+  for (std::int32_t i = compiler.local_count - 1; i >= 0; --i) {
+    auto const &local = compiler.locals.at(i);
+    if (identifier_equals(name, local.name)) {
+      if (not local.depth.has_value()) {
+        error("Can't read local variable in its own initializer.");
+      }
+      return i;
+    }
+  }
+
+  return {};
+}
+
 void LoxCompiler::add_local(Token const &name) {
   if (current->local_count == current->locals.max_size()) {
     error("Too many local variables in function.");
@@ -452,7 +471,7 @@ void LoxCompiler::add_local(Token const &name) {
   auto const local = &current->locals.at(current->local_count);
   ++current->local_count;
   local->name = name;
-  local->depth = current->scope_depth;
+  local->depth = std::nullopt;
 }
 
 void LoxCompiler::declare_variable() {
@@ -489,8 +508,13 @@ std::uint8_t LoxCompiler::parse_variable(std::string_view error_message) {
   return identifier_constant(parser.previous);
 }
 
+void LoxCompiler::mark_initialized() {
+  current->locals.at(current->local_count - 1).depth = current->scope_depth;
+}
+
 void LoxCompiler::define_variable(std::uint8_t global) {
   if (current->scope_depth > 0) {
+    mark_initialized();
     return;
   }
 
@@ -558,13 +582,26 @@ void LoxCompiler::statement() {
 }
 
 void LoxCompiler::named_variable(Token const &name, bool can_assign) {
-  auto const arg = identifier_constant(name);
+  OpCode get_op{};
+  OpCode set_op{};
+  uint8_t arg{};
+
+  auto maybe_arg = resolve_local(*current, name);
+  if (maybe_arg.has_value()) {
+    arg = maybe_arg.value();
+    get_op = OpCode::GET_LOCAL;
+    set_op = OpCode::SET_LOCAL;
+  } else {
+    arg = identifier_constant(name);
+    get_op = OpCode::GET_GLOBAL;
+    set_op = OpCode::SET_GLOBAL;
+  }
 
   if (can_assign && match(TokenType::EQUAL)) {
     expression();
-    emit_bytes(OpCode::SET_GLOBAL, arg);
+    emit_bytes(set_op, arg);
   } else {
-    emit_bytes(OpCode::GET_GLOBAL, arg);
+    emit_bytes(get_op, arg);
   }
 }
 
