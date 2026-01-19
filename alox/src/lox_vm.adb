@@ -52,6 +52,7 @@ package body Lox_VM is
    function Run (VM : in out VM_Context) return InterpretResult is
       Instruction : Lox_Chunk.Byte;
       Value       : Lox_Value.Value;
+      use type Lox_Value.Value;
    begin
       loop
          if VM.Trace_Execution then
@@ -73,6 +74,9 @@ package body Lox_VM is
             when Lox_Chunk.Op_Constant'Enum_Rep =>
                Value := Read_Constant (VM);
                Push (VM, Value);
+
+            when Lox_Chunk.Op_Negate'Enum_Rep   =>
+               Push (VM, -Pop (VM));
 
             when Lox_Chunk.Op_Return'Enum_Rep   =>
                Lox_Value.Print (Pop (VM));
