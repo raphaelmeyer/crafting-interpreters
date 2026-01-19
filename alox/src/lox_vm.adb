@@ -49,6 +49,26 @@ package body Lox_VM is
       return VM.Chunk.Constants (Index);
    end Read_Constant;
 
+   generic
+      with
+        function Op
+          (A : Lox_Value.Value; B : Lox_Value.Value) return Lox_Value.Value;
+   procedure Binary_Op (VM : in out VM_Context);
+
+   procedure Binary_Op (VM : in out VM_Context) is
+      A : Lox_Value.Value;
+      B : Lox_Value.Value;
+   begin
+      B := Pop (VM);
+      A := Pop (VM);
+      Push (VM, Op (A, B));
+   end Binary_Op;
+
+   procedure Binary_Op_Add is new Binary_Op (Lox_Value."+");
+   procedure Binary_Op_Subtract is new Binary_Op (Lox_Value."-");
+   procedure Binary_Op_Multiply is new Binary_Op (Lox_Value."*");
+   procedure Binary_Op_Divide is new Binary_Op (Lox_Value."/");
+
    function Run (VM : in out VM_Context) return InterpretResult is
       Instruction : Lox_Chunk.Byte;
       Value       : Lox_Value.Value;
@@ -74,6 +94,18 @@ package body Lox_VM is
             when Lox_Chunk.Op_Constant'Enum_Rep =>
                Value := Read_Constant (VM);
                Push (VM, Value);
+
+            when Lox_Chunk.Op_Add'Enum_Rep      =>
+               Binary_Op_Add (VM);
+
+            when Lox_Chunk.Op_Subtract'Enum_Rep =>
+               Binary_Op_Subtract (VM);
+
+            when Lox_Chunk.Op_Multiply'Enum_Rep =>
+               Binary_Op_Multiply (VM);
+
+            when Lox_Chunk.Op_Divide'Enum_Rep   =>
+               Binary_Op_Divide (VM);
 
             when Lox_Chunk.Op_Negate'Enum_Rep   =>
                Push (VM, -Pop (VM));

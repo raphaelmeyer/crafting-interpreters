@@ -48,6 +48,18 @@ package body Debug is
          when Lox_Chunk.Op_Constant'Enum_Rep =>
             return ConstantInstruction ("OP_CONSTANT", Chunk, Offset);
 
+         when Lox_Chunk.Op_Add'Enum_Rep      =>
+            return SimpleInstruction ("OP_ADD", Offset);
+
+         when Lox_Chunk.Op_Subtract'Enum_Rep =>
+            return SimpleInstruction ("OP_SUBTRACT", Offset);
+
+         when Lox_Chunk.Op_Multiply'Enum_Rep =>
+            return SimpleInstruction ("OP_MULTIPLY", Offset);
+
+         when Lox_Chunk.Op_Divide'Enum_Rep   =>
+            return SimpleInstruction ("OP_DIVIDE", Offset);
+
          when Lox_Chunk.Op_Negate'Enum_Rep   =>
             return SimpleInstruction ("OP_NEGATE", Offset);
 
