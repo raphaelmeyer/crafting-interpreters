@@ -3,6 +3,11 @@ with Debug;
 with Ada.Text_IO;
 
 package body Lox_VM is
+   procedure Init (VM : in out VM_Context) is
+   begin
+      Reset_Stack (VM);
+   end Init;
+
    function Interpret
      (VM : in out VM_Context; Chunk : Lox_Chunk.Chunk) return InterpretResult
    is
@@ -11,6 +16,23 @@ package body Lox_VM is
       VM.IP := Chunk.Code.First;
       return Run (VM);
    end Interpret;
+
+   procedure Push (VM : in out VM_Context; Value : Lox_Value.Value) is
+   begin
+      VM.Stack (VM.Stack_Top) := Value;
+      VM.Stack_Top := Stack_Index'Succ (VM.Stack_Top);
+   end Push;
+
+   function Pop (VM : in out VM_Context) return Lox_Value.Value is
+   begin
+      VM.Stack_Top := Stack_Index'Pred (VM.Stack_Top);
+      return VM.Stack (VM.Stack_Top);
+   end Pop;
+
+   procedure Reset_Stack (VM : in out VM_Context) is
+   begin
+      VM.Stack_Top := 0;
+   end Reset_Stack;
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte is
       Result : Lox_Chunk.Byte;

@@ -12,6 +12,8 @@ procedure ALox is
    Result : Lox_VM.InterpretResult;
    use type Lox_VM.InterpretResult;
 begin
+   Lox_VM.Init (VM);
+
    VM.Trace_Execution := False;
    for I in 1 .. Ada.Command_Line.Argument_Count loop
       if Ada.Command_Line.Argument (I) = "--debug" then
