@@ -55,6 +55,15 @@ package body Lox_VM is
    begin
       loop
          if VM.Trace_Execution then
+            Ada.Text_IO.Put ("          ");
+            for V of
+              VM.Stack (Stack_Index'First .. Stack_Index'Pred (VM.Stack_Top))
+            loop
+               Ada.Text_IO.Put ("[ ");
+               Lox_Value.Print (V);
+               Ada.Text_IO.Put (" ]");
+            end loop;
+            Ada.Text_IO.New_Line;
             Debug.DisassembleInstruction
               (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
          end if;
@@ -63,10 +72,11 @@ package body Lox_VM is
          case Instruction is
             when Lox_Chunk.Op_Constant'Enum_Rep =>
                Value := Read_Constant (VM);
-               Lox_Value.Print (Value);
-               Ada.Text_IO.New_Line;
+               Push (VM, Value);
 
             when Lox_Chunk.Op_Return'Enum_Rep   =>
+               Lox_Value.Print (Pop (VM));
+               Ada.Text_IO.New_Line;
                return Interpret_OK;
 
             when others                         =>
