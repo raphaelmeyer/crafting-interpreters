@@ -3,6 +3,9 @@ with Lox_Chunk;
 package Debug is
    procedure DisassembleChunk (Chunk : Lox_Chunk.Chunk; Name : String);
 
+   procedure DisassembleInstruction
+     (Chunk : Lox_Chunk.Chunk; Offset : Natural);
+
 private
    function DisassembleInstruction
      (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;

@@ -40,4 +40,4 @@ tasks:
   alox:run:
     dir: alox
     cmds:
-      - alr run
+      - alr run --args="--debug"

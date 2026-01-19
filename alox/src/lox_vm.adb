@@ -1,7 +1,8 @@
+with Debug;
+
 with Ada.Text_IO;
 
 package body Lox_VM is
-
    function Interpret
      (VM : in out VM_Context; Chunk : Lox_Chunk.Chunk) return InterpretResult
    is
@@ -31,6 +32,11 @@ package body Lox_VM is
       Value       : Lox_Value.Value;
    begin
       loop
+         if VM.Trace_Execution then
+            Debug.DisassembleInstruction
+              (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
+         end if;
+
          Instruction := Read_Byte (VM);
          case Instruction is
             when Lox_Chunk.Op_Constant'Enum_Rep =>

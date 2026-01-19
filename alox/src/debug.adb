@@ -16,6 +16,13 @@ package body Debug is
       end loop;
    end DisassembleChunk;
 
+   procedure DisassembleInstruction (Chunk : Lox_Chunk.Chunk; Offset : Natural)
+   is
+      Unused : Natural;
+   begin
+      Unused := DisassembleInstruction (Chunk, Offset);
+   end DisassembleInstruction;
+
    function DisassembleInstruction
      (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
    is

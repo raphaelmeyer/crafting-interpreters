@@ -6,8 +6,9 @@ package Lox_VM is
      (Interpret_OK, Interpret_Compile_Error, Interpret_Runtime_Error);
 
    type VM_Context is record
-      Chunk : Lox_Chunk.Chunk;
-      IP    : Lox_Chunk.Byte_Vectors.Cursor;
+      Trace_Execution : Boolean;
+      Chunk           : Lox_Chunk.Chunk;
+      IP              : Lox_Chunk.Byte_Vectors.Cursor;
    end record;
 
    function Interpret
