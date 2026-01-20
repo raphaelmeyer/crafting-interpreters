@@ -19,7 +19,7 @@ package Lox_VM is
    procedure Init (VM : in out VM_Context);
 
    function Interpret
-     (VM : in out VM_Context; Chunk : Lox_Chunk.Chunk) return InterpretResult;
+     (VM : in out VM_Context; Source : String) return InterpretResult;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
    function Pop (VM : in out VM_Context) return Lox_Value.Value;

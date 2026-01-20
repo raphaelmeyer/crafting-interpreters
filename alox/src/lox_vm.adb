@@ -1,4 +1,5 @@
 with Debug;
+with Lox_Compiler;
 
 with Ada.Text_IO;
 
@@ -9,12 +10,10 @@ package body Lox_VM is
    end Init;
 
    function Interpret
-     (VM : in out VM_Context; Chunk : Lox_Chunk.Chunk) return InterpretResult
-   is
+     (VM : in out VM_Context; Source : String) return InterpretResult is
    begin
-      VM.Chunk := Chunk;
-      VM.IP := Chunk.Code.First;
-      return Run (VM);
+      Lox_Compiler.Compile (Source);
+      return Interpret_OK;
    end Interpret;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value) is
