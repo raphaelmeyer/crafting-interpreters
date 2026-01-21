@@ -35,7 +35,7 @@ tasks:
   alox:
     dir: alox
     cmds:
-      - alr build
+      - alr build --validation
 
   alox:run:
     dir: alox

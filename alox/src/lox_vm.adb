@@ -10,7 +10,10 @@ package body Lox_VM is
    end Init;
 
    function Interpret
-     (VM : in out VM_Context; Source : String) return InterpretResult is
+     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
+      return InterpretResult
+   is
+      pragma Warnings (Off, VM);
    begin
       Lox_Compiler.Compile (Source);
       return Interpret_OK;

@@ -1,4 +1,5 @@
 with Exceptions;
+with Lox_Scanner;
 
 with Ada.Command_Line;
 with Ada.IO_Exceptions;
@@ -42,6 +43,21 @@ package body Main is
 
    end Main;
 
+   overriding
+   procedure Finalize (Source : in out Managed_Source) is
+   begin
+      if Source.Content /= null then
+         Free (Source.Content);
+      end if;
+   end Finalize;
+
+   function Make (Content : String) return Managed_Source is
+   begin
+      return Source : Managed_Source do
+         Source.Content := new String'(Content);
+      end return;
+   end Make;
+
    procedure Repl (VM : in out Lox_VM.VM_Context) is
    begin
       loop
@@ -49,9 +65,12 @@ package body Main is
             Ada.Text_IO.Put ("> ");
             declare
                Line   : constant String := Ada.Text_IO.Get_Line;
+               Source : constant Managed_Source := Make (Line);
                Unused : Lox_VM.InterpretResult;
             begin
-               Unused := Lox_VM.Interpret (VM, Line);
+               Unused :=
+                 Lox_VM.Interpret
+                   (VM, Lox_Scanner.Source_Code (Source.Content));
             end;
 
          exception
@@ -62,12 +81,14 @@ package body Main is
    end Repl;
 
    procedure Run_File (VM : in out Lox_VM.VM_Context; Path : String) is
-      Result : Lox_VM.InterpretResult;
-      Source : constant String := Read_File (Path);
+      Result  : Lox_VM.InterpretResult;
+      Content : constant String := Read_File (Path);
+      Source  : constant Managed_Source := Make (Content);
 
       use type Lox_VM.InterpretResult;
    begin
-      Result := Lox_VM.Interpret (VM, Source);
+      Result :=
+        Lox_VM.Interpret (VM, Lox_Scanner.Source_Code (Source.Content));
 
       if Result = Lox_VM.Interpret_Compile_Error then
          raise Exceptions.Compile_Error;
@@ -91,12 +112,18 @@ package body Main is
            Ada.Streams.Stream_Element_Array
              (1 .. Ada.Streams.Stream_Element_Offset (Size));
          Last : Ada.Streams.Stream_Element_Offset;
+
+         use type Ada.Streams.Stream_IO.Count;
       begin
          Ada.Streams.Stream_IO.Read (File, Data, Last);
          Ada.Streams.Stream_IO.Close (File);
 
+         if Size < 1 then
+            return "";
+         end if;
+
          declare
-            Source : String (1 .. Integer (Size));
+            Source : String (1 .. Positive (Size));
             I      : Positive := Source'First;
          begin
             for C of Data loop

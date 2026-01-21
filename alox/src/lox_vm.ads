@@ -1,4 +1,5 @@
 with Lox_Chunk;
+with Lox_Scanner;
 with Lox_Value;
 
 package Lox_VM is
@@ -19,7 +20,8 @@ package Lox_VM is
    procedure Init (VM : in out VM_Context);
 
    function Interpret
-     (VM : in out VM_Context; Source : String) return InterpretResult;
+     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
+      return InterpretResult;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
    function Pop (VM : in out VM_Context) return Lox_Value.Value;
