@@ -77,6 +77,9 @@ package Lox_Scanner is
 
 private
    function Is_At_End (S : in out Scanner) return Boolean;
+   function Advance (S : in out Scanner) return Character;
+   function Match (S : in out Scanner; Expected : Character) return Boolean;
+
    function Make_Token (S : in out Scanner; Kind : TokenType) return Token;
    function Error_Token (S : in out Scanner; Message : String) return Token;
 

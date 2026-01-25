@@ -18,6 +18,76 @@ package body Lox_Scanner is
          return Make_Token (S, TOKEN_EOF);
       end if;
 
+      declare
+         C : constant Character := Advance (S);
+      begin
+         case C is
+            when '('    =>
+               return Make_Token (S, TOKEN_LEFT_PAREN);
+
+            when ')'    =>
+               return Make_Token (S, TOKEN_RIGHT_PAREN);
+
+            when '{'    =>
+               return Make_Token (S, TOKEN_LEFT_BRACE);
+
+            when '}'    =>
+               return Make_Token (S, TOKEN_RIGHT_BRACE);
+
+            when ';'    =>
+               return Make_Token (S, TOKEN_SEMICOLON);
+
+            when ','    =>
+               return Make_Token (S, TOKEN_COMMA);
+
+            when '.'    =>
+               return Make_Token (S, TOKEN_DOT);
+
+            when '-'    =>
+               return Make_Token (S, TOKEN_MINUS);
+
+            when '+'    =>
+               return Make_Token (S, TOKEN_PLUS);
+
+            when '/'    =>
+               return Make_Token (S, TOKEN_SLASH);
+
+            when '*'    =>
+               return Make_Token (S, TOKEN_STAR);
+
+            when '!'    =>
+               return
+                 Make_Token
+                   (S,
+                    (if Match (S, '=') then TOKEN_BANG_EQUAL else TOKEN_BANG));
+
+            when '='    =>
+               return
+                 Make_Token
+                   (S,
+                    (if Match (S, '=')
+                     then TOKEN_EQUAL_EQUAL
+                     else TOKEN_EQUAL));
+
+            when '<'    =>
+               return
+                 Make_Token
+                   (S,
+                    (if Match (S, '=') then TOKEN_LESS_EQUAL else TOKEN_LESS));
+
+            when '>'    =>
+               return
+                 Make_Token
+                   (S,
+                    (if Match (S, '=')
+                     then TOKEN_GREATER_EQUAL
+                     else TOKEN_GREATER));
+
+            when others =>
+               null;
+         end case;
+      end;
+
       return Error_Token (S, "Unexpected character.");
    end Scan_Token;
 
@@ -25,6 +95,27 @@ package body Lox_Scanner is
    begin
       return S.Current > S.Source'Last;
    end Is_At_End;
+
+   function Advance (S : in out Scanner) return Character is
+      C : constant Character := S.Source (S.Current);
+   begin
+      S.Current := Positive'Succ (S.Current);
+      return C;
+   end Advance;
+
+   function Match (S : in out Scanner; Expected : Character) return Boolean is
+   begin
+      if Is_At_End (S) then
+         return False;
+      end if;
+
+      if S.Source (S.Current) /= Expected then
+         return False;
+      end if;
+
+      S.Current := Positive'Succ (S.Current);
+      return True;
+   end Match;
 
    function Make_Token (S : in out Scanner; Kind : TokenType) return Token is
       To : constant Natural := Natural'Pred (S.Current);
