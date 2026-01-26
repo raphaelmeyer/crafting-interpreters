@@ -115,6 +115,14 @@ package body Lox_Scanner is
       return S.Source (S.Current);
    end Peek;
 
+   function Peek_Next (S : in out Scanner) return Character is
+   begin
+      if Is_At_End (S) then
+         return Ada.Characters.Latin_1.NUL;
+      end if;
+      return S.Source (Positive'Succ (S.Current));
+   end Peek_Next;
+
    function Match (S : in out Scanner; Expected : Character) return Boolean is
    begin
       if Is_At_End (S) then
@@ -168,6 +176,15 @@ package body Lox_Scanner is
                when LF            =>
                   S.Line := Natural'Succ (S.Line);
                   Unused := Advance (S);
+
+               when '/'           =>
+                  if Peek_Next (S) = '/' then
+                     while Peek (S) /= LF and then not Is_At_End (S) loop
+                        Unused := Advance (S);
+                     end loop;
+                  else
+                     return;
+                  end if;
 
                when others        =>
                   return;
