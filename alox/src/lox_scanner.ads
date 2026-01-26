@@ -76,6 +76,7 @@ package Lox_Scanner is
    function Scan_Token (S : in out Scanner) return Token;
 
 private
+   function Is_Digit (C : Character) return Boolean;
    function Is_At_End (S : in out Scanner) return Boolean;
    function Advance (S : in out Scanner) return Character;
    function Peek (S : in out Scanner) return Character;
@@ -85,6 +86,7 @@ private
    function Make_Token (S : in out Scanner; Kind : TokenType) return Token;
    function Error_Token (S : in out Scanner; Message : String) return Token;
    procedure Skip_Whitespace (S : in out Scanner);
+   function Number_Literal (S : in out Scanner) return Token;
    function String_Literal (S : in out Scanner) return Token;
 
 end Lox_Scanner;

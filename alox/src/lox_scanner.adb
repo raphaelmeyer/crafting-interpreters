@@ -25,6 +25,10 @@ package body Lox_Scanner is
       declare
          C : constant Character := Advance (S);
       begin
+         if Is_Digit (C) then
+            return Number_Literal (S);
+         end if;
+
          case C is
             when '('    =>
                return Make_Token (S, TOKEN_LEFT_PAREN);
@@ -97,6 +101,17 @@ package body Lox_Scanner is
 
       return Error_Token (S, "Unexpected character.");
    end Scan_Token;
+
+   function Is_Digit (C : Character) return Boolean is
+   begin
+      case C is
+         when '0' .. '9' =>
+            return True;
+
+         when others     =>
+            return False;
+      end case;
+   end Is_Digit;
 
    function Is_At_End (S : in out Scanner) return Boolean is
    begin
@@ -196,6 +211,25 @@ package body Lox_Scanner is
          end;
       end loop;
    end Skip_Whitespace;
+
+   function Number_Literal (S : in out Scanner) return Token is
+      Unused : Character;
+   begin
+      while Is_Digit (Peek (S)) loop
+         Unused := Advance (S);
+      end loop;
+
+      if Peek (S) = '.' and then Is_Digit (Peek_Next (S)) then
+         --  consume the '.'
+         Unused := Advance (S);
+
+         while Is_Digit (Peek (S)) loop
+            Unused := Advance (S);
+         end loop;
+      end if;
+
+      return Make_Token (S, TOKEN_NUMBER);
+   end Number_Literal;
 
    function String_Literal (S : in out Scanner) return Token is
       Unused : Character;
