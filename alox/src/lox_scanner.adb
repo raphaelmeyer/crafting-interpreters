@@ -1,3 +1,5 @@
+with Ada.Characters.Latin_1;
+
 package body Lox_Scanner is
 
    function Init (Source : Source_Code) return Scanner is
@@ -12,6 +14,8 @@ package body Lox_Scanner is
 
    function Scan_Token (S : in out Scanner) return Token is
    begin
+      Skip_Whitespace (S);
+
       S.Start := S.Current;
 
       if Is_At_End (S) then
@@ -103,6 +107,14 @@ package body Lox_Scanner is
       return C;
    end Advance;
 
+   function Peek (S : in out Scanner) return Character is
+   begin
+      if S.Current > S.Source'Last then
+         return Ada.Characters.Latin_1.NUL;
+      end if;
+      return S.Source (S.Current);
+   end Peek;
+
    function Match (S : in out Scanner; Expected : Character) return Boolean is
    begin
       if Is_At_End (S) then
@@ -140,5 +152,29 @@ package body Lox_Scanner is
          Lexeme => Unbounded.To_Unbounded_String (Message),
          Line   => S.Line);
    end Error_Token;
+
+   procedure Skip_Whitespace (S : in out Scanner) is
+      Unused : Character;
+   begin
+      loop
+         declare
+            C : constant Character := Peek (S);
+            use Ada.Characters.Latin_1;
+         begin
+            case C is
+               when ' ' | CR | HT =>
+                  Unused := Advance (S);
+
+               when LF            =>
+                  S.Line := Natural'Succ (S.Line);
+                  Unused := Advance (S);
+
+               when others        =>
+                  return;
+            end case;
+
+         end;
+      end loop;
+   end Skip_Whitespace;
 
 end Lox_Scanner;
