@@ -1,17 +1,16 @@
 with Lox_Chunk;
 
 package Debug is
-   procedure DisassembleChunk (Chunk : Lox_Chunk.Chunk; Name : String);
+   procedure DisassembleChunk
+     (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String);
 
-   procedure DisassembleInstruction
-     (Chunk : Lox_Chunk.Chunk; Offset : Natural);
+   function DisassembleInstruction
+     (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural;
 
 private
-   function DisassembleInstruction
-     (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
-
    function ConstantInstruction
-     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
+     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
+      return Natural;
    function SimpleInstruction (Name : String; Offset : Natural) return Natural;
 
 end Debug;

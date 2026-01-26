@@ -4,19 +4,34 @@ with Lox_Compiler;
 with Ada.Text_IO;
 
 package body Lox_VM is
-   procedure Init (VM : in out VM_Context) is
+   procedure Init (VM : in out VM_Context; Trace_Execution : Boolean) is
    begin
+      VM.Trace_Execution := Trace_Execution;
       Reset_Stack (VM);
    end Init;
 
    function Interpret
-     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
-      return InterpretResult
+     (VM     : in out VM_Context;
+      Source : Lox_Scanner.Source_Code;
+      Chunk  : Lox_Chunk.Chunk_Access) return InterpretResult
    is
-      pragma Warnings (Off, VM);
+      Result : InterpretResult;
    begin
-      Lox_Compiler.Compile (Source);
-      return Interpret_OK;
+      Lox_Chunk.Init (Chunk.all);
+
+      if not Lox_Compiler.Compile (Source, Chunk) then
+         return Interpret_Compile_Error;
+      end if;
+
+      VM.Chunk := Lox_Chunk.Chunk_Read_Access (Chunk);
+      VM.IP := VM.Chunk.Code.First;
+
+      Result := Run (VM);
+
+      VM.Chunk := null;
+      VM.IP := Lox_Chunk.Byte_Vectors.No_Element;
+
+      return Result;
    end Interpret;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value) is
@@ -74,6 +89,7 @@ package body Lox_VM is
    function Run (VM : in out VM_Context) return InterpretResult is
       Instruction : Lox_Chunk.Byte;
       Value       : Lox_Value.Value;
+      Unused      : Natural;
       use type Lox_Value.Value;
    begin
       loop
@@ -87,8 +103,9 @@ package body Lox_VM is
                Ada.Text_IO.Put (" ]");
             end loop;
             Ada.Text_IO.New_Line;
-            Debug.DisassembleInstruction
-              (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
+            Unused :=
+              Debug.DisassembleInstruction
+                (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
          end if;
 
          Instruction := Read_Byte (VM);

@@ -1,5 +1,7 @@
 with Exceptions;
+with Lox_Chunk;
 with Lox_Scanner;
+with Lox_VM;
 
 with Ada.Command_Line;
 with Ada.IO_Exceptions;
@@ -8,20 +10,18 @@ with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
 package body Main is
+   Main_Chunk : aliased Lox_Chunk.Chunk;
 
    procedure Main is
       package Unbounded renames Ada.Strings.Unbounded;
 
       File_Name : Unbounded.Unbounded_String :=
         Unbounded.Null_Unbounded_String;
-      VM        : Lox_VM.VM_Context;
+      Is_Debug  : Boolean := False;
    begin
-      Lox_VM.Init (VM);
-
-      VM.Trace_Execution := False;
       for I in 1 .. Ada.Command_Line.Argument_Count loop
          if Ada.Command_Line.Argument (I) = "--debug" then
-            VM.Trace_Execution := True;
+            Is_Debug := True;
          elsif Unbounded.Length (File_Name) = 0 then
             File_Name :=
               Unbounded.To_Unbounded_String (Ada.Command_Line.Argument (I));
@@ -36,9 +36,9 @@ package body Main is
       end loop;
 
       if Unbounded.Length (File_Name) = 0 then
-         Repl (VM);
+         Repl (Is_Debug);
       else
-         Run_File (VM, Unbounded.To_String (File_Name));
+         Run_File (Unbounded.To_String (File_Name), Is_Debug);
       end if;
 
    end Main;
@@ -58,8 +58,11 @@ package body Main is
       end return;
    end Make;
 
-   procedure Repl (VM : in out Lox_VM.VM_Context) is
+   procedure Repl (Is_Debug : Boolean) is
+      VM : Lox_VM.VM_Context;
    begin
+      Lox_VM.Init (VM, Is_Debug);
+
       loop
          begin
             Ada.Text_IO.Put ("> ");
@@ -70,7 +73,9 @@ package body Main is
             begin
                Unused :=
                  Lox_VM.Interpret
-                   (VM, Lox_Scanner.Source_Code (Source.Content));
+                   (VM,
+                    Lox_Scanner.Source_Code (Source.Content),
+                    Main_Chunk'Access);
             end;
 
          exception
@@ -80,15 +85,19 @@ package body Main is
       end loop;
    end Repl;
 
-   procedure Run_File (VM : in out Lox_VM.VM_Context; Path : String) is
-      Result  : Lox_VM.InterpretResult;
-      Content : constant String := Read_File (Path);
-      Source  : constant Managed_Source := Make (Content);
+   procedure Run_File (Path : String; Is_Debug : Boolean) is
+      File_Content : constant String := Read_File (Path);
+      Source       : constant Managed_Source := Make (File_Content);
+      VM           : Lox_VM.VM_Context;
+      Result       : Lox_VM.InterpretResult;
 
       use type Lox_VM.InterpretResult;
    begin
+      Lox_VM.Init (VM, Is_Debug);
+
       Result :=
-        Lox_VM.Interpret (VM, Lox_Scanner.Source_Code (Source.Content));
+        Lox_VM.Interpret
+          (VM, Lox_Scanner.Source_Code (Source.Content), Main_Chunk'Access);
 
       if Result = Lox_VM.Interpret_Compile_Error then
          raise Exceptions.Compile_Error;

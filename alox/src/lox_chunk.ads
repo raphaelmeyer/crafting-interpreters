@@ -20,11 +20,16 @@ package Lox_Chunk is
    package Natural_Vectors is new
      Ada.Containers.Vectors (Index_Type => Natural, Element_Type => Natural);
 
-   type Chunk is record
+   type Chunk is limited record
       Code      : Byte_Vectors.Vector;
       Lines     : Natural_Vectors.Vector;
       Constants : Lox_Value.Value_Array;
    end record;
+
+   type Chunk_Access is access all Chunk;
+   type Chunk_Read_Access is access constant Chunk;
+
+   procedure Init (C : in out Chunk);
 
    procedure Write (C : in out Chunk; B : Byte; Line : Natural);
    procedure Write (C : in out Chunk; O : Op_Code; Line : Natural);

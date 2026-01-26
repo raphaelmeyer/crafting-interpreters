@@ -19,6 +19,7 @@
   ],
   "extensions": {
     "recommendations": [
+      "adacore.ada",
       "haskell.haskell",
       "llvm-vs-code-extensions.vscode-clangd",
       "streetsidesoftware.code-spell-checker",

@@ -7,8 +7,10 @@ with Lox_Value;
 
 package body Debug is
 
-   procedure DisassembleChunk (Chunk : Lox_Chunk.Chunk; Name : String) is
-      Offset : Natural := 0;
+   procedure DisassembleChunk
+     (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String)
+   is
+      Offset : Natural := Chunk.Code.First_Index;
    begin
       Ada.Text_IO.Put_Line ("== " & Name & " ==");
       while Offset < Natural (Chunk.Code.Length) loop
@@ -16,15 +18,8 @@ package body Debug is
       end loop;
    end DisassembleChunk;
 
-   procedure DisassembleInstruction (Chunk : Lox_Chunk.Chunk; Offset : Natural)
-   is
-      Unused : Natural;
-   begin
-      Unused := DisassembleInstruction (Chunk, Offset);
-   end DisassembleInstruction;
-
    function DisassembleInstruction
-     (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
+     (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural
    is
       Instruction : Lox_Chunk.Byte;
       Buffer      : String (1 .. 32);
@@ -75,7 +70,8 @@ package body Debug is
    end DisassembleInstruction;
 
    function ConstantInstruction
-     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
+     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
+      return Natural
    is
       Byte  : Lox_Chunk.Byte;
       Index : Natural;

@@ -1,5 +1,12 @@
 package body Lox_Chunk is
 
+   procedure Init (C : in out Chunk) is
+   begin
+      C.Code.Clear;
+      C.Lines.Clear;
+      C.Constants.Clear;
+   end Init;
+
    procedure Write (C : in out Chunk; B : Byte; Line : Natural) is
    begin
       C.Code.Append (B);

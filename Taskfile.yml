@@ -39,5 +39,7 @@ tasks:
 
   alox:run:
     dir: alox
+    deps:
+      - alox
     cmds:
-      - alr run --args="--debug"
+      - alr run --skip-build --args="--debug"

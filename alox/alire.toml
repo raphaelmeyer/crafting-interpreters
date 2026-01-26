@@ -5,3 +5,6 @@ version = "0.1.0-dev"
 authors = ["Raphael Meyer"]
 maintainers-logins = ["raphaelmeyer"]
 licenses = "MIT"
+
+[build-switches]
+"*".ada_version = "Ada2022"
