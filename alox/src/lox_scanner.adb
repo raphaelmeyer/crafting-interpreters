@@ -87,6 +87,9 @@ package body Lox_Scanner is
                      then TOKEN_GREATER_EQUAL
                      else TOKEN_GREATER));
 
+            when '"'    =>
+               return String_Literal (S);
+
             when others =>
                null;
          end case;
@@ -193,5 +196,24 @@ package body Lox_Scanner is
          end;
       end loop;
    end Skip_Whitespace;
+
+   function String_Literal (S : in out Scanner) return Token is
+      Unused : Character;
+      use Ada.Characters.Latin_1;
+   begin
+      while Peek (S) /= '"' and then not Is_At_End (S) loop
+         if Peek (S) = LF then
+            S.Line := Natural'Succ (S.Line);
+         end if;
+         Unused := Advance (S);
+      end loop;
+
+      if Is_At_End (S) then
+         return Error_Token (S, "Unterminated string.");
+      end if;
+
+      Unused := Advance (S);
+      return Make_Token (S, TOKEN_STRING);
+   end String_Literal;
 
 end Lox_Scanner;

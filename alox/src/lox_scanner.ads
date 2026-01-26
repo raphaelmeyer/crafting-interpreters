@@ -85,5 +85,6 @@ private
    function Make_Token (S : in out Scanner; Kind : TokenType) return Token;
    function Error_Token (S : in out Scanner; Message : String) return Token;
    procedure Skip_Whitespace (S : in out Scanner);
+   function String_Literal (S : in out Scanner) return Token;
 
 end Lox_Scanner;
