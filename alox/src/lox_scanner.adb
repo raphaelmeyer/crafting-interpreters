@@ -25,6 +25,10 @@ package body Lox_Scanner is
       declare
          C : constant Character := Advance (S);
       begin
+         if Is_Alpha (C) then
+            return Identifier (S);
+         end if;
+
          if Is_Digit (C) then
             return Number_Literal (S);
          end if;
@@ -101,6 +105,17 @@ package body Lox_Scanner is
 
       return Error_Token (S, "Unexpected character.");
    end Scan_Token;
+
+   function Is_Alpha (C : Character) return Boolean is
+   begin
+      case C is
+         when 'a' .. 'z' | 'A' .. 'Z' | '_' =>
+            return True;
+
+         when others                        =>
+            return False;
+      end case;
+   end Is_Alpha;
 
    function Is_Digit (C : Character) return Boolean is
    begin
@@ -211,6 +226,101 @@ package body Lox_Scanner is
          end;
       end loop;
    end Skip_Whitespace;
+
+   function Check_Keyword
+     (S : in out Scanner; Keyword : String; Kind : TokenType) return TokenType
+   is
+      To : constant Natural := Natural'Pred (S.Current);
+   begin
+      if S.Source (S.Start .. To) = Keyword then
+         return Kind;
+      end if;
+
+      return TOKEN_IDENTIFIER;
+   end Check_Keyword;
+
+   function Identifier_Type (S : in out Scanner) return TokenType is
+   begin
+      case S.Source (S.Start) is
+         when 'a'    =>
+            return Check_Keyword (S, "and", TOKEN_AND);
+
+         when 'c'    =>
+            return Check_Keyword (S, "class", TOKEN_CLASS);
+
+         when 'e'    =>
+            return Check_Keyword (S, "else", TOKEN_ELSE);
+
+         when 'f'    =>
+            if Positive'Succ (S.Start) < S.Current then
+               case S.Source (Positive'Succ (S.Start)) is
+                  when 'a'    =>
+                     return Check_Keyword (S, "false", TOKEN_FALSE);
+
+                  when 'o'    =>
+                     return Check_Keyword (S, "for", TOKEN_FOR);
+
+                  when 'u'    =>
+                     return Check_Keyword (S, "fun", TOKEN_FUN);
+
+                  when others =>
+                     null;
+               end case;
+            end if;
+
+         when 'i'    =>
+            return Check_Keyword (S, "if", TOKEN_IF);
+
+         when 'n'    =>
+            return Check_Keyword (S, "nil", TOKEN_NIL);
+
+         when 'o'    =>
+            return Check_Keyword (S, "or", TOKEN_OR);
+
+         when 'p'    =>
+            return Check_Keyword (S, "print", TOKEN_PRINT);
+
+         when 'r'    =>
+            return Check_Keyword (S, "return", TOKEN_RETURN);
+
+         when 's'    =>
+            return Check_Keyword (S, "super", TOKEN_SUPER);
+
+         when 't'    =>
+            if Positive'Succ (S.Start) < S.Current then
+               case S.Source (Positive'Succ (S.Start)) is
+                  when 'h'    =>
+                     return Check_Keyword (S, "this", TOKEN_THIS);
+
+                  when 'r'    =>
+                     return Check_Keyword (S, "true", TOKEN_TRUE);
+
+                  when others =>
+                     null;
+               end case;
+            end if;
+
+         when 'v'    =>
+            return Check_Keyword (S, "var", TOKEN_VAR);
+
+         when 'w'    =>
+            return Check_Keyword (S, "while", TOKEN_WHILE);
+
+         when others =>
+            null;
+      end case;
+
+      return TOKEN_IDENTIFIER;
+   end Identifier_Type;
+
+   function Identifier (S : in out Scanner) return Token is
+      Unused : Character;
+   begin
+      while Is_Alpha (Peek (S)) or else Is_Digit (Peek (S)) loop
+         Unused := Advance (S);
+      end loop;
+      return Make_Token (S, Identifier_Type (S));
+   end Identifier;
 
    function Number_Literal (S : in out Scanner) return Token is
       Unused : Character;
