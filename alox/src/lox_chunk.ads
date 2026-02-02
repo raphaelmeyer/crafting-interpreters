@@ -5,13 +5,13 @@ with Ada.Containers.Vectors;
 package Lox_Chunk is
    type Byte is mod 2 ** 8 with Size => 8;
    type Op_Code is
-     (Op_Constant,
-      Op_Add,
-      Op_Subtract,
-      Op_Multiply,
-      Op_Divide,
-      Op_Negate,
-      Op_Return)
+     (OP_CONSTANT,
+      OP_ADD,
+      OP_SUBTRACT,
+      OP_MULTIPLY,
+      OP_DIVIDE,
+      OP_NEGATE,
+      OP_RETURN)
    with Size => 8;
 
    package Byte_Vectors is new

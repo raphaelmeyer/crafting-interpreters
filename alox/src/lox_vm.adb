@@ -109,26 +109,26 @@ package body Lox_VM is
 
          Instruction := Read_Byte (VM);
          case Instruction is
-            when Lox_Chunk.Op_Constant'Enum_Rep =>
+            when Lox_Chunk.OP_CONSTANT'Enum_Rep =>
                Value := Read_Constant (VM);
                Push (VM, Value);
 
-            when Lox_Chunk.Op_Add'Enum_Rep      =>
+            when Lox_Chunk.OP_ADD'Enum_Rep      =>
                Binary_Op_Add (VM);
 
-            when Lox_Chunk.Op_Subtract'Enum_Rep =>
+            when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>
                Binary_Op_Subtract (VM);
 
-            when Lox_Chunk.Op_Multiply'Enum_Rep =>
+            when Lox_Chunk.OP_MULTIPLY'Enum_Rep =>
                Binary_Op_Multiply (VM);
 
-            when Lox_Chunk.Op_Divide'Enum_Rep   =>
+            when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
                Binary_Op_Divide (VM);
 
-            when Lox_Chunk.Op_Negate'Enum_Rep   =>
+            when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
                Push (VM, -Pop (VM));
 
-            when Lox_Chunk.Op_Return'Enum_Rep   =>
+            when Lox_Chunk.OP_RETURN'Enum_Rep   =>
                Lox_Value.Print (Pop (VM));
                Ada.Text_IO.New_Line;
                return Interpret_OK;

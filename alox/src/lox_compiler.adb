@@ -163,7 +163,7 @@ package body Lox_Compiler is
 
    procedure Emit_Return (C : in out Compiler_Context) is
    begin
-      Emit_Byte (C, Lox_Chunk.Op_Return);
+      Emit_Byte (C, Lox_Chunk.OP_RETURN);
    end Emit_Return;
 
    function Make_Constant
@@ -186,7 +186,7 @@ package body Lox_Compiler is
    is
       Id : constant Lox_Chunk.Byte := Make_Constant (C, Value);
    begin
-      Emit_Bytes (C, Lox_Chunk.Op_Constant, Id);
+      Emit_Bytes (C, Lox_Chunk.OP_CONSTANT, Id);
    end Emit_Constant;
 
    procedure End_Compiler (C : in out Compiler_Context) is
@@ -209,16 +209,16 @@ package body Lox_Compiler is
 
       case Operator_Type is
          when Lox_Scanner.TOKEN_PLUS  =>
-            Emit_Byte (C, Lox_Chunk.Op_Add);
+            Emit_Byte (C, Lox_Chunk.OP_ADD);
 
          when Lox_Scanner.TOKEN_MINUS =>
-            Emit_Byte (C, Lox_Chunk.Op_Subtract);
+            Emit_Byte (C, Lox_Chunk.OP_SUBTRACT);
 
          when Lox_Scanner.TOKEN_STAR  =>
-            Emit_Byte (C, Lox_Chunk.Op_Multiply);
+            Emit_Byte (C, Lox_Chunk.OP_MULTIPLY);
 
          when Lox_Scanner.TOKEN_SLASH =>
-            Emit_Byte (C, Lox_Chunk.Op_Divide);
+            Emit_Byte (C, Lox_Chunk.OP_DIVIDE);
 
          when others                  =>
             return;
@@ -247,7 +247,7 @@ package body Lox_Compiler is
 
       case Kind is
          when Lox_Scanner.TOKEN_MINUS =>
-            Emit_Byte (C, Lox_Chunk.Op_Negate);
+            Emit_Byte (C, Lox_Chunk.OP_NEGATE);
 
          when others                  =>
             return;

@@ -40,25 +40,25 @@ package body Debug is
 
       Instruction := Chunk.Code (Offset);
       case Instruction is
-         when Lox_Chunk.Op_Constant'Enum_Rep =>
+         when Lox_Chunk.OP_CONSTANT'Enum_Rep =>
             return ConstantInstruction ("OP_CONSTANT", Chunk, Offset);
 
-         when Lox_Chunk.Op_Add'Enum_Rep      =>
+         when Lox_Chunk.OP_ADD'Enum_Rep      =>
             return SimpleInstruction ("OP_ADD", Offset);
 
-         when Lox_Chunk.Op_Subtract'Enum_Rep =>
+         when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>
             return SimpleInstruction ("OP_SUBTRACT", Offset);
 
-         when Lox_Chunk.Op_Multiply'Enum_Rep =>
+         when Lox_Chunk.OP_MULTIPLY'Enum_Rep =>
             return SimpleInstruction ("OP_MULTIPLY", Offset);
 
-         when Lox_Chunk.Op_Divide'Enum_Rep   =>
+         when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
             return SimpleInstruction ("OP_DIVIDE", Offset);
 
-         when Lox_Chunk.Op_Negate'Enum_Rep   =>
+         when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
             return SimpleInstruction ("OP_NEGATE", Offset);
 
-         when Lox_Chunk.Op_Return'Enum_Rep   =>
+         when Lox_Chunk.OP_RETURN'Enum_Rep   =>
             return SimpleInstruction ("OP_RETURN", Offset);
 
          when others                         =>
