@@ -10,6 +10,19 @@ package Lox_Compiler is
 private
    use type Lox_Scanner.TokenType;
 
+   type Precedence_Type is
+     (PREC_NONE,
+      PREC_ASSIGNMENT,  -- =
+      PREC_OR,          -- or
+      PREC_AND,         -- and
+      PREC_EQUALITY,    -- == !=
+      PREC_COMPARISON,  -- < > <= >=
+      PREC_TERM,        -- + -
+      PREC_FACTOR,      -- * /
+      PREC_UNARY,       -- ! -
+      PREC_CALL,        -- . ()
+      PREC_PRIMARY);
+
    type Parser_Context is limited record
       Current    : Lox_Scanner.Token;
       Previous   : Lox_Scanner.Token;
@@ -21,6 +34,14 @@ private
       Scanner         : Lox_Scanner.Scanner;
       Parser          : Parser_Context;
       Compiling_Chunk : Lox_Chunk.Chunk_Access;
+   end record;
+
+   type Parse_Fn is access procedure (C : in out Compiler_Context);
+
+   type Parse_Rule is record
+      Prefix     : Parse_Fn;
+      Infix      : Parse_Fn;
+      Precedence : Precedence_Type;
    end record;
 
    function Current_Chunk
@@ -54,9 +75,14 @@ private
 
    procedure End_Compiler (C : in out Compiler_Context);
 
+   procedure Binary (C : in out Compiler_Context);
    procedure Grouping (C : in out Compiler_Context);
    procedure Number (C : in out Compiler_Context);
    procedure Unary (C : in out Compiler_Context);
    procedure Expression (C : in out Compiler_Context);
+
+   procedure Parse_Precedence
+     (C : in out Compiler_Context; Precedence : Precedence_Type);
+   function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
 end Lox_Compiler;

@@ -5,6 +5,50 @@ package body Lox_Compiler is
 
    package Unbounded renames Ada.Strings.Unbounded;
 
+   type Rules_Type is array (Lox_Scanner.TokenType) of Parse_Rule;
+   Rules : constant Rules_Type :=
+     [Lox_Scanner.TOKEN_LEFT_PAREN    => (Grouping'Access, null, PREC_NONE),
+      Lox_Scanner.TOKEN_RIGHT_PAREN   => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_LEFT_BRACE    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_RIGHT_BRACE   => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_COMMA         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_DOT           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_MINUS         =>
+        (Unary'Access, Binary'Access, PREC_TERM),
+      Lox_Scanner.TOKEN_PLUS          => (null, Binary'Access, PREC_TERM),
+      Lox_Scanner.TOKEN_SEMICOLON     => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_SLASH         => (null, Binary'Access, PREC_FACTOR),
+      Lox_Scanner.TOKEN_STAR          => (null, Binary'Access, PREC_FACTOR),
+      Lox_Scanner.TOKEN_BANG          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_BANG_EQUAL    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_EQUAL         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_EQUAL_EQUAL   => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_GREATER       => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_GREATER_EQUAL => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_LESS          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_LESS_EQUAL    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_IDENTIFIER    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_STRING        => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_NUMBER        => (Number'Access, null, PREC_NONE),
+      Lox_Scanner.TOKEN_AND           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_CLASS         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_ELSE          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_FALSE         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_FOR           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_FUN           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_IF            => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_NIL           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_OR            => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_PRINT         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_RETURN        => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_SUPER         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_THIS          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_TRUE          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_VAR           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_WHILE         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_ERROR         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_EOF           => (null, null, PREC_NONE)];
+
    function Compile
      (Source : Lox_Scanner.Source_Code; Chunk : Lox_Chunk.Chunk_Access)
       return Boolean
@@ -148,6 +192,30 @@ package body Lox_Compiler is
       Emit_Return (C);
    end End_Compiler;
 
+   procedure Binary (C : in out Compiler_Context) is
+      Operator_Type : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;
+      Rule          : constant Parse_Rule := Get_Rule (Operator_Type);
+   begin
+      Parse_Precedence (C, Precedence_Type'Succ (Rule.Precedence));
+
+      case Operator_Type is
+         when Lox_Scanner.TOKEN_PLUS  =>
+            Emit_Byte (C, Lox_Chunk.Op_Add);
+
+         when Lox_Scanner.TOKEN_MINUS =>
+            Emit_Byte (C, Lox_Chunk.Op_Subtract);
+
+         when Lox_Scanner.TOKEN_STAR  =>
+            Emit_Byte (C, Lox_Chunk.Op_Multiply);
+
+         when Lox_Scanner.TOKEN_SLASH =>
+            Emit_Byte (C, Lox_Chunk.Op_Divide);
+
+         when others                  =>
+            return;
+      end case;
+   end Binary;
+
    procedure Grouping (C : in out Compiler_Context) is
    begin
       Expression (C);
@@ -164,9 +232,9 @@ package body Lox_Compiler is
    end Number;
 
    procedure Unary (C : in out Compiler_Context) is
-      Kind : Lox_Scanner.TokenType := C.Parser.Previous.Kind;
+      Kind : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;
    begin
-      Expression (C);
+      Parse_Precedence (C, PREC_UNARY);
 
       case Kind is
          when Lox_Scanner.TOKEN_MINUS =>
@@ -181,7 +249,38 @@ package body Lox_Compiler is
 
    procedure Expression (C : in out Compiler_Context) is
    begin
-      null;
+      Parse_Precedence (C, PREC_ASSIGNMENT);
    end Expression;
+
+   procedure Parse_Precedence
+     (C : in out Compiler_Context; Precedence : Precedence_Type)
+   is
+      Prefix_Rule : Parse_Fn := null;
+   begin
+      Advance (C);
+      Prefix_Rule := Get_Rule (C.Parser.Previous.Kind).Prefix;
+      if Prefix_Rule = null then
+         Error (C, "Expect expression.");
+         return;
+      end if;
+
+      Prefix_Rule (C);
+
+      while Precedence < Get_Rule (C.Parser.Current.Kind).Precedence loop
+         Advance (C);
+         declare
+            Infix_Rule : constant Parse_Fn :=
+              Get_Rule (C.Parser.Previous.Kind).Infix;
+         begin
+            Infix_Rule (C);
+         end;
+      end loop;
+
+   end Parse_Precedence;
+
+   function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule is
+   begin
+      return Rules (Kind);
+   end Get_Rule;
 
 end Lox_Compiler;
