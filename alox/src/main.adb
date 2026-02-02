@@ -1,3 +1,4 @@
+with Debug;
 with Exceptions;
 with Lox_Chunk;
 with Lox_Scanner;
@@ -17,11 +18,11 @@ package body Main is
 
       File_Name : Unbounded.Unbounded_String :=
         Unbounded.Null_Unbounded_String;
-      Is_Debug  : Boolean := False;
    begin
       for I in 1 .. Ada.Command_Line.Argument_Count loop
          if Ada.Command_Line.Argument (I) = "--debug" then
-            Is_Debug := True;
+            Debug.Enable_Print_Code;
+            Debug.Enable_Trace_Execution;
          elsif Unbounded.Length (File_Name) = 0 then
             File_Name :=
               Unbounded.To_Unbounded_String (Ada.Command_Line.Argument (I));
@@ -36,9 +37,9 @@ package body Main is
       end loop;
 
       if Unbounded.Length (File_Name) = 0 then
-         Repl (Is_Debug);
+         Repl;
       else
-         Run_File (Unbounded.To_String (File_Name), Is_Debug);
+         Run_File (Unbounded.To_String (File_Name));
       end if;
 
    end Main;
@@ -58,10 +59,10 @@ package body Main is
       end return;
    end Make;
 
-   procedure Repl (Is_Debug : Boolean) is
+   procedure Repl is
       VM : Lox_VM.VM_Context;
    begin
-      Lox_VM.Init (VM, Is_Debug);
+      Lox_VM.Init (VM);
 
       loop
          begin
@@ -85,7 +86,7 @@ package body Main is
       end loop;
    end Repl;
 
-   procedure Run_File (Path : String; Is_Debug : Boolean) is
+   procedure Run_File (Path : String) is
       File_Content : constant String := Read_File (Path);
       Source       : constant Managed_Source := Make (File_Content);
       VM           : Lox_VM.VM_Context;
@@ -93,7 +94,7 @@ package body Main is
 
       use type Lox_VM.InterpretResult;
    begin
-      Lox_VM.Init (VM, Is_Debug);
+      Lox_VM.Init (VM);
 
       Result :=
         Lox_VM.Interpret

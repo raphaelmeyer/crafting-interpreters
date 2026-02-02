@@ -4,9 +4,8 @@ with Lox_Compiler;
 with Ada.Text_IO;
 
 package body Lox_VM is
-   procedure Init (VM : in out VM_Context; Trace_Execution : Boolean) is
+   procedure Init (VM : in out VM_Context) is
    begin
-      VM.Trace_Execution := Trace_Execution;
       Reset_Stack (VM);
    end Init;
 
@@ -93,7 +92,7 @@ package body Lox_VM is
       use type Lox_Value.Value;
    begin
       loop
-         if VM.Trace_Execution then
+         if Debug.Trace_Execution_Enabled then
             Ada.Text_IO.Put ("          ");
             for V of
               VM.Stack (Stack_Index'First .. Stack_Index'Pred (VM.Stack_Top))

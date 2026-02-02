@@ -16,8 +16,8 @@ private
    function Make (Content : String) return Managed_Source;
    procedure Free is new Ada.Unchecked_Deallocation (String, String_Access);
 
-   procedure Repl (Is_Debug : Boolean);
-   procedure Run_File (Path : String; Is_Debug : Boolean);
+   procedure Repl;
+   procedure Run_File (Path : String);
 
    function Read_File (Path : String) return String;
 

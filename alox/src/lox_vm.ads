@@ -11,7 +11,7 @@ package Lox_VM is
    type Stack_Index is range 0 .. 255;
    type Stack_Array is array (Stack_Index) of Lox_Value.Value;
 
-   procedure Init (VM : in out VM_Context; Trace_Execution : Boolean);
+   procedure Init (VM : in out VM_Context);
 
    function Interpret
      (VM     : in out VM_Context;
@@ -24,11 +24,10 @@ package Lox_VM is
 private
 
    type VM_Context is limited record
-      Trace_Execution : Boolean;
-      Chunk           : Lox_Chunk.Chunk_Read_Access;
-      IP              : Lox_Chunk.Byte_Vectors.Cursor;
-      Stack           : Stack_Array;
-      Stack_Top       : Stack_Index;
+      Chunk     : Lox_Chunk.Chunk_Read_Access;
+      IP        : Lox_Chunk.Byte_Vectors.Cursor;
+      Stack     : Stack_Array;
+      Stack_Top : Stack_Index;
    end record;
 
    procedure Reset_Stack (VM : in out VM_Context);

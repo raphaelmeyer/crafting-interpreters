@@ -69,6 +69,26 @@ package body Debug is
       end case;
    end DisassembleInstruction;
 
+   procedure Enable_Trace_Execution is
+   begin
+      Trace_Execution := True;
+   end Enable_Trace_Execution;
+
+   procedure Enable_Print_Code is
+   begin
+      Print_Code := True;
+   end Enable_Print_Code;
+
+   function Trace_Execution_Enabled return Boolean is
+   begin
+      return Trace_Execution;
+   end Trace_Execution_Enabled;
+
+   function Print_Code_Enabled return Boolean is
+   begin
+      return Print_Code;
+   end Print_Code_Enabled;
+
    function ConstantInstruction
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural

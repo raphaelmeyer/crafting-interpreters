@@ -1,3 +1,5 @@
+with Debug;
+
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
@@ -190,6 +192,13 @@ package body Lox_Compiler is
    procedure End_Compiler (C : in out Compiler_Context) is
    begin
       Emit_Return (C);
+
+      if Debug.Print_Code_Enabled then
+         if not C.Parser.Had_Error then
+            Debug.DisassembleChunk
+              (Lox_Chunk.Chunk_Read_Access (Current_Chunk (C)), "code");
+         end if;
+      end if;
    end End_Compiler;
 
    procedure Binary (C : in out Compiler_Context) is
