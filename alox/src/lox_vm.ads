@@ -20,6 +20,8 @@ package Lox_VM is
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
    function Pop (VM : in out VM_Context) return Lox_Value.Value;
+   function Peek
+     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value;
 
 private
 
@@ -31,6 +33,7 @@ private
    end record;
 
    procedure Reset_Stack (VM : in out VM_Context);
+   procedure Runtime_Error (VM : in out VM_Context; Message : String);
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte;
    function Read_Constant (VM : in out VM_Context) return Lox_Value.Value;

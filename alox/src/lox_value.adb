@@ -5,6 +5,16 @@ with Ada.Text_IO;
 
 package body Lox_Value is
 
+   function Make_Number (Number : Float) return Value is
+   begin
+      return (VAL_NUMBER, Number_Value => Number);
+   end Make_Number;
+
+   function Is_Number (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_NUMBER;
+   end Is_Number;
+
    procedure Write (VA : in out Value_Array; V : Value) is
    begin
       VA.Append (V);
@@ -12,7 +22,13 @@ package body Lox_Value is
 
    procedure Print (V : Value) is
    begin
-      Ada.Text_IO.Put (To_String (Float (V)));
+      case V.Kind is
+         when VAL_NUMBER =>
+            Ada.Text_IO.Put (To_String (V.Number_Value));
+
+         when others     =>
+            Ada.Text_IO.Put ("nil");
+      end case;
    end Print;
 
    function To_String (V : Float) return String is

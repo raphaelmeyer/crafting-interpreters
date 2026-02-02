@@ -247,7 +247,7 @@ package body Lox_Compiler is
         Unbounded.To_String (C.Parser.Previous.Lexeme);
       Value  : constant Float := Float'Value (Lexeme);
    begin
-      Emit_Constant (C, Lox_Value.Value (Value));
+      Emit_Constant (C, Lox_Value.Make_Number (Value));
    end Number;
 
    procedure Unary (C : in out Compiler_Context) is

@@ -1,6 +1,8 @@
 with Debug;
 with Lox_Compiler;
 
+with Ada.Integer_Text_IO;
+with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
 package body Lox_VM is
@@ -45,10 +47,38 @@ package body Lox_VM is
       return VM.Stack (VM.Stack_Top);
    end Pop;
 
+   function Peek
+     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value
+   is
+      Peek_Index : constant Integer := Integer (VM.Stack_Top) - Distance - 1;
+   begin
+      if Peek_Index < 0 then
+         return (Kind => Lox_Value.VAL_NIL);
+      end if;
+      return VM.Stack (Stack_Index (Peek_Index));
+   end Peek;
+
    procedure Reset_Stack (VM : in out VM_Context) is
    begin
       VM.Stack_Top := 0;
    end Reset_Stack;
+
+   procedure Runtime_Error (VM : in out VM_Context; Message : String) is
+      Index  : constant Natural := Lox_Chunk.Byte_Vectors.To_Index (VM.IP);
+      Line   : constant Natural := VM.Chunk.Lines (Index);
+      Buffer : String (1 .. 8);
+   begin
+      Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, Message);
+
+      Ada.Integer_Text_IO.Put (To => Buffer, Item => Line);
+      Ada.Text_IO.Put_Line
+        (Ada.Text_IO.Standard_Error,
+         "[line "
+         & Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both)
+         & "] in script");
+
+      Reset_Stack (VM);
+   end Runtime_Error;
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte is
       Result : Lox_Chunk.Byte;
@@ -66,30 +96,38 @@ package body Lox_VM is
    end Read_Constant;
 
    generic
-      with
-        function Op
-          (A : Lox_Value.Value; B : Lox_Value.Value) return Lox_Value.Value;
-   procedure Binary_Op (VM : in out VM_Context);
+      with function Op (A : Float; B : Float) return Float;
+   function Binary_Op (VM : in out VM_Context) return Interpret_Result;
 
-   procedure Binary_Op (VM : in out VM_Context) is
-      A : Lox_Value.Value;
-      B : Lox_Value.Value;
+   function Binary_Op (VM : in out VM_Context) return Interpret_Result is
    begin
-      B := Pop (VM);
-      A := Pop (VM);
-      Push (VM, Op (A, B));
+      if not Lox_Value.Is_Number (Peek (VM, 0))
+        or else not Lox_Value.Is_Number (Peek (VM, 1))
+      then
+         Runtime_Error (VM, "Operands must be numbers.");
+         return INTERPRET_RUNTIME_ERROR;
+      end if;
+
+      declare
+         B      : constant Float := Pop (VM).Number_Value;
+         A      : constant Float := Pop (VM).Number_Value;
+         Result : constant Float := Op (A, B);
+      begin
+         Push (VM, Lox_Value.Make_Number (Result));
+         return INTERPRET_OK;
+      end;
    end Binary_Op;
 
-   procedure Binary_Op_Add is new Binary_Op (Lox_Value."+");
-   procedure Binary_Op_Subtract is new Binary_Op (Lox_Value."-");
-   procedure Binary_Op_Multiply is new Binary_Op (Lox_Value."*");
-   procedure Binary_Op_Divide is new Binary_Op (Lox_Value."/");
+   function Binary_Op_Add is new Binary_Op ("+");
+   function Binary_Op_Subtract is new Binary_Op ("-");
+   function Binary_Op_Multiply is new Binary_Op ("*");
+   function Binary_Op_Divide is new Binary_Op ("/");
 
    function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
       Value       : Lox_Value.Value;
       Unused      : Natural;
-      use type Lox_Value.Value;
+      Result      : Interpret_Result;
    begin
       loop
          if Debug.Trace_Execution_Enabled then
@@ -114,19 +152,40 @@ package body Lox_VM is
                Push (VM, Value);
 
             when Lox_Chunk.OP_ADD'Enum_Rep      =>
-               Binary_Op_Add (VM);
+               Result := Binary_Op_Add (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
 
             when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>
-               Binary_Op_Subtract (VM);
+               Result := Binary_Op_Subtract (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
 
             when Lox_Chunk.OP_MULTIPLY'Enum_Rep =>
-               Binary_Op_Multiply (VM);
+               Result := Binary_Op_Multiply (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
 
             when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
-               Binary_Op_Divide (VM);
+               Result := Binary_Op_Divide (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
 
             when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
-               Push (VM, -Pop (VM));
+               if not Lox_Value.Is_Number (Peek (VM, 0)) then
+                  Runtime_Error (VM, "Operand must be a number.");
+                  return INTERPRET_RUNTIME_ERROR;
+               end if;
+
+               declare
+                  Value : constant Float := Pop (VM).Number_Value;
+               begin
+                  Push (VM, Lox_Value.Make_Number (-Value));
+               end;
 
             when Lox_Chunk.OP_RETURN'Enum_Rep   =>
                Lox_Value.Print (Pop (VM));
