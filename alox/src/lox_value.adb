@@ -4,6 +4,25 @@ with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
 package body Lox_Value is
+   function Make_Nil return Value is
+   begin
+      return (Kind => VAL_NIL);
+   end Make_Nil;
+
+   function Is_Nil (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_NIL;
+   end Is_Nil;
+
+   function Make_Bool (Bool : Boolean) return Value is
+   begin
+      return (VAL_BOOL, Bool_Value => Bool);
+   end Make_Bool;
+
+   function Is_Bool (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_BOOL;
+   end Is_Bool;
 
    function Make_Number (Number : Float) return Value is
    begin
@@ -23,6 +42,9 @@ package body Lox_Value is
    procedure Print (V : Value) is
    begin
       case V.Kind is
+         when VAL_BOOL   =>
+            Ada.Text_IO.Put ((if V.Bool_Value then "true" else "false"));
+
          when VAL_NUMBER =>
             Ada.Text_IO.Put (To_String (V.Number_Value));
 

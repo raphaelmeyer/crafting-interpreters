@@ -21,6 +21,12 @@ package Lox_Value is
 
    subtype Value_Array is Value_Vectors.Vector;
 
+   function Make_Nil return Value;
+   function Is_Nil (V : Value) return Boolean;
+
+   function Make_Bool (Bool : Boolean) return Value;
+   function Is_Bool (V : Value) return Boolean;
+
    function Make_Number (Number : Float) return Value;
    function Is_Number (V : Value) return Boolean;
 

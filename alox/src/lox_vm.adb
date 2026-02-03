@@ -151,6 +151,15 @@ package body Lox_VM is
                Value := Read_Constant (VM);
                Push (VM, Value);
 
+            when Lox_Chunk.OP_NIL'Enum_Rep      =>
+               Push (VM, Lox_Value.Make_Nil);
+
+            when Lox_Chunk.OP_TRUE'Enum_Rep     =>
+               Push (VM, Lox_Value.Make_Bool (True));
+
+            when Lox_Chunk.OP_FALSE'Enum_Rep    =>
+               Push (VM, Lox_Value.Make_Bool (False));
+
             when Lox_Chunk.OP_ADD'Enum_Rep      =>
                Result := Binary_Op_Add (VM);
                if Result /= INTERPRET_OK then

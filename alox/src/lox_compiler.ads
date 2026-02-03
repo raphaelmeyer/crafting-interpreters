@@ -76,6 +76,7 @@ private
    procedure End_Compiler (C : in out Compiler_Context);
 
    procedure Binary (C : in out Compiler_Context);
+   procedure Literal (C : in out Compiler_Context);
    procedure Grouping (C : in out Compiler_Context);
    procedure Number (C : in out Compiler_Context);
    procedure Unary (C : in out Compiler_Context);

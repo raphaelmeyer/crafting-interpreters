@@ -6,6 +6,9 @@ package Lox_Chunk is
    type Byte is mod 2 ** 8 with Size => 8;
    type Op_Code is
      (OP_CONSTANT,
+      OP_NIL,
+      OP_TRUE,
+      OP_FALSE,
       OP_ADD,
       OP_SUBTRACT,
       OP_MULTIPLY,

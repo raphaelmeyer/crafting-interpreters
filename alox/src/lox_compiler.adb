@@ -37,17 +37,17 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_AND           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_CLASS         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_ELSE          => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_FALSE         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_FALSE         => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_FOR           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_FUN           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_IF            => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_NIL           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_NIL           => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_OR            => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_PRINT         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RETURN        => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_SUPER         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_THIS          => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_TRUE          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_TRUE          => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_VAR           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_WHILE         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_ERROR         => (null, null, PREC_NONE),
@@ -234,6 +234,23 @@ package body Lox_Compiler is
             return;
       end case;
    end Binary;
+
+   procedure Literal (C : in out Compiler_Context) is
+   begin
+      case C.Parser.Previous.Kind is
+         when Lox_Scanner.TOKEN_FALSE =>
+            Emit_Byte (C, Lox_Chunk.OP_FALSE);
+
+         when Lox_Scanner.TOKEN_NIL   =>
+            Emit_Byte (C, Lox_Chunk.OP_NIL);
+
+         when Lox_Scanner.TOKEN_TRUE  =>
+            Emit_Byte (C, Lox_Chunk.OP_TRUE);
+
+         when others                  =>
+            return;
+      end case;
+   end Literal;
 
    procedure Grouping (C : in out Compiler_Context) is
    begin
