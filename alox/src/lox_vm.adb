@@ -147,7 +147,7 @@ package body Lox_VM is
             end loop;
             Ada.Text_IO.New_Line;
             Unused :=
-              Debug.DisassembleInstruction
+              Debug.Disassemble_Instruction
                 (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
          end if;
 

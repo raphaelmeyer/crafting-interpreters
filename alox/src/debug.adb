@@ -7,18 +7,18 @@ with Lox_Value;
 
 package body Debug is
 
-   procedure DisassembleChunk
+   procedure Disassemble_Chunk
      (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String)
    is
       Offset : Natural := Chunk.Code.First_Index;
    begin
       Ada.Text_IO.Put_Line ("== " & Name & " ==");
       while Offset < Natural (Chunk.Code.Length) loop
-         Offset := DisassembleInstruction (Chunk, Offset);
+         Offset := Disassemble_Instruction (Chunk, Offset);
       end loop;
-   end DisassembleChunk;
+   end Disassemble_Chunk;
 
-   function DisassembleInstruction
+   function Disassemble_Instruction
      (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural
    is
       Instruction : Lox_Chunk.Byte;
@@ -41,37 +41,37 @@ package body Debug is
       Instruction := Chunk.Code (Offset);
       case Instruction is
          when Lox_Chunk.OP_CONSTANT'Enum_Rep =>
-            return ConstantInstruction ("OP_CONSTANT", Chunk, Offset);
+            return Constant_Instruction ("OP_CONSTANT", Chunk, Offset);
 
          when Lox_Chunk.OP_NIL'Enum_Rep      =>
-            return SimpleInstruction ("OP_NIL", Offset);
+            return Simple_Instruction ("OP_NIL", Offset);
 
          when Lox_Chunk.OP_TRUE'Enum_Rep     =>
-            return SimpleInstruction ("OP_TRUE", Offset);
+            return Simple_Instruction ("OP_TRUE", Offset);
 
          when Lox_Chunk.OP_FALSE'Enum_Rep    =>
-            return SimpleInstruction ("OP_FALSE", Offset);
+            return Simple_Instruction ("OP_FALSE", Offset);
 
          when Lox_Chunk.OP_ADD'Enum_Rep      =>
-            return SimpleInstruction ("OP_ADD", Offset);
+            return Simple_Instruction ("OP_ADD", Offset);
 
          when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>
-            return SimpleInstruction ("OP_SUBTRACT", Offset);
+            return Simple_Instruction ("OP_SUBTRACT", Offset);
 
          when Lox_Chunk.OP_MULTIPLY'Enum_Rep =>
-            return SimpleInstruction ("OP_MULTIPLY", Offset);
+            return Simple_Instruction ("OP_MULTIPLY", Offset);
 
          when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
-            return SimpleInstruction ("OP_DIVIDE", Offset);
+            return Simple_Instruction ("OP_DIVIDE", Offset);
 
          when Lox_Chunk.OP_NOT'Enum_Rep      =>
-            return SimpleInstruction ("OP_NOT", Offset);
+            return Simple_Instruction ("OP_NOT", Offset);
 
          when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
-            return SimpleInstruction ("OP_NEGATE", Offset);
+            return Simple_Instruction ("OP_NEGATE", Offset);
 
          when Lox_Chunk.OP_RETURN'Enum_Rep   =>
-            return SimpleInstruction ("OP_RETURN", Offset);
+            return Simple_Instruction ("OP_RETURN", Offset);
 
          when others                         =>
             Ada.Text_IO.Put ("Unknown opcode ");
@@ -79,7 +79,7 @@ package body Debug is
             Ada.Text_IO.New_Line;
             return Offset + 1;
       end case;
-   end DisassembleInstruction;
+   end Disassemble_Instruction;
 
    procedure Enable_Trace_Execution is
    begin
@@ -101,7 +101,7 @@ package body Debug is
       return Print_Code;
    end Print_Code_Enabled;
 
-   function ConstantInstruction
+   function Constant_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural
    is
@@ -116,13 +116,13 @@ package body Debug is
       Lox_Value.Print (Chunk.Constants (Index));
       Ada.Text_IO.Put_Line ("'");
       return Offset + 2;
-   end ConstantInstruction;
+   end Constant_Instruction;
 
-   function SimpleInstruction (Name : String; Offset : Natural) return Natural
+   function Simple_Instruction (Name : String; Offset : Natural) return Natural
    is
    begin
       Ada.Text_IO.Put_Line (Name);
       return Offset + 1;
-   end SimpleInstruction;
+   end Simple_Instruction;
 
 end Debug;

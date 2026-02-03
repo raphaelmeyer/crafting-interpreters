@@ -1,10 +1,10 @@
 with Lox_Chunk;
 
 package Debug is
-   procedure DisassembleChunk
+   procedure Disassemble_Chunk
      (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String);
 
-   function DisassembleInstruction
+   function Disassemble_Instruction
      (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural;
 
    procedure Enable_Trace_Execution;
@@ -17,9 +17,10 @@ private
    Print_Code      : Boolean := False;
    Trace_Execution : Boolean := False;
 
-   function ConstantInstruction
+   function Constant_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural;
-   function SimpleInstruction (Name : String; Offset : Natural) return Natural;
+   function Simple_Instruction
+     (Name : String; Offset : Natural) return Natural;
 
 end Debug;

@@ -205,7 +205,7 @@ package body Lox_Compiler is
 
       if Debug.Print_Code_Enabled then
          if not C.Parser.Had_Error then
-            Debug.DisassembleChunk
+            Debug.Disassemble_Chunk
               (Lox_Chunk.Chunk_Read_Access (Current_Chunk (C)), "code");
          end if;
       end if;
