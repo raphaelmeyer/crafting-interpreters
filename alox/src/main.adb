@@ -70,7 +70,7 @@ package body Main is
             declare
                Line   : constant String := Ada.Text_IO.Get_Line;
                Source : constant Managed_Source := Make (Line);
-               Unused : Lox_VM.InterpretResult;
+               Unused : Lox_VM.Interpret_Result;
             begin
                Unused :=
                  Lox_VM.Interpret
@@ -90,9 +90,9 @@ package body Main is
       File_Content : constant String := Read_File (Path);
       Source       : constant Managed_Source := Make (File_Content);
       VM           : Lox_VM.VM_Context;
-      Result       : Lox_VM.InterpretResult;
+      Result       : Lox_VM.Interpret_Result;
 
-      use type Lox_VM.InterpretResult;
+      use type Lox_VM.Interpret_Result;
    begin
       Lox_VM.Init (VM);
 
@@ -100,11 +100,11 @@ package body Main is
         Lox_VM.Interpret
           (VM, Lox_Scanner.Source_Code (Source.Content), Main_Chunk'Access);
 
-      if Result = Lox_VM.Interpret_Compile_Error then
+      if Result = Lox_VM.INTERPRET_COMPILE_ERROR then
          raise Exceptions.Compile_Error;
       end if;
 
-      if Result = Lox_VM.Interpret_Runtime_Error then
+      if Result = Lox_VM.INTERPRET_RUNTIME_ERROR then
          raise Exceptions.Runtime_Error;
       end if;
    end Run_File;

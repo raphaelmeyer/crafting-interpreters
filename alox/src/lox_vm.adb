@@ -12,14 +12,14 @@ package body Lox_VM is
    function Interpret
      (VM     : in out VM_Context;
       Source : Lox_Scanner.Source_Code;
-      Chunk  : Lox_Chunk.Chunk_Access) return InterpretResult
+      Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result
    is
-      Result : InterpretResult;
+      Result : Interpret_Result;
    begin
       Lox_Chunk.Init (Chunk.all);
 
       if not Lox_Compiler.Compile (Source, Chunk) then
-         return Interpret_Compile_Error;
+         return INTERPRET_COMPILE_ERROR;
       end if;
 
       VM.Chunk := Lox_Chunk.Chunk_Read_Access (Chunk);
@@ -85,7 +85,7 @@ package body Lox_VM is
    procedure Binary_Op_Multiply is new Binary_Op (Lox_Value."*");
    procedure Binary_Op_Divide is new Binary_Op (Lox_Value."/");
 
-   function Run (VM : in out VM_Context) return InterpretResult is
+   function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
       Value       : Lox_Value.Value;
       Unused      : Natural;
@@ -131,10 +131,10 @@ package body Lox_VM is
             when Lox_Chunk.OP_RETURN'Enum_Rep   =>
                Lox_Value.Print (Pop (VM));
                Ada.Text_IO.New_Line;
-               return Interpret_OK;
+               return INTERPRET_OK;
 
             when others                         =>
-               return Interpret_Runtime_Error;
+               return INTERPRET_RUNTIME_ERROR;
          end case;
       end loop;
    end Run;

@@ -5,8 +5,8 @@ with Lox_Value;
 package Lox_VM is
    type VM_Context is limited private;
 
-   type InterpretResult is
-     (Interpret_OK, Interpret_Compile_Error, Interpret_Runtime_Error);
+   type Interpret_Result is
+     (INTERPRET_OK, INTERPRET_COMPILE_ERROR, INTERPRET_RUNTIME_ERROR);
 
    type Stack_Index is range 0 .. 255;
    type Stack_Array is array (Stack_Index) of Lox_Value.Value;
@@ -16,7 +16,7 @@ package Lox_VM is
    function Interpret
      (VM     : in out VM_Context;
       Source : Lox_Scanner.Source_Code;
-      Chunk  : Lox_Chunk.Chunk_Access) return InterpretResult;
+      Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
    function Pop (VM : in out VM_Context) return Lox_Value.Value;
@@ -34,6 +34,6 @@ private
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte;
    function Read_Constant (VM : in out VM_Context) return Lox_Value.Value;
-   function Run (VM : in out VM_Context) return InterpretResult;
+   function Run (VM : in out VM_Context) return Interpret_Result;
 
 end Lox_VM;
