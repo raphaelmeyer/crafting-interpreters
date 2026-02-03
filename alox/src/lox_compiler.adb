@@ -1,5 +1,7 @@
 with Debug;
 
+with Ada.Integer_Text_IO;
+with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
@@ -87,8 +89,16 @@ package body Lox_Compiler is
       end if;
       C.Parser.Panic_Mode := True;
 
-      Ada.Text_IO.Put
-        (Ada.Text_IO.Standard_Error, "[line " & Token.Line'Image & "] Error");
+      declare
+         Buffer : String (1 .. 8);
+      begin
+         Ada.Integer_Text_IO.Put (To => Buffer, Item => Token.Line);
+         Ada.Text_IO.Put
+           (Ada.Text_IO.Standard_Error,
+            "[line "
+            & Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both)
+            & "] Error");
+      end;
 
       if Token.Kind = Lox_Scanner.TOKEN_EOF then
          Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, " at end");
