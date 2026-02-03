@@ -24,13 +24,17 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_SLASH         => (null, Binary'Access, PREC_FACTOR),
       Lox_Scanner.TOKEN_STAR          => (null, Binary'Access, PREC_FACTOR),
       Lox_Scanner.TOKEN_BANG          => (Unary'Access, null, PREC_NONE),
-      Lox_Scanner.TOKEN_BANG_EQUAL    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_BANG_EQUAL    => (null, Binary'Access, PREC_EQUALITY),
       Lox_Scanner.TOKEN_EQUAL         => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_EQUAL_EQUAL   => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_GREATER       => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_GREATER_EQUAL => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_LESS          => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_LESS_EQUAL    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_EQUAL_EQUAL   => (null, Binary'Access, PREC_EQUALITY),
+      Lox_Scanner.TOKEN_GREATER       =>
+        (null, Binary'Access, PREC_COMPARISON),
+      Lox_Scanner.TOKEN_GREATER_EQUAL =>
+        (null, Binary'Access, PREC_COMPARISON),
+      Lox_Scanner.TOKEN_LESS          =>
+        (null, Binary'Access, PREC_COMPARISON),
+      Lox_Scanner.TOKEN_LESS_EQUAL    =>
+        (null, Binary'Access, PREC_COMPARISON),
       Lox_Scanner.TOKEN_IDENTIFIER    => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_STRING        => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_NUMBER        => (Number'Access, null, PREC_NONE),
@@ -171,6 +175,15 @@ package body Lox_Compiler is
       Emit_Byte (C, Byte_2);
    end Emit_Bytes;
 
+   procedure Emit_Bytes
+     (C      : in out Compiler_Context;
+      Byte_1 : Lox_Chunk.Op_Code;
+      Byte_2 : Lox_Chunk.Op_Code) is
+   begin
+      Emit_Byte (C, Byte_1);
+      Emit_Byte (C, Byte_2);
+   end Emit_Bytes;
+
    procedure Emit_Return (C : in out Compiler_Context) is
    begin
       Emit_Byte (C, Lox_Chunk.OP_RETURN);
@@ -218,19 +231,37 @@ package body Lox_Compiler is
       Parse_Precedence (C, Precedence_Type'Succ (Rule.Precedence));
 
       case Operator_Type is
-         when Lox_Scanner.TOKEN_PLUS  =>
+         when Lox_Scanner.TOKEN_BANG_EQUAL    =>
+            Emit_Bytes (C, Lox_Chunk.OP_EQUAL, Lox_Chunk.OP_NOT);
+
+         when Lox_Scanner.TOKEN_EQUAL_EQUAL   =>
+            Emit_Byte (C, Lox_Chunk.OP_EQUAL);
+
+         when Lox_Scanner.TOKEN_GREATER       =>
+            Emit_Byte (C, Lox_Chunk.OP_GREATER);
+
+         when Lox_Scanner.TOKEN_GREATER_EQUAL =>
+            Emit_Bytes (C, Lox_Chunk.OP_LESS, Lox_Chunk.OP_NOT);
+
+         when Lox_Scanner.TOKEN_LESS          =>
+            Emit_Byte (C, Lox_Chunk.OP_LESS);
+
+         when Lox_Scanner.TOKEN_LESS_EQUAL    =>
+            Emit_Bytes (C, Lox_Chunk.OP_GREATER, Lox_Chunk.OP_NOT);
+
+         when Lox_Scanner.TOKEN_PLUS          =>
             Emit_Byte (C, Lox_Chunk.OP_ADD);
 
-         when Lox_Scanner.TOKEN_MINUS =>
+         when Lox_Scanner.TOKEN_MINUS         =>
             Emit_Byte (C, Lox_Chunk.OP_SUBTRACT);
 
-         when Lox_Scanner.TOKEN_STAR  =>
+         when Lox_Scanner.TOKEN_STAR          =>
             Emit_Byte (C, Lox_Chunk.OP_MULTIPLY);
 
-         when Lox_Scanner.TOKEN_SLASH =>
+         when Lox_Scanner.TOKEN_SLASH         =>
             Emit_Byte (C, Lox_Chunk.OP_DIVIDE);
 
-         when others                  =>
+         when others                          =>
             return;
       end case;
    end Binary;

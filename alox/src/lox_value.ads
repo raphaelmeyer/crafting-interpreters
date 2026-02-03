@@ -34,6 +34,8 @@ package Lox_Value is
 
    procedure Print (V : Value);
 
+   function Values_Equal (A : Value; B : Value) return Boolean;
+
 private
    function To_String (V : Float) return String;
 

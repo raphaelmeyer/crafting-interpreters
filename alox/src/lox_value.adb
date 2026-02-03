@@ -53,6 +53,23 @@ package body Lox_Value is
       end case;
    end Print;
 
+   function Values_Equal (A : Value; B : Value) return Boolean is
+   begin
+      if A.Kind /= B.Kind then
+         return False;
+      end if;
+      case A.Kind is
+         when VAL_BOOL   =>
+            return A.Bool_Value = B.Bool_Value;
+
+         when VAL_NIL    =>
+            return True;
+
+         when VAL_NUMBER =>
+            return A.Number_Value = B.Number_Value;
+      end case;
+   end Values_Equal;
+
    function To_String (V : Float) return String is
       Buffer : String (1 .. 32);
 

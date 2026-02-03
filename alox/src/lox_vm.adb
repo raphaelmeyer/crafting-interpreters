@@ -103,7 +103,9 @@ package body Lox_VM is
    end Read_Constant;
 
    generic
-      with function Op (A : Float; B : Float) return Float;
+      type Result_Type is private;
+      with function Op (A : Float; B : Float) return Result_Type;
+      with function Make (R : Result_Type) return Lox_Value.Value;
    function Binary_Op (VM : in out VM_Context) return Interpret_Result;
 
    function Binary_Op (VM : in out VM_Context) return Interpret_Result is
@@ -118,17 +120,24 @@ package body Lox_VM is
       declare
          B      : constant Float := Pop (VM).Number_Value;
          A      : constant Float := Pop (VM).Number_Value;
-         Result : constant Float := Op (A, B);
+         Result : constant Result_Type := Op (A, B);
       begin
-         Push (VM, Lox_Value.Make_Number (Result));
+         Push (VM, Make (Result));
          return INTERPRET_OK;
       end;
    end Binary_Op;
 
-   function Binary_Op_Add is new Binary_Op ("+");
-   function Binary_Op_Subtract is new Binary_Op ("-");
-   function Binary_Op_Multiply is new Binary_Op ("*");
-   function Binary_Op_Divide is new Binary_Op ("/");
+   function Binary_Op_Greater is new
+     Binary_Op (Boolean, ">", Lox_Value.Make_Bool);
+   function Binary_Op_Less is new
+     Binary_Op (Boolean, "<", Lox_Value.Make_Bool);
+   function Binary_Op_Add is new Binary_Op (Float, "+", Lox_Value.Make_Number);
+   function Binary_Op_Subtract is new
+     Binary_Op (Float, "-", Lox_Value.Make_Number);
+   function Binary_Op_Multiply is new
+     Binary_Op (Float, "*", Lox_Value.Make_Number);
+   function Binary_Op_Divide is new
+     Binary_Op (Float, "/", Lox_Value.Make_Number);
 
    function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
@@ -168,6 +177,27 @@ package body Lox_VM is
 
             when Lox_Chunk.OP_FALSE'Enum_Rep    =>
                Push (VM, Lox_Value.Make_Bool (False));
+
+            when Lox_Chunk.OP_EQUAL'Enum_Rep    =>
+               declare
+                  B : constant Lox_Value.Value := Pop (VM);
+                  A : constant Lox_Value.Value := Pop (VM);
+               begin
+                  Push
+                    (VM, Lox_Value.Make_Bool (Lox_Value.Values_Equal (A, B)));
+               end;
+
+            when Lox_Chunk.OP_GREATER'Enum_Rep  =>
+               Result := Binary_Op_Greater (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
+
+            when Lox_Chunk.OP_LESS'Enum_Rep     =>
+               Result := Binary_Op_Less (VM);
+               if Result /= INTERPRET_OK then
+                  return Result;
+               end if;
 
             when Lox_Chunk.OP_ADD'Enum_Rep      =>
                Result := Binary_Op_Add (VM);

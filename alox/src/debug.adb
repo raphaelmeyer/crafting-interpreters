@@ -52,6 +52,15 @@ package body Debug is
          when Lox_Chunk.OP_FALSE'Enum_Rep    =>
             return Simple_Instruction ("OP_FALSE", Offset);
 
+         when Lox_Chunk.OP_EQUAL'Enum_Rep    =>
+            return Simple_Instruction ("OP_EQUAL", Offset);
+
+         when Lox_Chunk.OP_GREATER'Enum_Rep  =>
+            return Simple_Instruction ("OP_GREATER", Offset);
+
+         when Lox_Chunk.OP_LESS'Enum_Rep     =>
+            return Simple_Instruction ("OP_LESS", Offset);
+
          when Lox_Chunk.OP_ADD'Enum_Rep      =>
             return Simple_Instruction ("OP_ADD", Offset);
 
