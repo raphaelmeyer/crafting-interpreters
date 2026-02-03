@@ -64,6 +64,9 @@ package body Debug is
          when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
             return SimpleInstruction ("OP_DIVIDE", Offset);
 
+         when Lox_Chunk.OP_NOT'Enum_Rep      =>
+            return SimpleInstruction ("OP_NOT", Offset);
+
          when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
             return SimpleInstruction ("OP_NEGATE", Offset);
 

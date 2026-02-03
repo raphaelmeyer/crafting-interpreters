@@ -22,6 +22,7 @@ package Lox_VM is
    function Pop (VM : in out VM_Context) return Lox_Value.Value;
    function Peek
      (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value;
+   function Is_Falsey (Value : Lox_Value.Value) return Boolean;
 
 private
 

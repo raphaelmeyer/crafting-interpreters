@@ -58,6 +58,13 @@ package body Lox_VM is
       return VM.Stack (Stack_Index (Peek_Index));
    end Peek;
 
+   function Is_Falsey (Value : Lox_Value.Value) return Boolean is
+   begin
+      return
+        Lox_Value.Is_Nil (Value)
+        or else (Lox_Value.Is_Bool (Value) and then not Value.Bool_Value);
+   end Is_Falsey;
+
    procedure Reset_Stack (VM : in out VM_Context) is
    begin
       VM.Stack_Top := 0;
@@ -125,7 +132,6 @@ package body Lox_VM is
 
    function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
-      Value       : Lox_Value.Value;
       Unused      : Natural;
       Result      : Interpret_Result;
    begin
@@ -148,8 +154,11 @@ package body Lox_VM is
          Instruction := Read_Byte (VM);
          case Instruction is
             when Lox_Chunk.OP_CONSTANT'Enum_Rep =>
-               Value := Read_Constant (VM);
-               Push (VM, Value);
+               declare
+                  Value : constant Lox_Value.Value := Read_Constant (VM);
+               begin
+                  Push (VM, Value);
+               end;
 
             when Lox_Chunk.OP_NIL'Enum_Rep      =>
                Push (VM, Lox_Value.Make_Nil);
@@ -183,6 +192,9 @@ package body Lox_VM is
                if Result /= INTERPRET_OK then
                   return Result;
                end if;
+
+            when Lox_Chunk.OP_NOT'Enum_Rep      =>
+               Push (VM, Lox_Value.Make_Bool (Is_Falsey (Pop (VM))));
 
             when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
                if not Lox_Value.Is_Number (Peek (VM, 0)) then

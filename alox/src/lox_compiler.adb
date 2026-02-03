@@ -23,7 +23,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_SEMICOLON     => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_SLASH         => (null, Binary'Access, PREC_FACTOR),
       Lox_Scanner.TOKEN_STAR          => (null, Binary'Access, PREC_FACTOR),
-      Lox_Scanner.TOKEN_BANG          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_BANG          => (Unary'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_BANG_EQUAL    => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_EQUAL         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_EQUAL_EQUAL   => (null, null, PREC_NONE),
@@ -273,6 +273,9 @@ package body Lox_Compiler is
       Parse_Precedence (C, PREC_UNARY);
 
       case Kind is
+         when Lox_Scanner.TOKEN_BANG  =>
+            Emit_Byte (C, Lox_Chunk.OP_NOT);
+
          when Lox_Scanner.TOKEN_MINUS =>
             Emit_Byte (C, Lox_Chunk.OP_NEGATE);
 
@@ -280,7 +283,6 @@ package body Lox_Compiler is
             return;
 
       end case;
-
    end Unary;
 
    procedure Expression (C : in out Compiler_Context) is
