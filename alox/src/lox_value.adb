@@ -34,6 +34,16 @@ package body Lox_Value is
       return V.Kind = VAL_NUMBER;
    end Is_Number;
 
+   function Make_String (Str : Unbounded_String) return Value is
+   begin
+      return (VAL_STRING, String_Value => Str);
+   end Make_String;
+
+   function Is_String (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_STRING;
+   end Is_String;
+
    procedure Write (VA : in out Value_Array; V : Value) is
    begin
       VA.Append (V);
@@ -48,12 +58,16 @@ package body Lox_Value is
          when VAL_NUMBER =>
             Ada.Text_IO.Put (To_String (V.Number_Value));
 
+         when VAL_STRING =>
+            Ada.Text_IO.Put (Unbounded.To_String (V.String_Value));
+
          when others     =>
             Ada.Text_IO.Put ("nil");
       end case;
    end Print;
 
    function Values_Equal (A : Value; B : Value) return Boolean is
+      use type Unbounded.Unbounded_String;
    begin
       if A.Kind /= B.Kind then
          return False;
@@ -67,6 +81,9 @@ package body Lox_Value is
 
          when VAL_NUMBER =>
             return A.Number_Value = B.Number_Value;
+
+         when VAL_STRING =>
+            return A.String_Value = B.String_Value;
       end case;
    end Values_Equal;
 

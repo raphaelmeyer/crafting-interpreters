@@ -36,7 +36,8 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_LESS_EQUAL    =>
         (null, Binary'Access, PREC_COMPARISON),
       Lox_Scanner.TOKEN_IDENTIFIER    => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_STRING        => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_STRING        =>
+        (String_Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_NUMBER        => (Number'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_AND           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_CLASS         => (null, null, PREC_NONE),
@@ -297,6 +298,16 @@ package body Lox_Compiler is
    begin
       Emit_Constant (C, Lox_Value.Make_Number (Value));
    end Number;
+
+   procedure String_Literal (C : in out Compiler_Context) is
+      From : constant Positive := Positive'Succ (1);
+      To   : constant Natural :=
+        Natural'Pred (Unbounded.Length (C.Parser.Previous.Lexeme));
+      Str  : constant Lox_Value.Unbounded_String :=
+        Unbounded.Unbounded_Slice (C.Parser.Previous.Lexeme, From, To);
+   begin
+      Emit_Constant (C, Lox_Value.Make_String (Str));
+   end String_Literal;
 
    procedure Unary (C : in out Compiler_Context) is
       Kind : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;

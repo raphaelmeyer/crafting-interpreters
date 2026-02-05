@@ -1,7 +1,11 @@
 with Ada.Containers.Vectors;
+with Ada.Strings.Unbounded;
 
 package Lox_Value is
-   type Value_Type is (VAL_BOOL, VAL_NIL, VAL_NUMBER);
+   package Unbounded renames Ada.Strings.Unbounded;
+   subtype Unbounded_String is Unbounded.Unbounded_String;
+
+   type Value_Type is (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING);
 
    type Value (Kind : Value_Type := VAL_NIL) is record
       case Kind is
@@ -10,6 +14,9 @@ package Lox_Value is
 
          when VAL_NUMBER =>
             Number_Value : Float;
+
+         when VAL_STRING =>
+            String_Value : Unbounded_String;
 
          when others =>
             null;
@@ -29,6 +36,9 @@ package Lox_Value is
 
    function Make_Number (Number : Float) return Value;
    function Is_Number (V : Value) return Boolean;
+
+   function Make_String (Str : Unbounded_String) return Value;
+   function Is_String (V : Value) return Boolean;
 
    procedure Write (VA : in out Value_Array; V : Value);
 
