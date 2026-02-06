@@ -40,55 +40,58 @@ package body Debug is
 
       Instruction := Chunk.Code (Offset);
       case Instruction is
-         when Lox_Chunk.OP_CONSTANT'Enum_Rep =>
+         when Lox_Chunk.OP_CONSTANT'Enum_Rep      =>
             return Constant_Instruction ("OP_CONSTANT", Chunk, Offset);
 
-         when Lox_Chunk.OP_NIL'Enum_Rep      =>
+         when Lox_Chunk.OP_NIL'Enum_Rep           =>
             return Simple_Instruction ("OP_NIL", Offset);
 
-         when Lox_Chunk.OP_TRUE'Enum_Rep     =>
+         when Lox_Chunk.OP_TRUE'Enum_Rep          =>
             return Simple_Instruction ("OP_TRUE", Offset);
 
-         when Lox_Chunk.OP_FALSE'Enum_Rep    =>
+         when Lox_Chunk.OP_FALSE'Enum_Rep         =>
             return Simple_Instruction ("OP_FALSE", Offset);
 
-         when Lox_Chunk.OP_POP'Enum_Rep      =>
+         when Lox_Chunk.OP_POP'Enum_Rep           =>
             return Simple_Instruction ("OP_POP", Offset);
 
-         when Lox_Chunk.OP_EQUAL'Enum_Rep    =>
+         when Lox_Chunk.OP_DEFINE_GLOBAL'Enum_Rep =>
+            return Constant_Instruction ("OP_DEFINE_GLOBAL", Chunk, Offset);
+
+         when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
             return Simple_Instruction ("OP_EQUAL", Offset);
 
-         when Lox_Chunk.OP_GREATER'Enum_Rep  =>
+         when Lox_Chunk.OP_GREATER'Enum_Rep       =>
             return Simple_Instruction ("OP_GREATER", Offset);
 
-         when Lox_Chunk.OP_LESS'Enum_Rep     =>
+         when Lox_Chunk.OP_LESS'Enum_Rep          =>
             return Simple_Instruction ("OP_LESS", Offset);
 
-         when Lox_Chunk.OP_ADD'Enum_Rep      =>
+         when Lox_Chunk.OP_ADD'Enum_Rep           =>
             return Simple_Instruction ("OP_ADD", Offset);
 
-         when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>
+         when Lox_Chunk.OP_SUBTRACT'Enum_Rep      =>
             return Simple_Instruction ("OP_SUBTRACT", Offset);
 
-         when Lox_Chunk.OP_MULTIPLY'Enum_Rep =>
+         when Lox_Chunk.OP_MULTIPLY'Enum_Rep      =>
             return Simple_Instruction ("OP_MULTIPLY", Offset);
 
-         when Lox_Chunk.OP_DIVIDE'Enum_Rep   =>
+         when Lox_Chunk.OP_DIVIDE'Enum_Rep        =>
             return Simple_Instruction ("OP_DIVIDE", Offset);
 
-         when Lox_Chunk.OP_NOT'Enum_Rep      =>
+         when Lox_Chunk.OP_NOT'Enum_Rep           =>
             return Simple_Instruction ("OP_NOT", Offset);
 
-         when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
+         when Lox_Chunk.OP_NEGATE'Enum_Rep        =>
             return Simple_Instruction ("OP_NEGATE", Offset);
 
-         when Lox_Chunk.OP_PRINT'Enum_Rep    =>
+         when Lox_Chunk.OP_PRINT'Enum_Rep         =>
             return Simple_Instruction ("OP_PRINT", Offset);
 
-         when Lox_Chunk.OP_RETURN'Enum_Rep   =>
+         when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 
-         when others                         =>
+         when others                              =>
             Ada.Text_IO.Put ("Unknown opcode ");
             Ada.Integer_Text_IO.Put (Integer (Instruction));
             Ada.Text_IO.New_Line;

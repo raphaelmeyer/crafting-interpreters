@@ -2,6 +2,8 @@ with Lox_Chunk;
 with Lox_Scanner;
 with Lox_Value;
 
+with Ada.Containers.Hashed_Maps;
+
 package Lox_VM is
    type VM_Context is limited private;
 
@@ -19,11 +21,23 @@ package Lox_VM is
       Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result;
 
 private
+   function Hash_String
+     (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type;
+
+   package Hash_Table is new
+     Ada.Containers.Hashed_Maps
+       (Key_Type        => Lox_Value.Unbounded_String,
+        Element_Type    => Lox_Value.Value,
+        Hash            => Hash_String,
+        Equivalent_Keys => Lox_Value.Unbounded."=",
+        "="             => Lox_Value.Values_Equal);
+
    type VM_Context is limited record
       Chunk     : Lox_Chunk.Chunk_Read_Access;
       IP        : Lox_Chunk.Byte_Vectors.Cursor;
       Stack     : Stack_Array;
       Stack_Top : Stack_Index;
+      Globals   : Hash_Table.Map;
    end record;
 
    procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
@@ -39,6 +53,8 @@ private
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte;
    function Read_Constant (VM : in out VM_Context) return Lox_Value.Value;
+   function Read_String
+     (VM : in out VM_Context) return Lox_Value.Unbounded_String;
    function Run (VM : in out VM_Context) return Interpret_Result;
 
 end Lox_VM;

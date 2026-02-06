@@ -352,6 +352,23 @@ package body Lox_Compiler is
       Parse_Precedence (C, PREC_ASSIGNMENT);
    end Expression;
 
+   procedure Variable_Declaration (C : in out Compiler_Context) is
+      Global : constant Lox_Chunk.Byte :=
+        Parse_Variable (C, "Expect variable name.");
+   begin
+      if Match (C, Lox_Scanner.TOKEN_EQUAL) then
+         Expression (C);
+      else
+         Emit_Byte (C, Lox_Chunk.OP_NIL);
+      end if;
+      Consume
+        (C,
+         Lox_Scanner.TOKEN_SEMICOLON,
+         "Expect ';' after variable declaration.");
+
+      Define_Variable (C, Global);
+   end Variable_Declaration;
+
    procedure Expression_Statement (C : in out Compiler_Context) is
    begin
       Expression (C);
@@ -368,7 +385,11 @@ package body Lox_Compiler is
 
    procedure Declaration (C : in out Compiler_Context) is
    begin
-      Statement (C);
+      if Match (C, Lox_Scanner.TOKEN_VAR) then
+         Variable_Declaration (C);
+      else
+         Statement (C);
+      end if;
 
       if C.Parser.Panic_Mode then
          Synchronize (C);
@@ -409,6 +430,27 @@ package body Lox_Compiler is
       end loop;
 
    end Parse_Precedence;
+
+   function Identifier_Constant
+     (C : in out Compiler_Context; Token : Lox_Scanner.Token)
+      return Lox_Chunk.Byte is
+   begin
+      return Make_Constant (C, Lox_Value.Make_String (Token.Lexeme));
+   end Identifier_Constant;
+
+   function Parse_Variable
+     (C : in out Compiler_Context; Error_Message : String)
+      return Lox_Chunk.Byte is
+   begin
+      Consume (C, Lox_Scanner.TOKEN_IDENTIFIER, Error_Message);
+      return Identifier_Constant (C, C.Parser.Previous);
+   end Parse_Variable;
+
+   procedure Define_Variable
+     (C : in out Compiler_Context; Global : Lox_Chunk.Byte) is
+   begin
+      Emit_Bytes (C, Lox_Chunk.OP_DEFINE_GLOBAL, Global);
+   end Define_Variable;
 
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule is
    begin

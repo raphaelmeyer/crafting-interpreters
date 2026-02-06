@@ -93,12 +93,21 @@ private
    procedure String_Literal (C : in out Compiler_Context);
    procedure Unary (C : in out Compiler_Context);
    procedure Expression (C : in out Compiler_Context);
+   procedure Variable_Declaration (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);
    procedure Declaration (C : in out Compiler_Context);
    procedure Statement (C : in out Compiler_Context);
 
    procedure Parse_Precedence
      (C : in out Compiler_Context; Precedence : Precedence_Type);
+   function Identifier_Constant
+     (C : in out Compiler_Context; Token : Lox_Scanner.Token)
+      return Lox_Chunk.Byte;
+   function Parse_Variable
+     (C : in out Compiler_Context; Error_Message : String)
+      return Lox_Chunk.Byte;
+   procedure Define_Variable
+     (C : in out Compiler_Context; Global : Lox_Chunk.Byte);
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
    procedure Synchronize (C : in out Compiler_Context);
