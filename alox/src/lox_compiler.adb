@@ -352,6 +352,13 @@ package body Lox_Compiler is
       Parse_Precedence (C, PREC_ASSIGNMENT);
    end Expression;
 
+   procedure Expression_Statement (C : in out Compiler_Context) is
+   begin
+      Expression (C);
+      Consume (C, Lox_Scanner.TOKEN_SEMICOLON, "Expect ';' after expression.");
+      Emit_Byte (C, Lox_Chunk.OP_POP);
+   end Expression_Statement;
+
    procedure Print_Statement (C : in out Compiler_Context) is
    begin
       Expression (C);
@@ -368,6 +375,8 @@ package body Lox_Compiler is
    begin
       if Match (C, Lox_Scanner.TOKEN_PRINT) then
          Print_Statement (C);
+      else
+         Expression_Statement (C);
       end if;
    end Statement;
 

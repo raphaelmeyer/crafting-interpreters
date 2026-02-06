@@ -152,7 +152,6 @@ package body Lox_VM is
 
    function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
-      Unused      : Natural;
       Result      : Interpret_Result;
    begin
       loop
@@ -166,9 +165,13 @@ package body Lox_VM is
                Ada.Text_IO.Put (" ]");
             end loop;
             Ada.Text_IO.New_Line;
-            Unused :=
-              Debug.Disassemble_Instruction
-                (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
+            declare
+               Unused : Natural :=
+                 Debug.Disassemble_Instruction
+                   (VM.Chunk, Lox_Chunk.Byte_Vectors.To_Index (VM.IP));
+            begin
+               null;
+            end;
          end if;
 
          Instruction := Read_Byte (VM);
@@ -188,6 +191,13 @@ package body Lox_VM is
 
             when Lox_Chunk.OP_FALSE'Enum_Rep    =>
                Push (VM, Lox_Value.Make_Bool (False));
+
+            when Lox_Chunk.OP_POP'Enum_Rep      =>
+               declare
+                  Unused : constant Lox_Value.Value := Pop (VM);
+               begin
+                  null;
+               end;
 
             when Lox_Chunk.OP_EQUAL'Enum_Rep    =>
                declare
