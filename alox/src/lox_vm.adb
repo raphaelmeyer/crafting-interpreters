@@ -65,6 +65,18 @@ package body Lox_VM is
         or else (Lox_Value.Is_Bool (Value) and then not Value.Bool_Value);
    end Is_Falsey;
 
+   procedure Concatenate (VM : in out VM_Context) is
+      B : constant String :=
+        Lox_Value.Unbounded.To_String (Pop (VM).String_Value);
+      A : constant String :=
+        Lox_Value.Unbounded.To_String (Pop (VM).String_Value);
+   begin
+      Push
+        (VM,
+         Lox_Value.Make_String
+           (Lox_Value.Unbounded.To_Unbounded_String (A & B)));
+   end Concatenate;
+
    procedure Reset_Stack (VM : in out VM_Context) is
    begin
       VM.Stack_Top := 0;
@@ -131,7 +143,6 @@ package body Lox_VM is
      Binary_Op (Boolean, ">", Lox_Value.Make_Bool);
    function Binary_Op_Less is new
      Binary_Op (Boolean, "<", Lox_Value.Make_Bool);
-   function Binary_Op_Add is new Binary_Op (Float, "+", Lox_Value.Make_Number);
    function Binary_Op_Subtract is new
      Binary_Op (Float, "-", Lox_Value.Make_Number);
    function Binary_Op_Multiply is new
@@ -200,9 +211,23 @@ package body Lox_VM is
                end if;
 
             when Lox_Chunk.OP_ADD'Enum_Rep      =>
-               Result := Binary_Op_Add (VM);
-               if Result /= INTERPRET_OK then
-                  return Result;
+               if Lox_Value.Is_String (Peek (VM, 0))
+                 and then Lox_Value.Is_String (Peek (VM, 1))
+               then
+                  Concatenate (VM);
+               elsif Lox_Value.Is_Number (Peek (VM, 0))
+                 and then Lox_Value.Is_Number (Peek (VM, 1))
+               then
+                  declare
+                     B : constant Float := Pop (VM).Number_Value;
+                     A : constant Float := Pop (VM).Number_Value;
+                  begin
+                     Push (VM, Lox_Value.Make_Number (A + B));
+                  end;
+               else
+                  Runtime_Error
+                    (VM, "Operands must be two numbers or two strings.");
+                  return INTERPRET_RUNTIME_ERROR;
                end if;
 
             when Lox_Chunk.OP_SUBTRACT'Enum_Rep =>

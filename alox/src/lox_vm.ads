@@ -18,20 +18,21 @@ package Lox_VM is
       Source : Lox_Scanner.Source_Code;
       Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result;
 
-   procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
-   function Pop (VM : in out VM_Context) return Lox_Value.Value;
-   function Peek
-     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value;
-   function Is_Falsey (Value : Lox_Value.Value) return Boolean;
-
 private
-
    type VM_Context is limited record
       Chunk     : Lox_Chunk.Chunk_Read_Access;
       IP        : Lox_Chunk.Byte_Vectors.Cursor;
       Stack     : Stack_Array;
       Stack_Top : Stack_Index;
    end record;
+
+   procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
+   function Pop (VM : in out VM_Context) return Lox_Value.Value;
+   function Peek
+     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value;
+
+   function Is_Falsey (Value : Lox_Value.Value) return Boolean;
+   procedure Concatenate (VM : in out VM_Context);
 
    procedure Reset_Stack (VM : in out VM_Context);
    procedure Runtime_Error (VM : in out VM_Context; Message : String);
