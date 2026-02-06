@@ -59,6 +59,13 @@ private
      (C       : in out Compiler_Context;
       Kind    : Lox_Scanner.TokenType;
       Message : String);
+   function Check
+     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType)
+      return Boolean;
+   function Match
+     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType)
+      return Boolean;
+
    procedure Emit_Byte (C : in out Compiler_Context; Byte : Lox_Chunk.Byte);
    procedure Emit_Byte
      (C : in out Compiler_Context; Op_Code : Lox_Chunk.Op_Code);
@@ -86,6 +93,9 @@ private
    procedure String_Literal (C : in out Compiler_Context);
    procedure Unary (C : in out Compiler_Context);
    procedure Expression (C : in out Compiler_Context);
+   procedure Print_Statement (C : in out Compiler_Context);
+   procedure Declaration (C : in out Compiler_Context);
+   procedure Statement (C : in out Compiler_Context);
 
    procedure Parse_Precedence
      (C : in out Compiler_Context; Precedence : Precedence_Type);

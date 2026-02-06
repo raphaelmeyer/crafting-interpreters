@@ -18,6 +18,7 @@ package Lox_Chunk is
       OP_DIVIDE,
       OP_NOT,
       OP_NEGATE,
+      OP_PRINT,
       OP_RETURN)
    with Size => 8;
 

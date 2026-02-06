@@ -71,8 +71,10 @@ package body Lox_Compiler is
       C.Parser.Panic_Mode := False;
 
       Advance (C);
-      Expression (C);
-      Consume (C, Lox_Scanner.TOKEN_EOF, "Expect end of expression.");
+
+      while not Match (C, Lox_Scanner.TOKEN_EOF) loop
+         Declaration (C);
+      end loop;
 
       End_Compiler (C);
 
@@ -155,6 +157,24 @@ package body Lox_Compiler is
 
       Error_At_Current (C, Message);
    end Consume;
+
+   function Check
+     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType) return Boolean
+   is
+   begin
+      return C.Parser.Current.Kind = Kind;
+   end Check;
+
+   function Match
+     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType) return Boolean
+   is
+   begin
+      if not Check (C, Kind) then
+         return False;
+      end if;
+      Advance (C);
+      return True;
+   end Match;
 
    procedure Emit_Byte (C : in out Compiler_Context; Byte : Lox_Chunk.Byte) is
    begin
@@ -331,6 +351,25 @@ package body Lox_Compiler is
    begin
       Parse_Precedence (C, PREC_ASSIGNMENT);
    end Expression;
+
+   procedure Print_Statement (C : in out Compiler_Context) is
+   begin
+      Expression (C);
+      Consume (C, Lox_Scanner.TOKEN_SEMICOLON, "Expect ';' after value.");
+      Emit_Byte (C, Lox_Chunk.OP_PRINT);
+   end Print_Statement;
+
+   procedure Declaration (C : in out Compiler_Context) is
+   begin
+      Statement (C);
+   end Declaration;
+
+   procedure Statement (C : in out Compiler_Context) is
+   begin
+      if Match (C, Lox_Scanner.TOKEN_PRINT) then
+         Print_Statement (C);
+      end if;
+   end Statement;
 
    procedure Parse_Precedence
      (C : in out Compiler_Context; Precedence : Precedence_Type)

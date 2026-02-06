@@ -49,7 +49,7 @@ package body Lox_Value is
       VA.Append (V);
    end Write;
 
-   procedure Print (V : Value) is
+   procedure Print_Value (V : Value) is
    begin
       case V.Kind is
          when VAL_BOOL   =>
@@ -64,7 +64,7 @@ package body Lox_Value is
          when others     =>
             Ada.Text_IO.Put ("nil");
       end case;
-   end Print;
+   end Print_Value;
 
    function Values_Equal (A : Value; B : Value) return Boolean is
       use type Unbounded.Unbounded_String;

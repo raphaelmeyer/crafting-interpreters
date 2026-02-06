@@ -79,6 +79,9 @@ package body Debug is
          when Lox_Chunk.OP_NEGATE'Enum_Rep   =>
             return Simple_Instruction ("OP_NEGATE", Offset);
 
+         when Lox_Chunk.OP_PRINT'Enum_Rep    =>
+            return Simple_Instruction ("OP_PRINT", Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep   =>
             return Simple_Instruction ("OP_RETURN", Offset);
 
@@ -122,7 +125,7 @@ package body Debug is
       Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
       Ada.Integer_Text_IO.Put (Index, Width => 4);
       Ada.Text_IO.Put (" '");
-      Lox_Value.Print (Chunk.Constants (Index));
+      Lox_Value.Print_Value (Chunk.Constants (Index));
       Ada.Text_IO.Put_Line ("'");
       return Offset + 2;
    end Constant_Instruction;

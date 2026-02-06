@@ -162,7 +162,7 @@ package body Lox_VM is
               VM.Stack (Stack_Index'First .. Stack_Index'Pred (VM.Stack_Top))
             loop
                Ada.Text_IO.Put ("[ ");
-               Lox_Value.Print (V);
+               Lox_Value.Print_Value (V);
                Ada.Text_IO.Put (" ]");
             end loop;
             Ada.Text_IO.New_Line;
@@ -263,9 +263,11 @@ package body Lox_VM is
                   Push (VM, Lox_Value.Make_Number (-Value));
                end;
 
-            when Lox_Chunk.OP_RETURN'Enum_Rep   =>
-               Lox_Value.Print (Pop (VM));
+            when Lox_Chunk.OP_PRINT'Enum_Rep    =>
+               Lox_Value.Print_Value (Pop (VM));
                Ada.Text_IO.New_Line;
+
+            when Lox_Chunk.OP_RETURN'Enum_Rep   =>
                return INTERPRET_OK;
 
             when others                         =>

@@ -42,7 +42,7 @@ package Lox_Value is
 
    procedure Write (VA : in out Value_Array; V : Value);
 
-   procedure Print (V : Value);
+   procedure Print_Value (V : Value);
 
    function Values_Equal (A : Value; B : Value) return Boolean;
 
