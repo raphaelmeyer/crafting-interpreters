@@ -101,4 +101,5 @@ private
      (C : in out Compiler_Context; Precedence : Precedence_Type);
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
+   procedure Synchronize (C : in out Compiler_Context);
 end Lox_Compiler;

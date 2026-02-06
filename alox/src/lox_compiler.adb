@@ -369,6 +369,10 @@ package body Lox_Compiler is
    procedure Declaration (C : in out Compiler_Context) is
    begin
       Statement (C);
+
+      if C.Parser.Panic_Mode then
+         Synchronize (C);
+      end if;
    end Declaration;
 
    procedure Statement (C : in out Compiler_Context) is
@@ -410,5 +414,32 @@ package body Lox_Compiler is
    begin
       return Rules (Kind);
    end Get_Rule;
+
+   procedure Synchronize (C : in out Compiler_Context) is
+   begin
+      C.Parser.Panic_Mode := False;
+
+      while C.Parser.Current.Kind /= Lox_Scanner.TOKEN_EOF loop
+         if C.Parser.Previous.Kind = Lox_Scanner.TOKEN_SEMICOLON then
+            return;
+         end if;
+         case C.Parser.Current.Kind is
+            when Lox_Scanner.TOKEN_CLASS
+               | Lox_Scanner.TOKEN_FUN
+               | Lox_Scanner.TOKEN_VAR
+               | Lox_Scanner.TOKEN_FOR
+               | Lox_Scanner.TOKEN_IF
+               | Lox_Scanner.TOKEN_WHILE
+               | Lox_Scanner.TOKEN_PRINT
+               | Lox_Scanner.TOKEN_RETURN =>
+               return;
+
+            when others                   =>
+               null;
+         end case;
+
+         Advance (C);
+      end loop;
+   end Synchronize;
 
 end Lox_Compiler;
