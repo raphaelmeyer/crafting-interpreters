@@ -61,6 +61,9 @@ package body Debug is
          when Lox_Chunk.OP_DEFINE_GLOBAL'Enum_Rep =>
             return Constant_Instruction ("OP_DEFINE_GLOBAL", Chunk, Offset);
 
+         when Lox_Chunk.OP_SET_GLOBAL'Enum_Rep    =>
+            return Constant_Instruction ("OP_SET_GLOBAL", Chunk, Offset);
+
          when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
             return Simple_Instruction ("OP_EQUAL", Offset);
 

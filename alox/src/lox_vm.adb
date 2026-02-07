@@ -251,6 +251,24 @@ package body Lox_VM is
                   Unused := Pop (VM);
                end;
 
+            when Lox_Chunk.OP_SET_GLOBAL'Enum_Rep    =>
+               declare
+                  Name : constant Lox_Value.Unbounded_String :=
+                    Read_String (VM);
+                  Item : constant Hash_Table.Cursor := VM.Globals.Find (Name);
+                  use type Hash_Table.Cursor;
+               begin
+                  if Item = Hash_Table.No_Element then
+                     Runtime_Error
+                       (VM,
+                        "Undefined variable '"
+                        & Lox_Value.Unbounded.To_String (Name)
+                        & "'.");
+                     return INTERPRET_RUNTIME_ERROR;
+                  end if;
+                  VM.Globals.Replace_Element (Item, Peek (VM, 0));
+               end;
+
             when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
                declare
                   B : constant Lox_Value.Value := Pop (VM);

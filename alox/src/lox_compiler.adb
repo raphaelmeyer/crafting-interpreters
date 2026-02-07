@@ -245,7 +245,9 @@ package body Lox_Compiler is
       end if;
    end End_Compiler;
 
-   procedure Binary (C : in out Compiler_Context) is
+   procedure Binary
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
       Operator_Type : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;
       Rule          : constant Parse_Rule := Get_Rule (Operator_Type);
    begin
@@ -287,7 +289,8 @@ package body Lox_Compiler is
       end case;
    end Binary;
 
-   procedure Literal (C : in out Compiler_Context) is
+   procedure Literal
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced) is
    begin
       case C.Parser.Previous.Kind is
          when Lox_Scanner.TOKEN_FALSE =>
@@ -304,14 +307,17 @@ package body Lox_Compiler is
       end case;
    end Literal;
 
-   procedure Grouping (C : in out Compiler_Context) is
+   procedure Grouping
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced) is
    begin
       Expression (C);
       Consume
         (C, Lox_Scanner.TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
    end Grouping;
 
-   procedure Number (C : in out Compiler_Context) is
+   procedure Number
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
       Lexeme : constant String :=
         Unbounded.To_String (C.Parser.Previous.Lexeme);
       Value  : constant Float := Float'Value (Lexeme);
@@ -319,7 +325,9 @@ package body Lox_Compiler is
       Emit_Constant (C, Lox_Value.Make_Number (Value));
    end Number;
 
-   procedure String_Literal (C : in out Compiler_Context) is
+   procedure String_Literal
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
       From : constant Positive := Positive'Succ (1);
       To   : constant Natural :=
         Natural'Pred (Unbounded.Length (C.Parser.Previous.Lexeme));
@@ -330,19 +338,28 @@ package body Lox_Compiler is
    end String_Literal;
 
    procedure Named_Variable
-     (C : in out Compiler_Context; Name : Lox_Scanner.Token)
+     (C          : in out Compiler_Context;
+      Name       : Lox_Scanner.Token;
+      Can_Assign : Boolean)
    is
       Arg : constant Lox_Chunk.Byte := Identifier_Constant (C, Name);
    begin
-      Emit_Bytes (C, Lox_Chunk.OP_GET_GLOBAL, Arg);
+      if Can_Assign and then Match (C, Lox_Scanner.TOKEN_EQUAL) then
+         Expression (C);
+         Emit_Bytes (C, Lox_Chunk.OP_SET_GLOBAL, Arg);
+      else
+         Emit_Bytes (C, Lox_Chunk.OP_GET_GLOBAL, Arg);
+      end if;
    end Named_Variable;
 
-   procedure Variable (C : in out Compiler_Context) is
+   procedure Variable (C : in out Compiler_Context; Can_Assign : Boolean) is
    begin
-      Named_Variable (C, C.Parser.Previous);
+      Named_Variable (C, C.Parser.Previous, Can_Assign);
    end Variable;
 
-   procedure Unary (C : in out Compiler_Context) is
+   procedure Unary
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
       Kind : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;
    begin
       Parse_Precedence (C, PREC_UNARY);
@@ -422,6 +439,7 @@ package body Lox_Compiler is
      (C : in out Compiler_Context; Precedence : Precedence_Type)
    is
       Prefix_Rule : Parse_Fn := null;
+      Can_Assign  : Boolean := False;
    begin
       Advance (C);
       Prefix_Rule := Get_Rule (C.Parser.Previous.Kind).Prefix;
@@ -430,7 +448,8 @@ package body Lox_Compiler is
          return;
       end if;
 
-      Prefix_Rule (C);
+      Can_Assign := Precedence <= PREC_ASSIGNMENT;
+      Prefix_Rule (C, Can_Assign);
 
       while Precedence <= Get_Rule (C.Parser.Current.Kind).Precedence loop
          Advance (C);
@@ -438,10 +457,13 @@ package body Lox_Compiler is
             Infix_Rule : constant Parse_Fn :=
               Get_Rule (C.Parser.Previous.Kind).Infix;
          begin
-            Infix_Rule (C);
+            Infix_Rule (C, Can_Assign);
          end;
       end loop;
 
+      if Can_Assign and then Match (C, Lox_Scanner.TOKEN_EQUAL) then
+         Error (C, "Invalid assignment target.");
+      end if;
    end Parse_Precedence;
 
    function Identifier_Constant

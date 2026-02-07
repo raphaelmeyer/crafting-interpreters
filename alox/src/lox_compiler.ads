@@ -36,7 +36,8 @@ private
       Compiling_Chunk : Lox_Chunk.Chunk_Access;
    end record;
 
-   type Parse_Fn is access procedure (C : in out Compiler_Context);
+   type Parse_Fn is
+     access procedure (C : in out Compiler_Context; Can_Assign : Boolean);
 
    type Parse_Rule is record
       Prefix     : Parse_Fn;
@@ -86,15 +87,18 @@ private
 
    procedure End_Compiler (C : in out Compiler_Context);
 
-   procedure Binary (C : in out Compiler_Context);
-   procedure Literal (C : in out Compiler_Context);
-   procedure Grouping (C : in out Compiler_Context);
-   procedure Number (C : in out Compiler_Context);
-   procedure String_Literal (C : in out Compiler_Context);
+   procedure Binary (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Literal (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Grouping (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Number (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure String_Literal
+     (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Named_Variable
-     (C : in out Compiler_Context; Name : Lox_Scanner.Token);
-   procedure Variable (C : in out Compiler_Context);
-   procedure Unary (C : in out Compiler_Context);
+     (C          : in out Compiler_Context;
+      Name       : Lox_Scanner.Token;
+      Can_Assign : Boolean);
+   procedure Variable (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Unary (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Expression (C : in out Compiler_Context);
    procedure Variable_Declaration (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);

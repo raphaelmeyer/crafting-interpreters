@@ -12,6 +12,7 @@ package Lox_Chunk is
       OP_POP,
       OP_GET_GLOBAL,
       OP_DEFINE_GLOBAL,
+      OP_SET_GLOBAL,
       OP_EQUAL,
       OP_GREATER,
       OP_LESS,
