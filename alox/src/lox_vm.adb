@@ -219,6 +219,24 @@ package body Lox_VM is
                   null;
                end;
 
+            when Lox_Chunk.OP_GET_GLOBAL'Enum_Rep    =>
+               declare
+                  Name  : constant Lox_Value.Unbounded_String :=
+                    Read_String (VM);
+                  Value : constant Hash_Table.Cursor := VM.Globals.Find (Name);
+                  use type Hash_Table.Cursor;
+               begin
+                  if Value = Hash_Table.No_Element then
+                     Runtime_Error
+                       (VM,
+                        "Undefined variable '"
+                        & Lox_Value.Unbounded.To_String (Name)
+                        & "'.");
+                     return INTERPRET_RUNTIME_ERROR;
+                  end if;
+                  Push (VM, Hash_Table.Element (Value));
+               end;
+
             when Lox_Chunk.OP_DEFINE_GLOBAL'Enum_Rep =>
                declare
                   Name   : constant Lox_Value.Unbounded_String :=

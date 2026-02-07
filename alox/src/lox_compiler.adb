@@ -35,7 +35,7 @@ package body Lox_Compiler is
         (null, Binary'Access, PREC_COMPARISON),
       Lox_Scanner.TOKEN_LESS_EQUAL    =>
         (null, Binary'Access, PREC_COMPARISON),
-      Lox_Scanner.TOKEN_IDENTIFIER    => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_IDENTIFIER    => (Variable'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_STRING        =>
         (String_Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_NUMBER        => (Number'Access, null, PREC_NONE),
@@ -328,6 +328,19 @@ package body Lox_Compiler is
    begin
       Emit_Constant (C, Lox_Value.Make_String (Str));
    end String_Literal;
+
+   procedure Named_Variable
+     (C : in out Compiler_Context; Name : Lox_Scanner.Token)
+   is
+      Arg : constant Lox_Chunk.Byte := Identifier_Constant (C, Name);
+   begin
+      Emit_Bytes (C, Lox_Chunk.OP_GET_GLOBAL, Arg);
+   end Named_Variable;
+
+   procedure Variable (C : in out Compiler_Context) is
+   begin
+      Named_Variable (C, C.Parser.Previous);
+   end Variable;
 
    procedure Unary (C : in out Compiler_Context) is
       Kind : constant Lox_Scanner.TokenType := C.Parser.Previous.Kind;

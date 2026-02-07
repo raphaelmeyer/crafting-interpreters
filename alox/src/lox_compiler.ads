@@ -91,6 +91,9 @@ private
    procedure Grouping (C : in out Compiler_Context);
    procedure Number (C : in out Compiler_Context);
    procedure String_Literal (C : in out Compiler_Context);
+   procedure Named_Variable
+     (C : in out Compiler_Context; Name : Lox_Scanner.Token);
+   procedure Variable (C : in out Compiler_Context);
    procedure Unary (C : in out Compiler_Context);
    procedure Expression (C : in out Compiler_Context);
    procedure Variable_Declaration (C : in out Compiler_Context);
