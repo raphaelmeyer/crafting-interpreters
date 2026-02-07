@@ -7,13 +7,35 @@ package Lox_Value is
 
    type Value_Type is (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING);
 
+   type Lox_Float (Is_Valid : Boolean := True) is record
+      case Is_Valid is
+         when True =>
+            Value : Long_Float;
+
+         when False =>
+            null;
+      end case;
+   end record;
+
+   overriding
+   function "=" (Left, Right : Lox_Float) return Boolean;
+   function "+" (Left, Right : Lox_Float) return Lox_Float;
+   function "-" (Left, Right : Lox_Float) return Lox_Float;
+   function "*" (Left, Right : Lox_Float) return Lox_Float;
+   function "/" (Left, Right : Lox_Float) return Lox_Float;
+   function "<" (Left, Right : Lox_Float) return Boolean;
+   function ">" (Left, Right : Lox_Float) return Boolean;
+   function "-" (Right : Lox_Float) return Lox_Float;
+
+   NaN : constant Lox_Float := (Is_Valid => False);
+
    type Value (Kind : Value_Type := VAL_NIL) is record
       case Kind is
          when VAL_BOOL =>
             Bool_Value : Boolean;
 
          when VAL_NUMBER =>
-            Number_Value : Float;
+            Number_Value : Lox_Float;
 
          when VAL_STRING =>
             String_Value : Unbounded_String;
@@ -34,7 +56,7 @@ package Lox_Value is
    function Make_Bool (Bool : Boolean) return Value;
    function Is_Bool (V : Value) return Boolean;
 
-   function Make_Number (Number : Float) return Value;
+   function Make_Number (Number : Lox_Value.Lox_Float) return Value;
    function Is_Number (V : Value) return Boolean;
 
    function Make_String (Str : Unbounded_String) return Value;
@@ -47,6 +69,6 @@ package Lox_Value is
    function Values_Equal (A : Value; B : Value) return Boolean;
 
 private
-   function To_String (V : Float) return String;
+   function To_String (V : Lox_Value.Lox_Float) return String;
 
 end Lox_Value;

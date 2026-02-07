@@ -1,9 +1,83 @@
-with Ada.Float_Text_IO;
+with Ada.Long_Float_Text_IO;
 with Ada.Strings;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
 package body Lox_Value is
+   overriding
+   function "=" (Left, Right : Lox_Float) return Boolean is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return False;
+      else
+         return Left.Value = Right.Value;
+      end if;
+   end "=";
+
+   function "+" (Left, Right : Lox_Float) return Lox_Float is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return NaN;
+      else
+         return (Is_Valid => True, Value => Left.Value + Right.Value);
+      end if;
+   end "+";
+
+   function "-" (Left, Right : Lox_Float) return Lox_Float is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return NaN;
+      else
+         return (Is_Valid => True, Value => Left.Value - Right.Value);
+      end if;
+   end "-";
+
+   function "*" (Left, Right : Lox_Float) return Lox_Float is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return NaN;
+      else
+         return (Is_Valid => True, Value => Left.Value * Right.Value);
+      end if;
+   end "*";
+
+   function "/" (Left, Right : Lox_Float) return Lox_Float is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid or else Right.Value = 0.0
+      then
+         return NaN;
+      else
+         return (Is_Valid => True, Value => Left.Value / Right.Value);
+      end if;
+   end "/";
+
+   function "<" (Left, Right : Lox_Float) return Boolean is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return False;
+      else
+         return Left.Value < Right.Value;
+      end if;
+   end "<";
+
+   function ">" (Left, Right : Lox_Float) return Boolean is
+   begin
+      if not Left.Is_Valid or else not Right.Is_Valid then
+         return False;
+      else
+         return Left.Value > Right.Value;
+      end if;
+   end ">";
+
+   function "-" (Right : Lox_Float) return Lox_Float is
+   begin
+      if Right.Is_Valid then
+         return (Is_Valid => True, Value => -Right.Value);
+      else
+         return NaN;
+      end if;
+   end "-";
+
    function Make_Nil return Value is
    begin
       return (Kind => VAL_NIL);
@@ -24,7 +98,7 @@ package body Lox_Value is
       return V.Kind = VAL_BOOL;
    end Is_Bool;
 
-   function Make_Number (Number : Float) return Value is
+   function Make_Number (Number : Lox_Value.Lox_Float) return Value is
    begin
       return (VAL_NUMBER, Number_Value => Number);
    end Make_Number;
@@ -87,7 +161,7 @@ package body Lox_Value is
       end case;
    end Values_Equal;
 
-   function To_String (V : Float) return String is
+   function To_String (V : Lox_Value.Lox_Float) return String is
       Buffer : String (1 .. 32);
 
       function Trim_Trailing (S : String; C : Character) return String is
@@ -101,13 +175,16 @@ package body Lox_Value is
       end Trim_Trailing;
 
    begin
-      if V = 0.0 then
+      if not V.Is_Valid then
+         return "NaN";
+      elsif V.Value = 0.0 then
          return "0";
-      elsif abs V < 1.0E-4 or else 1.0E+6 <= abs V then
-         Ada.Float_Text_IO.Put (To => Buffer, Item => V);
+      elsif abs V.Value < 1.0E-4 or else 1.0E+6 <= abs V.Value then
+         Ada.Long_Float_Text_IO.Put (To => Buffer, Item => V.Value);
          return Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both);
       else
-         Ada.Float_Text_IO.Put (To => Buffer, Item => V, Aft => 6, Exp => 0);
+         Ada.Long_Float_Text_IO.Put
+           (To => Buffer, Item => V.Value, Aft => 6, Exp => 0);
          return
            Trim_Trailing
              (Trim_Trailing

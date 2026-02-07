@@ -320,7 +320,8 @@ package body Lox_Compiler is
    is
       Lexeme : constant String :=
         Unbounded.To_String (C.Parser.Previous.Lexeme);
-      Value  : constant Float := Float'Value (Lexeme);
+      Value  : constant Lox_Value.Lox_Float :=
+        (Is_Valid => True, Value => Long_Float'Value (Lexeme));
    begin
       Emit_Constant (C, Lox_Value.Make_Number (Value));
    end Number;

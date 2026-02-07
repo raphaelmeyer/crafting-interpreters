@@ -6,6 +6,8 @@ with Ada.Strings.Fixed;
 with Ada.Text_IO;
 
 package body Lox_VM is
+   use type Lox_Value.Lox_Float;
+
    procedure Init (VM : in out VM_Context) is
    begin
       Reset_Stack (VM);
@@ -136,7 +138,10 @@ package body Lox_VM is
 
    generic
       type Result_Type is private;
-      with function Op (A : Float; B : Float) return Result_Type;
+      with
+        function Op
+          (A : Lox_Value.Lox_Float; B : Lox_Value.Lox_Float)
+           return Result_Type;
       with function Make (R : Result_Type) return Lox_Value.Value;
    function Binary_Op (VM : in out VM_Context) return Interpret_Result;
 
@@ -150,8 +155,8 @@ package body Lox_VM is
       end if;
 
       declare
-         B      : constant Float := Pop (VM).Number_Value;
-         A      : constant Float := Pop (VM).Number_Value;
+         B      : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
+         A      : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
          Result : constant Result_Type := Op (A, B);
       begin
          Push (VM, Make (Result));
@@ -164,11 +169,11 @@ package body Lox_VM is
    function Binary_Op_Less is new
      Binary_Op (Boolean, "<", Lox_Value.Make_Bool);
    function Binary_Op_Subtract is new
-     Binary_Op (Float, "-", Lox_Value.Make_Number);
+     Binary_Op (Lox_Value.Lox_Float, "-", Lox_Value.Make_Number);
    function Binary_Op_Multiply is new
-     Binary_Op (Float, "*", Lox_Value.Make_Number);
+     Binary_Op (Lox_Value.Lox_Float, "*", Lox_Value.Make_Number);
    function Binary_Op_Divide is new
-     Binary_Op (Float, "/", Lox_Value.Make_Number);
+     Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
    function Run (VM : in out VM_Context) return Interpret_Result is
       Instruction : Lox_Chunk.Byte;
@@ -299,8 +304,8 @@ package body Lox_VM is
                  and then Lox_Value.Is_Number (Peek (VM, 1))
                then
                   declare
-                     B : constant Float := Pop (VM).Number_Value;
-                     A : constant Float := Pop (VM).Number_Value;
+                     B : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
+                     A : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
                   begin
                      Push (VM, Lox_Value.Make_Number (A + B));
                   end;
@@ -338,7 +343,8 @@ package body Lox_VM is
                end if;
 
                declare
-                  Value : constant Float := Pop (VM).Number_Value;
+                  Value : constant Lox_Value.Lox_Float :=
+                    Pop (VM).Number_Value;
                begin
                   Push (VM, Lox_Value.Make_Number (-Value));
                end;
