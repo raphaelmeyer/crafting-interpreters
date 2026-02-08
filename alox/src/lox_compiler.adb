@@ -346,7 +346,7 @@ package body Lox_Compiler is
 
       Prefix_Rule (C);
 
-      while Precedence < Get_Rule (C.Parser.Current.Kind).Precedence loop
+      while Precedence <= Get_Rule (C.Parser.Current.Kind).Precedence loop
          Advance (C);
          declare
             Infix_Rule : constant Parse_Fn :=
