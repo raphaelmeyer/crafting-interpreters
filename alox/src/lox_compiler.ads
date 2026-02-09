@@ -33,9 +33,22 @@ private
       Panic_Mode : Boolean;
    end record;
 
+   type Maybe_Natural (Has_Value : Boolean := False) is record
+      case Has_Value is
+         when False =>
+            null;
+
+         when True =>
+            Value : Natural;
+      end case;
+   end record;
+
+   function Just (Value : Natural) return Maybe_Natural;
+   function None return Maybe_Natural;
+
    type Local_Type is record
       Name  : Lox_Scanner.Token;
-      Depth : Natural;
+      Depth : Maybe_Natural;
    end record;
 
    type Local_Index is range 0 .. 255;
@@ -150,6 +163,10 @@ private
    function Identifier_Constant
      (C : in out Compiler_Context; Token : Lox_Scanner.Token)
       return Lox_Chunk.Byte;
+   function Identifiers_Equal
+     (A : Lox_Scanner.Token; B : Lox_Scanner.Token) return Boolean;
+   procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token);
+   procedure Declare_Variable (C : in out Compiler_Context);
    function Parse_Variable
      (C : in out Compiler_Context; Error_Message : String)
       return Lox_Chunk.Byte;

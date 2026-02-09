@@ -83,6 +83,16 @@ package body Lox_Compiler is
       return not C.Parser.Had_Error;
    end Compile;
 
+   function Just (Value : Natural) return Maybe_Natural is
+   begin
+      return (Has_Value => True, Value => Value);
+   end Just;
+
+   function None return Maybe_Natural is
+   begin
+      return (Has_Value => False);
+   end None;
+
    overriding
    procedure Initialize (Compiler : in out Compiler_Instance) is
    begin
@@ -273,8 +283,26 @@ package body Lox_Compiler is
    end Begin_Scope;
 
    procedure End_Scope (C : in out Compiler_Context) is
+      function Has_Variable_In_Scope return Boolean is
+      begin
+         if C.Current.Local_Count = 0 then
+            return False;
+         end if;
+         declare
+            Top_Index : constant Local_Index :=
+              Local_Index (Natural'Pred (C.Current.Local_Count));
+         begin
+            return
+              C.Current.Locals (Top_Index).Depth.Value > C.Current.Scope_Depth;
+         end;
+      end Has_Variable_In_Scope;
    begin
       C.Current.Scope_Depth := Natural'Pred (C.Current.Scope_Depth);
+
+      while Has_Variable_In_Scope loop
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+         C.Current.Local_Count := Natural'Pred (C.Current.Local_Count);
+      end loop;
    end End_Scope;
 
    procedure Binary
@@ -521,17 +549,93 @@ package body Lox_Compiler is
       return Make_Constant (C, Lox_Value.Make_String (Token.Lexeme));
    end Identifier_Constant;
 
+   function Identifiers_Equal
+     (A : Lox_Scanner.Token; B : Lox_Scanner.Token) return Boolean
+   is
+      use type Lox_Scanner.Unbounded_String;
+   begin
+      return A.Lexeme = B.Lexeme;
+   end Identifiers_Equal;
+
+   procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token)
+   is
+   begin
+      if C.Current.Local_Count > Natural (Local_Index'Last) then
+         Error (C, "Too many local variables in function.");
+         return;
+      end if;
+
+      declare
+         Local : Local_Type renames
+           C.Current.Locals (Local_Index (C.Current.Local_Count));
+      begin
+         C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
+         Local.Name := Name;
+         Local.Depth := Just (C.Current.Scope_Depth);
+      end;
+   end Add_Local;
+
+   procedure Declare_Variable (C : in out Compiler_Context) is
+      procedure Check_Duplicate_In_Same_Scope (Name : Lox_Scanner.Token) is
+      begin
+         if C.Current.Local_Count = 0 then
+            return;
+         end if;
+
+         for I in reverse
+           Local_Index'First
+           .. Local_Index (Natural'Pred (C.Current.Local_Count))
+         loop
+            declare
+               Local : Local_Type renames C.Current.Locals (I);
+            begin
+               exit when
+                 Local.Depth.Has_Value
+                 and then Local.Depth.Value < C.Current.Scope_Depth;
+
+               if Identifiers_Equal (Name, Local.Name) then
+                  Error
+                    (C, "Already a variable with this name in this scope.");
+               end if;
+            end;
+         end loop;
+      end Check_Duplicate_In_Same_Scope;
+
+   begin
+      if C.Current.Scope_Depth = 0 then
+         return;
+      end if;
+
+      declare
+         Name : constant Lox_Scanner.Token := C.Parser.Previous;
+      begin
+         Check_Duplicate_In_Same_Scope (Name);
+
+         Add_Local (C, Name);
+      end;
+   end Declare_Variable;
+
    function Parse_Variable
      (C : in out Compiler_Context; Error_Message : String)
       return Lox_Chunk.Byte is
    begin
       Consume (C, Lox_Scanner.TOKEN_IDENTIFIER, Error_Message);
+
+      Declare_Variable (C);
+      if C.Current.Scope_Depth > 0 then
+         return 0;
+      end if;
+
       return Identifier_Constant (C, C.Parser.Previous);
    end Parse_Variable;
 
    procedure Define_Variable
      (C : in out Compiler_Context; Global : Lox_Chunk.Byte) is
    begin
+      if C.Current.Scope_Depth > 0 then
+         return;
+      end if;
+
       Emit_Bytes (C, Lox_Chunk.OP_DEFINE_GLOBAL, Global);
    end Define_Variable;
 
