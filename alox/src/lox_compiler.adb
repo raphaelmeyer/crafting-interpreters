@@ -267,6 +267,16 @@ package body Lox_Compiler is
       end if;
    end End_Compiler;
 
+   procedure Begin_Scope (C : in out Compiler_Context) is
+   begin
+      C.Current.Scope_Depth := Natural'Succ (C.Current.Scope_Depth);
+   end Begin_Scope;
+
+   procedure End_Scope (C : in out Compiler_Context) is
+   begin
+      C.Current.Scope_Depth := Natural'Pred (C.Current.Scope_Depth);
+   end End_Scope;
+
    procedure Binary
      (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
    is
@@ -405,6 +415,17 @@ package body Lox_Compiler is
       Parse_Precedence (C, PREC_ASSIGNMENT);
    end Expression;
 
+   procedure Block (C : in out Compiler_Context) is
+   begin
+      while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE)
+        and then not Check (C, Lox_Scanner.TOKEN_EOF)
+      loop
+         Declaration (C);
+      end loop;
+
+      Consume (C, Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+   end Block;
+
    procedure Variable_Declaration (C : in out Compiler_Context) is
       Global : constant Lox_Chunk.Byte :=
         Parse_Variable (C, "Expect variable name.");
@@ -453,6 +474,10 @@ package body Lox_Compiler is
    begin
       if Match (C, Lox_Scanner.TOKEN_PRINT) then
          Print_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_LEFT_BRACE) then
+         Begin_Scope (C);
+         Block (C);
+         End_Scope (C);
       else
          Expression_Statement (C);
       end if;

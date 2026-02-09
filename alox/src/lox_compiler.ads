@@ -123,6 +123,9 @@ private
      (C : in out Compiler_Context; Compiler : Compiler_Access);
    procedure End_Compiler (C : in out Compiler_Context);
 
+   procedure Begin_Scope (C : in out Compiler_Context);
+   procedure End_Scope (C : in out Compiler_Context);
+
    procedure Binary (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Literal (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Grouping (C : in out Compiler_Context; Can_Assign : Boolean);
@@ -136,6 +139,7 @@ private
    procedure Variable (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Unary (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Expression (C : in out Compiler_Context);
+   procedure Block (C : in out Compiler_Context);
    procedure Variable_Declaration (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);
    procedure Declaration (C : in out Compiler_Context);
