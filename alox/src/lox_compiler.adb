@@ -62,9 +62,11 @@ package body Lox_Compiler is
      (Source : Lox_Scanner.Source_Code; Chunk : Lox_Chunk.Chunk_Access)
       return Boolean
    is
-      C : Compiler_Context;
+      C        : Compiler_Context;
+      Compiler : Compiler_Instance;
    begin
       C.Scanner := Lox_Scanner.Init (Source);
+      Init_Compiler (C, Compiler.Instance);
       C.Compiling_Chunk := Chunk;
 
       C.Parser.Had_Error := False;
@@ -80,6 +82,18 @@ package body Lox_Compiler is
 
       return not C.Parser.Had_Error;
    end Compile;
+
+   overriding
+   procedure Initialize (Compiler : in out Compiler_Instance) is
+   begin
+      Compiler.Instance := new Compiler_Type;
+   end Initialize;
+
+   overriding
+   procedure Finalize (Compiler : in out Compiler_Instance) is
+   begin
+      Free (Compiler.Instance);
+   end Finalize;
 
    function Current_Chunk
      (C : in out Compiler_Context) return Lox_Chunk.Chunk_Access is
@@ -232,6 +246,14 @@ package body Lox_Compiler is
    begin
       Emit_Bytes (C, Lox_Chunk.OP_CONSTANT, Id);
    end Emit_Constant;
+
+   procedure Init_Compiler
+     (C : in out Compiler_Context; Compiler : Compiler_Access) is
+   begin
+      Compiler.Local_Count := 0;
+      Compiler.Scope_Depth := 0;
+      C.Current := Compiler;
+   end Init_Compiler;
 
    procedure End_Compiler (C : in out Compiler_Context) is
    begin

@@ -2,6 +2,9 @@ with Lox_Chunk;
 with Lox_Scanner;
 with Lox_Value;
 
+with Ada.Finalization;
+with Ada.Unchecked_Deallocation;
+
 package Lox_Compiler is
    function Compile
      (Source : Lox_Scanner.Source_Code; Chunk : Lox_Chunk.Chunk_Access)
@@ -30,9 +33,31 @@ private
       Panic_Mode : Boolean;
    end record;
 
+   type Local_Type is record
+      Name  : Lox_Scanner.Token;
+      Depth : Natural;
+   end record;
+
+   type Local_Index is range 0 .. 255;
+   type Locals_Array is array (Local_Index) of Local_Type;
+
+   type Compiler_Type is limited record
+      Locals      : Locals_Array;
+      Local_Count : Natural;
+      Scope_Depth : Natural;
+   end record;
+
+   type Compiler_Access is access Compiler_Type;
+
+   type Compiler_Instance is new Ada.Finalization.Limited_Controlled
+   with record
+      Instance : Compiler_Access;
+   end record;
+
    type Compiler_Context is limited record
       Scanner         : Lox_Scanner.Scanner;
       Parser          : Parser_Context;
+      Current         : Compiler_Access;
       Compiling_Chunk : Lox_Chunk.Chunk_Access;
    end record;
 
@@ -44,6 +69,15 @@ private
       Infix      : Parse_Fn;
       Precedence : Precedence_Type;
    end record;
+
+   overriding
+   procedure Initialize (Compiler : in out Compiler_Instance);
+   overriding
+   procedure Finalize (Compiler : in out Compiler_Instance);
+   procedure Free is new
+     Ada.Unchecked_Deallocation
+       (Object => Compiler_Type,
+        Name   => Compiler_Access);
 
    function Current_Chunk
      (C : in out Compiler_Context) return Lox_Chunk.Chunk_Access;
@@ -85,6 +119,8 @@ private
    procedure Emit_Constant
      (C : in out Compiler_Context; Value : Lox_Value.Value);
 
+   procedure Init_Compiler
+     (C : in out Compiler_Context; Compiler : Compiler_Access);
    procedure End_Compiler (C : in out Compiler_Context);
 
    procedure Binary (C : in out Compiler_Context; Can_Assign : Boolean);
