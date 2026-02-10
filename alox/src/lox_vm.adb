@@ -224,6 +224,20 @@ package body Lox_VM is
                   null;
                end;
 
+            when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
+               declare
+                  Slot : constant Lox_Chunk.Byte := Read_Byte (VM);
+               begin
+                  Push (VM, VM.Stack (Stack_Index (Slot)));
+               end;
+
+            when Lox_Chunk.OP_SET_LOCAL'Enum_Rep     =>
+               declare
+                  Slot : constant Lox_Chunk.Byte := Read_Byte (VM);
+               begin
+                  VM.Stack (Stack_Index (Slot)) := Peek (VM, 0);
+               end;
+
             when Lox_Chunk.OP_GET_GLOBAL'Enum_Rep    =>
                declare
                   Name  : constant Lox_Value.Unbounded_String :=

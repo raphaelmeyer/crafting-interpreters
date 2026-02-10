@@ -55,6 +55,12 @@ package body Debug is
          when Lox_Chunk.OP_POP'Enum_Rep           =>
             return Simple_Instruction ("OP_POP", Offset);
 
+         when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
+            return Byte_Instruction ("OP_GET_LOCAL", Chunk, Offset);
+
+         when Lox_Chunk.OP_SET_LOCAL'Enum_Rep     =>
+            return Byte_Instruction ("OP_SET_LOCAL", Chunk, Offset);
+
          when Lox_Chunk.OP_GET_GLOBAL'Enum_Rep    =>
             return Constant_Instruction ("OP_GET_GLOBAL", Chunk, Offset);
 
@@ -129,15 +135,12 @@ package body Debug is
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural
    is
-      Byte  : Lox_Chunk.Byte;
-      Index : Natural;
+      Const : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
    begin
-      Byte := Chunk.Code (Offset + 1);
-      Index := Natural (Byte);
       Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
-      Ada.Integer_Text_IO.Put (Index, Width => 4);
+      Ada.Integer_Text_IO.Put (Natural (Const), Width => 4);
       Ada.Text_IO.Put (" '");
-      Lox_Value.Print_Value (Chunk.Constants (Index));
+      Lox_Value.Print_Value (Chunk.Constants (Natural (Const)));
       Ada.Text_IO.Put_Line ("'");
       return Offset + 2;
    end Constant_Instruction;
@@ -148,5 +151,16 @@ package body Debug is
       Ada.Text_IO.Put_Line (Name);
       return Offset + 1;
    end Simple_Instruction;
+
+   function Byte_Instruction
+     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
+      return Natural
+   is
+      Slot : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
+   begin
+      Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
+      Ada.Integer_Text_IO.Put (Natural (Slot), Width => 4);
+      return Offset + 2;
+   end Byte_Instruction;
 
 end Debug;

@@ -22,5 +22,7 @@ private
       return Natural;
    function Simple_Instruction
      (Name : String; Offset : Natural) return Natural;
-
+   function Byte_Instruction
+     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
+      return Natural;
 end Debug;

@@ -403,13 +403,26 @@ package body Lox_Compiler is
       Name       : Lox_Scanner.Token;
       Can_Assign : Boolean)
    is
-      Arg : constant Lox_Chunk.Byte := Identifier_Constant (C, Name);
+      Resolved : Local_Index;
+      Arg      : Lox_Chunk.Byte;
+      Get_Op   : Lox_Chunk.Op_Code;
+      Set_Op   : Lox_Chunk.Op_Code;
    begin
+      if Resolve_Local (C, C.Current, Name, Resolved) then
+         Arg := Lox_Chunk.Byte (Resolved);
+         Get_Op := Lox_Chunk.OP_GET_LOCAL;
+         Set_Op := Lox_Chunk.OP_SET_LOCAL;
+      else
+         Arg := Identifier_Constant (C, Name);
+         Get_Op := Lox_Chunk.OP_GET_GLOBAL;
+         Set_Op := Lox_Chunk.OP_SET_GLOBAL;
+      end if;
+
       if Can_Assign and then Match (C, Lox_Scanner.TOKEN_EQUAL) then
          Expression (C);
-         Emit_Bytes (C, Lox_Chunk.OP_SET_GLOBAL, Arg);
+         Emit_Bytes (C, Set_Op, Arg);
       else
-         Emit_Bytes (C, Lox_Chunk.OP_GET_GLOBAL, Arg);
+         Emit_Bytes (C, Get_Op, Arg);
       end if;
    end Named_Variable;
 
@@ -557,6 +570,31 @@ package body Lox_Compiler is
       return A.Lexeme = B.Lexeme;
    end Identifiers_Equal;
 
+   function Resolve_Local
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Name     : Lox_Scanner.Token;
+      Index    : out Local_Index) return Boolean is
+   begin
+      if Compiler.Local_Count = 0 then
+         return False;
+      end if;
+
+      for I in reverse
+        Local_Index'First .. Local_Index (Natural'Pred (Compiler.Local_Count))
+      loop
+         if Identifiers_Equal (Name, Compiler.Locals (I).Name) then
+            if not Compiler.Locals (I).Depth.Has_Value then
+               Error (C, "Can't read local variable in its own initializer.");
+            end if;
+            Index := I;
+            return True;
+         end if;
+      end loop;
+
+      return False;
+   end Resolve_Local;
+
    procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token)
    is
    begin
@@ -571,7 +609,7 @@ package body Lox_Compiler is
       begin
          C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
          Local.Name := Name;
-         Local.Depth := Just (C.Current.Scope_Depth);
+         Local.Depth := (Has_Value => False);
       end;
    end Add_Local;
 
@@ -629,10 +667,18 @@ package body Lox_Compiler is
       return Identifier_Constant (C, C.Parser.Previous);
    end Parse_Variable;
 
+   procedure Mark_Initialized (C : in out Compiler_Context) is
+      Top_Index : constant Local_Index :=
+        Local_Index (Natural'Pred (C.Current.Local_Count));
+   begin
+      C.Current.Locals (Top_Index).Depth := Just (C.Current.Scope_Depth);
+   end Mark_Initialized;
+
    procedure Define_Variable
      (C : in out Compiler_Context; Global : Lox_Chunk.Byte) is
    begin
       if C.Current.Scope_Depth > 0 then
+         Mark_Initialized (C);
          return;
       end if;
 

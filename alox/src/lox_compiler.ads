@@ -165,11 +165,17 @@ private
       return Lox_Chunk.Byte;
    function Identifiers_Equal
      (A : Lox_Scanner.Token; B : Lox_Scanner.Token) return Boolean;
+   function Resolve_Local
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Name     : Lox_Scanner.Token;
+      Index    : out Local_Index) return Boolean;
    procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token);
    procedure Declare_Variable (C : in out Compiler_Context);
    function Parse_Variable
      (C : in out Compiler_Context; Error_Message : String)
       return Lox_Chunk.Byte;
+   procedure Mark_Initialized (C : in out Compiler_Context);
    procedure Define_Variable
      (C : in out Compiler_Context; Global : Lox_Chunk.Byte);
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
