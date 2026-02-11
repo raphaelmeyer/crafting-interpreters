@@ -82,6 +82,10 @@ void free_vm() {
 }
 
 static inline uint8_t read_byte() { return *vm.ip++; }
+static inline uint16_t read_short() {
+  vm.ip += 2;
+  return (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]);
+}
 
 static inline Value read_constant() {
   return vm.chunk->constants.values[read_byte()];
@@ -250,6 +254,20 @@ static InterpretResult run() {
     case OP_PRINT: {
       print_value(pop());
       printf("\n");
+      break;
+    }
+
+    case OP_JUMP: {
+      uint16_t offset = read_short();
+      vm.ip += offset;
+      break;
+    }
+
+    case OP_JUMP_IF_FALSE: {
+      uint16_t offset = read_short();
+      if (is_falsey(peek(0))) {
+        vm.ip += offset;
+      }
       break;
     }
 
