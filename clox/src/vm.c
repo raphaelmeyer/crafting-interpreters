@@ -81,15 +81,13 @@ void free_vm() {
   free_objects(vm.objects);
 }
 
-static inline uint8_t read_byte(VM *vm) { return *vm->ip++; }
+static inline uint8_t read_byte() { return *vm.ip++; }
 
-static inline Value read_constant(VM *vm) {
-  return vm->chunk->constants.values[read_byte(vm)];
+static inline Value read_constant() {
+  return vm.chunk->constants.values[read_byte()];
 }
 
-static inline ObjString *read_string(VM *vm) {
-  return as_string(read_constant(vm));
-}
+static inline ObjString *read_string() { return as_string(read_constant()); }
 
 static Value subtract(double a, double b) { return number_value(a - b); }
 static Value multiply(double a, double b) { return number_value(a * b); }
@@ -117,10 +115,10 @@ static InterpretResult run() {
     }
 
     uint8_t instruction;
-    switch (instruction = read_byte(&vm)) {
+    switch (instruction = read_byte()) {
 
     case OP_CONSTANT: {
-      Value const constant = read_constant(&vm);
+      Value const constant = read_constant();
       push(constant);
       break;
     }
@@ -140,19 +138,19 @@ static InterpretResult run() {
       break;
 
     case OP_GET_LOCAL: {
-      uint8_t slot = read_byte(&vm);
+      uint8_t slot = read_byte();
       push(vm.stack[slot]);
       break;
     }
 
     case OP_SET_LOCAL: {
-      uint8_t slot = read_byte(&vm);
+      uint8_t slot = read_byte();
       vm.stack[slot] = peek(0);
       break;
     }
 
     case OP_GET_GLOBAL: {
-      ObjString *name = read_string(&vm);
+      ObjString *name = read_string();
       Value value;
       if (!table_get(&vm.globals, name, &value)) {
         runtime_error("Undefined variable '%s'.", name->chars);
@@ -163,14 +161,14 @@ static InterpretResult run() {
     }
 
     case OP_DEFINE_GLOBAL: {
-      ObjString *const name = read_string(&vm);
+      ObjString *const name = read_string();
       table_set(&vm.globals, name, peek(0));
       pop();
       break;
     }
 
     case OP_SET_GLOBAL: {
-      ObjString *name = read_string(&vm);
+      ObjString *name = read_string();
       if (table_set(&vm.globals, name, peek(0))) {
         table_delete(&vm.globals, name);
         runtime_error("Undefined variable '%s'.", name->chars);
