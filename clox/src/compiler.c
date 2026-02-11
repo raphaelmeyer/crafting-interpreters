@@ -272,6 +272,15 @@ static void define_variable(uint8_t global) {
   emit_bytes(OP_DEFINE_GLOBAL, global);
 }
 
+static void logical_and(bool) {
+  int32_t end_jump = emit_jump(OP_JUMP_IF_FALSE);
+
+  emit_byte(OP_POP);
+  parse_precedence(PREC_AND);
+
+  patch_jump(end_jump);
+}
+
 static void binary(bool) {
   TokenType operator_type = parser.previous.type;
   ParseRule *rule = get_rule(operator_type);
@@ -339,6 +348,17 @@ static void number(bool) {
   emit_constant(number_value(value));
 }
 
+static void logical_or(bool) {
+  int32_t else_jump = emit_jump(OP_JUMP_IF_FALSE);
+  int32_t end_jump = emit_jump(OP_JUMP);
+
+  patch_jump(else_jump);
+  emit_byte(OP_POP);
+
+  parse_precedence(PREC_OR);
+  patch_jump(end_jump);
+}
+
 static void string(bool) {
   emit_constant(obj_value(
       copy_string(parser.previous.start + 1, parser.previous.length - 2)));
@@ -387,46 +407,46 @@ static void unary(bool) {
 
 static ParseRule rules[] = {
     // clang-format off
-    [TOKEN_LEFT_PAREN]    = {grouping,  NULL,   PREC_NONE},
-    [TOKEN_RIGHT_PAREN]   = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_LEFT_BRACE]    = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_RIGHT_BRACE]   = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_COMMA]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_DOT]           = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_MINUS]         = {unary,     binary, PREC_TERM},
-    [TOKEN_PLUS]          = {NULL,      binary, PREC_TERM},
-    [TOKEN_SEMICOLON]     = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_SLASH]         = {NULL,      binary, PREC_FACTOR},
-    [TOKEN_STAR]          = {NULL,      binary, PREC_FACTOR},
-    [TOKEN_BANG]          = {unary,     NULL,   PREC_NONE},
-    [TOKEN_BANG_EQUAL]    = {NULL,      binary, PREC_EQUALITY},
-    [TOKEN_EQUAL]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_EQUAL_EQUAL]   = {NULL,      binary, PREC_EQUALITY},
-    [TOKEN_GREATER]       = {NULL,      binary, PREC_COMPARISON},
-    [TOKEN_GREATER_EQUAL] = {NULL,      binary, PREC_COMPARISON},
-    [TOKEN_LESS]          = {NULL,      binary, PREC_COMPARISON},
-    [TOKEN_LESS_EQUAL]    = {NULL,      binary, PREC_COMPARISON},
-    [TOKEN_IDENTIFIER]    = {variable,  NULL,   PREC_NONE},
-    [TOKEN_STRING]        = {string,    NULL,   PREC_NONE},
-    [TOKEN_NUMBER]        = {number,    NULL,   PREC_NONE},
-    [TOKEN_AND]           = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_CLASS]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_ELSE]          = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_FALSE]         = {literal,   NULL,   PREC_NONE},
-    [TOKEN_FOR]           = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_FUN]           = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_IF]            = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_NIL]           = {literal,   NULL,   PREC_NONE},
-    [TOKEN_OR]            = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_PRINT]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_RETURN]        = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_SUPER]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_THIS]          = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_TRUE]          = {literal,   NULL,   PREC_NONE},
-    [TOKEN_VAR]           = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_WHILE]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_ERROR]         = {NULL,      NULL,   PREC_NONE},
-    [TOKEN_EOF]           = {NULL,      NULL,   PREC_NONE},
+    [TOKEN_LEFT_PAREN]    = {grouping,  NULL,         PREC_NONE},
+    [TOKEN_RIGHT_PAREN]   = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_LEFT_BRACE]    = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_RIGHT_BRACE]   = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_COMMA]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_DOT]           = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_MINUS]         = {unary,     binary,       PREC_TERM},
+    [TOKEN_PLUS]          = {NULL,      binary,       PREC_TERM},
+    [TOKEN_SEMICOLON]     = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_SLASH]         = {NULL,      binary,       PREC_FACTOR},
+    [TOKEN_STAR]          = {NULL,      binary,       PREC_FACTOR},
+    [TOKEN_BANG]          = {unary,     NULL,         PREC_NONE},
+    [TOKEN_BANG_EQUAL]    = {NULL,      binary,       PREC_EQUALITY},
+    [TOKEN_EQUAL]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_EQUAL_EQUAL]   = {NULL,      binary,       PREC_EQUALITY},
+    [TOKEN_GREATER]       = {NULL,      binary,       PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL,      binary,       PREC_COMPARISON},
+    [TOKEN_LESS]          = {NULL,      binary,       PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL]    = {NULL,      binary,       PREC_COMPARISON},
+    [TOKEN_IDENTIFIER]    = {variable,  NULL,         PREC_NONE},
+    [TOKEN_STRING]        = {string,    NULL,         PREC_NONE},
+    [TOKEN_NUMBER]        = {number,    NULL,         PREC_NONE},
+    [TOKEN_AND]           = {NULL,      logical_and,  PREC_AND},
+    [TOKEN_CLASS]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_ELSE]          = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_FALSE]         = {literal,   NULL,         PREC_NONE},
+    [TOKEN_FOR]           = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_FUN]           = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_IF]            = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_NIL]           = {literal,   NULL,         PREC_NONE},
+    [TOKEN_OR]            = {NULL,      logical_or,   PREC_OR},
+    [TOKEN_PRINT]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_RETURN]        = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_SUPER]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_THIS]          = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_TRUE]          = {literal,   NULL,         PREC_NONE},
+    [TOKEN_VAR]           = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_WHILE]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_ERROR]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_EOF]           = {NULL,      NULL,         PREC_NONE},
     // clang-format on
 };
 
