@@ -125,6 +125,9 @@ private
      (C      : in out Compiler_Context;
       Byte_1 : Lox_Chunk.Op_Code;
       Byte_2 : Lox_Chunk.Op_Code);
+   function Emit_Jump
+     (C : in out Compiler_Context; Instruction : Lox_Chunk.Op_Code)
+      return Natural;
    procedure Emit_Return (C : in out Compiler_Context);
    function Make_Constant
      (C : in out Compiler_Context; Value : Lox_Value.Value)
@@ -154,6 +157,8 @@ private
    procedure Expression (C : in out Compiler_Context);
    procedure Block (C : in out Compiler_Context);
    procedure Variable_Declaration (C : in out Compiler_Context);
+   procedure Expression_Statement (C : in out Compiler_Context);
+   procedure If_Statement (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);
    procedure Declaration (C : in out Compiler_Context);
    procedure Statement (C : in out Compiler_Context);

@@ -1,4 +1,5 @@
 with Debug;
+with Lox_Types; use Lox_Types;
 
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
@@ -229,6 +230,21 @@ package body Lox_Compiler is
       Emit_Byte (C, Byte_2);
    end Emit_Bytes;
 
+   function Emit_Jump
+     (C : in out Compiler_Context; Instruction : Lox_Chunk.Op_Code)
+      return Natural is
+   begin
+      Emit_Byte (C, Instruction);
+      declare
+         Patch_Index : constant Natural :=
+           Natural (Current_Chunk (C).Code.Length);
+      begin
+         Emit_Byte (C, Lox_Chunk.Byte'Last);
+         Emit_Byte (C, Lox_Chunk.Byte'Last);
+         return Patch_Index;
+      end;
+   end Emit_Jump;
+
    procedure Emit_Return (C : in out Compiler_Context) is
    begin
       Emit_Byte (C, Lox_Chunk.OP_RETURN);
@@ -256,6 +272,20 @@ package body Lox_Compiler is
    begin
       Emit_Bytes (C, Lox_Chunk.OP_CONSTANT, Id);
    end Emit_Constant;
+
+   procedure Patch_Jump (C : in out Compiler_Context; Offset : Natural) is
+      Jump : constant Natural :=
+        Natural (Current_Chunk (C).Code.Length) - Offset - 2;
+   begin
+      if Jump > Natural (Short'Last) then
+         Error (C, "Too much code to jump over.");
+         return;
+      end if;
+
+      Current_Chunk (C).Code (Offset) := Lox_Chunk.Byte (Jump / 256);
+      Current_Chunk (C).Code (Natural'Succ (Offset)) :=
+        Lox_Chunk.Byte (Jump mod 256);
+   end Patch_Jump;
 
    procedure Init_Compiler
      (C : in out Compiler_Context; Compiler : Compiler_Access) is
@@ -498,6 +528,33 @@ package body Lox_Compiler is
       Emit_Byte (C, Lox_Chunk.OP_PRINT);
    end Print_Statement;
 
+   procedure If_Statement (C : in out Compiler_Context) is
+   begin
+      Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+      Expression (C);
+      Consume
+        (C, Lox_Scanner.TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+      declare
+         Then_Jump : Natural;
+         Else_Jump : Natural;
+      begin
+         Then_Jump := Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+         Statement (C);
+
+         Else_Jump := Emit_Jump (C, Lox_Chunk.OP_JUMP);
+
+         Patch_Jump (C, Then_Jump);
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+
+         if Match (C, Lox_Scanner.TOKEN_ELSE) then
+            Statement (C);
+         end if;
+         Patch_Jump (C, Else_Jump);
+      end;
+   end If_Statement;
+
    procedure Declaration (C : in out Compiler_Context) is
    begin
       if Match (C, Lox_Scanner.TOKEN_VAR) then
@@ -515,6 +572,8 @@ package body Lox_Compiler is
    begin
       if Match (C, Lox_Scanner.TOKEN_PRINT) then
          Print_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_IF) then
+         If_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_LEFT_BRACE) then
          Begin_Scope (C);
          Block (C);
@@ -609,7 +668,7 @@ package body Lox_Compiler is
       begin
          C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
          Local.Name := Name;
-         Local.Depth := (Has_Value => False);
+         Local.Depth := None;
       end;
    end Add_Local;
 

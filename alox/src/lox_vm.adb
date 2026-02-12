@@ -124,6 +124,17 @@ package body Lox_VM is
       return Result;
    end Read_Byte;
 
+   function Read_Short (VM : in out VM_Context) return Short is
+      High : Lox_Chunk.Byte;
+      Low  : Lox_Chunk.Byte;
+   begin
+      High := Lox_Chunk.Byte_Vectors.Element (VM.IP);
+      VM.IP := Lox_Chunk.Byte_Vectors.Next (VM.IP);
+      Low := Lox_Chunk.Byte_Vectors.Element (VM.IP);
+      VM.IP := Lox_Chunk.Byte_Vectors.Next (VM.IP);
+      return (Short (High) * 256 + Short (Low));
+   end Read_Short;
+
    function Read_Constant (VM : in out VM_Context) return Lox_Value.Value is
       Index : constant Natural := Natural (Read_Byte (VM));
    begin
@@ -366,6 +377,28 @@ package body Lox_VM is
             when Lox_Chunk.OP_PRINT'Enum_Rep         =>
                Lox_Value.Print_Value (Pop (VM));
                Ada.Text_IO.New_Line;
+
+            when Lox_Chunk.OP_JUMP'Enum_Rep          =>
+               declare
+                  Offset : constant Short := Read_Short (VM);
+               begin
+                  VM.IP :=
+                    VM.Chunk.Code.To_Cursor
+                      (Lox_Chunk.Byte_Vectors.To_Index (VM.IP)
+                       + Natural (Offset));
+               end;
+
+            when Lox_Chunk.OP_JUMP_IF_FALSE'Enum_Rep =>
+               declare
+                  Offset : constant Short := Read_Short (VM);
+               begin
+                  if Is_Falsey (Peek (VM, 0)) then
+                     VM.IP :=
+                       VM.Chunk.Code.To_Cursor
+                         (Lox_Chunk.Byte_Vectors.To_Index (VM.IP)
+                          + Natural (Offset));
+                  end if;
+               end;
 
             when Lox_Chunk.OP_RETURN'Enum_Rep        =>
                return INTERPRET_OK;

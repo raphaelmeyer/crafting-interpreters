@@ -17,6 +17,8 @@ private
    Print_Code      : Boolean := False;
    Trace_Execution : Boolean := False;
 
+   type Direction is (Forward, Backward);
+
    function Constant_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural;
@@ -25,4 +27,9 @@ private
    function Byte_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural;
+   function Jump_Instruction
+     (Name           : String;
+      Jump_Direction : Direction;
+      Chunk          : Lox_Chunk.Chunk_Read_Access;
+      Offset         : Natural) return Natural;
 end Debug;

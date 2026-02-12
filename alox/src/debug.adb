@@ -1,9 +1,9 @@
+with Lox_Value;
+
 with Ada.Integer_Text_IO;
 with Ada.Strings;
 with Ada.Strings.Fixed;
 with Ada.Text_IO;
-
-with Lox_Value;
 
 package body Debug is
 
@@ -100,6 +100,13 @@ package body Debug is
          when Lox_Chunk.OP_PRINT'Enum_Rep         =>
             return Simple_Instruction ("OP_PRINT", Offset);
 
+         when Lox_Chunk.OP_JUMP'Enum_Rep          =>
+            return Jump_Instruction ("OP_JUMP", Forward, Chunk, Offset);
+
+         when Lox_Chunk.OP_JUMP_IF_FALSE'Enum_Rep =>
+            return
+              Jump_Instruction ("OP_JUMP_IF_FALSE", Forward, Chunk, Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 
@@ -162,5 +169,27 @@ package body Debug is
       Ada.Integer_Text_IO.Put (Natural (Slot), Width => 4);
       return Offset + 2;
    end Byte_Instruction;
+
+   function Jump_Instruction
+     (Name           : String;
+      Jump_Direction : Direction;
+      Chunk          : Lox_Chunk.Chunk_Read_Access;
+      Offset         : Natural) return Natural
+   is
+      High        : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
+      Low         : constant Lox_Chunk.Byte := Chunk.Code (Offset + 2);
+      Jump        : constant Natural := Natural (High) * 256 + Natural (Low);
+      Destination : constant Natural :=
+        (if Jump_Direction = Forward
+         then Offset + 3 + Jump
+         else Offset + 3 - Jump);
+   begin
+      Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
+      Ada.Integer_Text_IO.Put (Offset, Width => 4);
+      Ada.Text_IO.Put (" -> ");
+      Ada.Integer_Text_IO.Put (Destination, Width => 0);
+      Ada.Text_IO.New_Line;
+      return Offset + 3;
+   end Jump_Instruction;
 
 end Debug;

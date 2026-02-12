@@ -1,6 +1,7 @@
 with Lox_Chunk;
 with Lox_Scanner;
 with Lox_Value;
+with Lox_Types; use Lox_Types;
 
 with Ada.Containers.Hashed_Maps;
 
@@ -52,6 +53,7 @@ private
    procedure Runtime_Error (VM : in out VM_Context; Message : String);
 
    function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte;
+   function Read_Short (VM : in out VM_Context) return Short;
    function Read_Constant (VM : in out VM_Context) return Lox_Value.Value;
    function Read_String
      (VM : in out VM_Context) return Lox_Value.Unbounded_String;
