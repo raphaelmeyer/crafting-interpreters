@@ -1,5 +1,4 @@
 with Debug;
-with Lox_Types; use Lox_Types;
 
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
@@ -201,9 +200,9 @@ package body Lox_Compiler is
       return True;
    end Match;
 
-   procedure Emit_Byte (C : in out Compiler_Context; Byte : Lox_Chunk.Byte) is
+   procedure Emit_Byte (C : in out Compiler_Context; Value : Byte) is
    begin
-      Lox_Chunk.Write (Current_Chunk (C).all, Byte, C.Parser.Previous.Line);
+      Lox_Chunk.Write (Current_Chunk (C).all, Value, C.Parser.Previous.Line);
    end Emit_Byte;
 
    procedure Emit_Byte
@@ -213,9 +212,8 @@ package body Lox_Compiler is
    end Emit_Byte;
 
    procedure Emit_Bytes
-     (C      : in out Compiler_Context;
-      Byte_1 : Lox_Chunk.Op_Code;
-      Byte_2 : Lox_Chunk.Byte) is
+     (C : in out Compiler_Context; Byte_1 : Lox_Chunk.Op_Code; Byte_2 : Byte)
+   is
    begin
       Emit_Byte (C, Byte_1);
       Emit_Byte (C, Byte_2);
@@ -239,8 +237,8 @@ package body Lox_Compiler is
          Patch_Index : constant Natural :=
            Natural (Current_Chunk (C).Code.Length);
       begin
-         Emit_Byte (C, Lox_Chunk.Byte'Last);
-         Emit_Byte (C, Lox_Chunk.Byte'Last);
+         Emit_Byte (C, Byte'Last);
+         Emit_Byte (C, Byte'Last);
          return Patch_Index;
       end;
    end Emit_Jump;
@@ -251,24 +249,23 @@ package body Lox_Compiler is
    end Emit_Return;
 
    function Make_Constant
-     (C : in out Compiler_Context; Value : Lox_Value.Value)
-      return Lox_Chunk.Byte
+     (C : in out Compiler_Context; Value : Lox_Value.Value) return Byte
    is
       Id : constant Natural :=
         Lox_Chunk.Add_Constant (Current_Chunk (C).all, Value);
    begin
-      if Id > Natural (Lox_Chunk.Byte'Last) then
+      if Id > Natural (Byte'Last) then
          Error (C, "Too many constants in one chunk.");
          return 0;
       end if;
 
-      return Lox_Chunk.Byte (Id);
+      return Byte (Id);
    end Make_Constant;
 
    procedure Emit_Constant
      (C : in out Compiler_Context; Value : Lox_Value.Value)
    is
-      Id : constant Lox_Chunk.Byte := Make_Constant (C, Value);
+      Id : constant Byte := Make_Constant (C, Value);
    begin
       Emit_Bytes (C, Lox_Chunk.OP_CONSTANT, Id);
    end Emit_Constant;
@@ -282,9 +279,8 @@ package body Lox_Compiler is
          return;
       end if;
 
-      Current_Chunk (C).Code (Offset) := Lox_Chunk.Byte (Jump / 256);
-      Current_Chunk (C).Code (Natural'Succ (Offset)) :=
-        Lox_Chunk.Byte (Jump mod 256);
+      Current_Chunk (C).Code (Offset) := Byte (Jump / 256);
+      Current_Chunk (C).Code (Natural'Succ (Offset)) := Byte (Jump mod 256);
    end Patch_Jump;
 
    procedure Init_Compiler
@@ -434,12 +430,12 @@ package body Lox_Compiler is
       Can_Assign : Boolean)
    is
       Resolved : Local_Index;
-      Arg      : Lox_Chunk.Byte;
+      Arg      : Byte;
       Get_Op   : Lox_Chunk.Op_Code;
       Set_Op   : Lox_Chunk.Op_Code;
    begin
       if Resolve_Local (C, C.Current, Name, Resolved) then
-         Arg := Lox_Chunk.Byte (Resolved);
+         Arg := Byte (Resolved);
          Get_Op := Lox_Chunk.OP_GET_LOCAL;
          Set_Op := Lox_Chunk.OP_SET_LOCAL;
       else
@@ -498,8 +494,7 @@ package body Lox_Compiler is
    end Block;
 
    procedure Variable_Declaration (C : in out Compiler_Context) is
-      Global : constant Lox_Chunk.Byte :=
-        Parse_Variable (C, "Expect variable name.");
+      Global : constant Byte := Parse_Variable (C, "Expect variable name.");
    begin
       if Match (C, Lox_Scanner.TOKEN_EQUAL) then
          Expression (C);
@@ -615,8 +610,7 @@ package body Lox_Compiler is
    end Parse_Precedence;
 
    function Identifier_Constant
-     (C : in out Compiler_Context; Token : Lox_Scanner.Token)
-      return Lox_Chunk.Byte is
+     (C : in out Compiler_Context; Token : Lox_Scanner.Token) return Byte is
    begin
       return Make_Constant (C, Lox_Value.Make_String (Token.Lexeme));
    end Identifier_Constant;
@@ -713,8 +707,7 @@ package body Lox_Compiler is
    end Declare_Variable;
 
    function Parse_Variable
-     (C : in out Compiler_Context; Error_Message : String)
-      return Lox_Chunk.Byte is
+     (C : in out Compiler_Context; Error_Message : String) return Byte is
    begin
       Consume (C, Lox_Scanner.TOKEN_IDENTIFIER, Error_Message);
 
@@ -733,8 +726,7 @@ package body Lox_Compiler is
       C.Current.Locals (Top_Index).Depth := Just (C.Current.Scope_Depth);
    end Mark_Initialized;
 
-   procedure Define_Variable
-     (C : in out Compiler_Context; Global : Lox_Chunk.Byte) is
+   procedure Define_Variable (C : in out Compiler_Context; Global : Byte) is
    begin
       if C.Current.Scope_Depth > 0 then
          Mark_Initialized (C);

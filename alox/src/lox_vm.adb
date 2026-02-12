@@ -116,17 +116,16 @@ package body Lox_VM is
       Reset_Stack (VM);
    end Runtime_Error;
 
-   function Read_Byte (VM : in out VM_Context) return Lox_Chunk.Byte is
-      Result : constant Lox_Chunk.Byte :=
-        Lox_Chunk.Byte_Vectors.Element (VM.IP);
+   function Read_Byte (VM : in out VM_Context) return Byte is
+      Result : constant Byte := Lox_Chunk.Byte_Vectors.Element (VM.IP);
    begin
       VM.IP := Lox_Chunk.Byte_Vectors.Next (VM.IP);
       return Result;
    end Read_Byte;
 
    function Read_Short (VM : in out VM_Context) return Short is
-      High : Lox_Chunk.Byte;
-      Low  : Lox_Chunk.Byte;
+      High : Byte;
+      Low  : Byte;
    begin
       High := Lox_Chunk.Byte_Vectors.Element (VM.IP);
       VM.IP := Lox_Chunk.Byte_Vectors.Next (VM.IP);
@@ -187,7 +186,7 @@ package body Lox_VM is
      Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
    function Run (VM : in out VM_Context) return Interpret_Result is
-      Instruction : Lox_Chunk.Byte;
+      Instruction : Byte;
       Result      : Interpret_Result;
    begin
       loop
@@ -237,14 +236,14 @@ package body Lox_VM is
 
             when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
                declare
-                  Slot : constant Lox_Chunk.Byte := Read_Byte (VM);
+                  Slot : constant Byte := Read_Byte (VM);
                begin
                   Push (VM, VM.Stack (Stack_Index (Slot)));
                end;
 
             when Lox_Chunk.OP_SET_LOCAL'Enum_Rep     =>
                declare
-                  Slot : constant Lox_Chunk.Byte := Read_Byte (VM);
+                  Slot : constant Byte := Read_Byte (VM);
                begin
                   VM.Stack (Stack_Index (Slot)) := Peek (VM, 0);
                end;

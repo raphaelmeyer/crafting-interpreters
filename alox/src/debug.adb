@@ -1,4 +1,5 @@
 with Lox_Value;
+with Lox_Types; use Lox_Types;
 
 with Ada.Integer_Text_IO;
 with Ada.Strings;
@@ -21,7 +22,7 @@ package body Debug is
    function Disassemble_Instruction
      (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural
    is
-      Instruction : Lox_Chunk.Byte;
+      Instruction : Byte;
       Buffer      : String (1 .. 32);
    begin
       Ada.Integer_Text_IO.Put (To => Buffer, Item => Offset);
@@ -142,7 +143,7 @@ package body Debug is
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural
    is
-      Const : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
+      Const : constant Byte := Chunk.Code (Offset + 1);
    begin
       Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
       Ada.Integer_Text_IO.Put (Natural (Const), Width => 4);
@@ -163,7 +164,7 @@ package body Debug is
      (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
       return Natural
    is
-      Slot : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
+      Slot : constant Byte := Chunk.Code (Offset + 1);
    begin
       Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
       Ada.Integer_Text_IO.Put (Natural (Slot), Width => 4);
@@ -176,8 +177,8 @@ package body Debug is
       Chunk          : Lox_Chunk.Chunk_Read_Access;
       Offset         : Natural) return Natural
    is
-      High        : constant Lox_Chunk.Byte := Chunk.Code (Offset + 1);
-      Low         : constant Lox_Chunk.Byte := Chunk.Code (Offset + 2);
+      High        : constant Byte := Chunk.Code (Offset + 1);
+      Low         : constant Byte := Chunk.Code (Offset + 2);
       Jump        : constant Natural := Natural (High) * 256 + Natural (Low);
       Destination : constant Natural :=
         (if Jump_Direction = Forward

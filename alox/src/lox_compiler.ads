@@ -1,6 +1,7 @@
 with Lox_Chunk;
 with Lox_Scanner;
 with Lox_Value;
+with Lox_Types; use Lox_Types;
 
 with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
@@ -114,13 +115,11 @@ private
      (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType)
       return Boolean;
 
-   procedure Emit_Byte (C : in out Compiler_Context; Byte : Lox_Chunk.Byte);
+   procedure Emit_Byte (C : in out Compiler_Context; Value : Byte);
    procedure Emit_Byte
      (C : in out Compiler_Context; Op_Code : Lox_Chunk.Op_Code);
    procedure Emit_Bytes
-     (C      : in out Compiler_Context;
-      Byte_1 : Lox_Chunk.Op_Code;
-      Byte_2 : Lox_Chunk.Byte);
+     (C : in out Compiler_Context; Byte_1 : Lox_Chunk.Op_Code; Byte_2 : Byte);
    procedure Emit_Bytes
      (C      : in out Compiler_Context;
       Byte_1 : Lox_Chunk.Op_Code;
@@ -130,8 +129,7 @@ private
       return Natural;
    procedure Emit_Return (C : in out Compiler_Context);
    function Make_Constant
-     (C : in out Compiler_Context; Value : Lox_Value.Value)
-      return Lox_Chunk.Byte;
+     (C : in out Compiler_Context; Value : Lox_Value.Value) return Byte;
    procedure Emit_Constant
      (C : in out Compiler_Context; Value : Lox_Value.Value);
 
@@ -166,8 +164,7 @@ private
    procedure Parse_Precedence
      (C : in out Compiler_Context; Precedence : Precedence_Type);
    function Identifier_Constant
-     (C : in out Compiler_Context; Token : Lox_Scanner.Token)
-      return Lox_Chunk.Byte;
+     (C : in out Compiler_Context; Token : Lox_Scanner.Token) return Byte;
    function Identifiers_Equal
      (A : Lox_Scanner.Token; B : Lox_Scanner.Token) return Boolean;
    function Resolve_Local
@@ -178,11 +175,9 @@ private
    procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token);
    procedure Declare_Variable (C : in out Compiler_Context);
    function Parse_Variable
-     (C : in out Compiler_Context; Error_Message : String)
-      return Lox_Chunk.Byte;
+     (C : in out Compiler_Context; Error_Message : String) return Byte;
    procedure Mark_Initialized (C : in out Compiler_Context);
-   procedure Define_Variable
-     (C : in out Compiler_Context; Global : Lox_Chunk.Byte);
+   procedure Define_Variable (C : in out Compiler_Context; Global : Byte);
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
    procedure Synchronize (C : in out Compiler_Context);

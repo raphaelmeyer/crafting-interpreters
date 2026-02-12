@@ -1,3 +1,4 @@
 package Lox_Types is
+   type Byte is mod 2 ** 8 with Size => 8;
    type Short is mod 2 ** 16 with Size => 16;
 end Lox_Types;

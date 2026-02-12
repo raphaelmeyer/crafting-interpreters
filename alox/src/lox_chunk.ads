@@ -1,9 +1,9 @@
 with Lox_Value;
+with Lox_Types; use Lox_Types;
 
 with Ada.Containers.Vectors;
 
 package Lox_Chunk is
-   type Byte is mod 2 ** 8 with Size => 8;
    type Op_Code is
      (OP_CONSTANT,
       OP_NIL,
