@@ -94,6 +94,7 @@ private:
   void var_declaration();
   void statement();
   void expression_statement();
+  void for_statement();
   void if_statement();
   void print_statement();
   void while_statement();
@@ -595,6 +596,51 @@ void LoxCompiler::expression_statement() {
   emit_byte(OpCode::POP);
 }
 
+void LoxCompiler::for_statement() {
+  begin_scope();
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'for'.");
+  if (match(TokenType::SEMICOLON)) {
+    // No initializer
+  } else if (match(TokenType::VAR)) {
+    var_declaration();
+  } else {
+    expression_statement();
+  }
+
+  auto loop_start = current_chunk()->code.size();
+  std::optional<std::size_t> exit_jump{};
+  if (not match(TokenType::SEMICOLON)) {
+    expression();
+    consume(TokenType::SEMICOLON, "Expect ';' after loop condition.");
+
+    // Jump out of the loop if the condition is false
+    exit_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+    emit_byte(OpCode::POP);
+  }
+
+  if (not match(TokenType::RIGHT_PAREN)) {
+    auto const body_jump = emit_jump(OpCode::JUMP);
+    auto const increment_start = current_chunk()->code.size();
+    expression();
+    emit_byte(OpCode::POP);
+    consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    emit_loop(loop_start);
+    loop_start = increment_start;
+    patch_jump(body_jump);
+  }
+
+  statement();
+  emit_loop(loop_start);
+
+  if (exit_jump.has_value()) {
+    patch_jump(exit_jump.value());
+    emit_byte(OpCode::POP);
+  }
+
+  end_scope();
+}
+
 void LoxCompiler::if_statement() {
   consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
   expression();
@@ -665,6 +711,8 @@ void LoxCompiler::var_declaration() {
 void LoxCompiler::statement() {
   if (match(TokenType::PRINT)) {
     print_statement();
+  } else if (match(TokenType::FOR)) {
+    for_statement();
   } else if (match(TokenType::IF)) {
     if_statement();
   } else if (match(TokenType::WHILE)) {
