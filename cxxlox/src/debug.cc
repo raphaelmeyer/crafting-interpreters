@@ -7,6 +7,8 @@
 
 namespace {
 
+enum class Direction { Forward, Backward };
+
 std::size_t simple_instruction(std::string name, std::size_t offset) {
   std::cout << name << "\n";
   return offset + 1;
@@ -29,6 +31,27 @@ std::size_t constant_instruction(std::string name, Chunk const &chunk,
   std::cout << "'\n";
 
   return offset + 2;
+}
+
+std::size_t destination(Direction direction, std::size_t start,
+                        std::size_t jump) {
+  switch (direction) {
+  case Direction::Forward:
+    return start + 3 + jump;
+  case Direction::Backward:
+    return start + 3 - jump;
+  }
+}
+
+std::size_t jump_instruction(std::string name, Direction direction,
+                             Chunk const &chunk, std::size_t offset) {
+  auto const high_byte = chunk.code.at(offset + 1) << 8;
+  auto const low_byte = chunk.code.at(offset + 2);
+  auto const jump = static_cast<std::uint16_t>(high_byte | low_byte);
+  std::cout << std::format("{:16} {:4} -> {}", name, offset,
+                           destination(direction, offset, jump))
+            << "\n";
+  return offset + 3;
 }
 
 } // namespace
@@ -95,6 +118,11 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_NEGATE", offset);
   case OpCode::PRINT:
     return simple_instruction("OP_PRINT", offset);
+  case OpCode::JUMP:
+    return jump_instruction("OP_JUMP", Direction ::Forward, chunk, offset);
+  case OpCode::JUMP_IF_FALSE:
+    return jump_instruction("OP_JUMP_IF_FALSE", Direction::Forward, chunk,
+                            offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

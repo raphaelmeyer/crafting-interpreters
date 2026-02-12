@@ -26,6 +26,8 @@ enum class OpCode : std::uint8_t {
   NOT,
   NEGATE,
   PRINT,
+  JUMP,
+  JUMP_IF_FALSE,
   RETURN
 };
 

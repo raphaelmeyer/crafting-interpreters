@@ -45,6 +45,7 @@ private:
   }
 
   std::uint8_t read_byte();
+  std::uint16_t read_short();
   Value read_constant();
   OpCode read_opcode();
   std::string read_string();
@@ -110,6 +111,12 @@ void LoxVM::concatenate() {
 }
 
 std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
+
+std::uint16_t LoxVM::read_short() {
+  auto const high_byte = *vm.ip++;
+  auto const low_byte = *vm.ip++;
+  return static_cast<std::uint16_t>((high_byte << 8) | low_byte);
+}
 
 Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
 
@@ -267,6 +274,20 @@ InterpretResult LoxVM::run() {
     case OpCode::PRINT: {
       print_value(pop());
       std::cout << "\n";
+      break;
+    }
+
+    case OpCode::JUMP: {
+      auto const offset = read_short();
+      vm.ip += offset;
+      break;
+    }
+
+    case OpCode::JUMP_IF_FALSE: {
+      auto const offset = read_short();
+      if (is_falsey(peek(0))) {
+        vm.ip += offset;
+      }
       break;
     }
 

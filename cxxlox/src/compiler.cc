@@ -59,9 +59,11 @@ private:
   void emit_byte(OpCode op_code);
   void emit_bytes(OpCode op_code, std::uint8_t byte);
   void emit_bytes(OpCode op_code_a, OpCode op_code_b);
+  std::size_t emit_jump(OpCode instruction);
   void emit_return();
   std::uint8_t make_constant(Value value);
   void emit_constant(Value value);
+  void patch_jump(std::size_t offset);
 
   struct Context;
   void init_compiler(Context *compiler);
@@ -89,6 +91,7 @@ private:
   void var_declaration();
   void statement();
   void expression_statement();
+  void if_statement();
   void print_statement();
 
   void named_variable(Token const &name, bool can_assign);
@@ -212,6 +215,13 @@ void LoxCompiler::emit_bytes(OpCode op_code_a, OpCode op_code_b) {
   emit_byte(op_code_b);
 }
 
+std::size_t LoxCompiler::emit_jump(OpCode instruction) {
+  emit_byte(instruction);
+  emit_byte(0xff);
+  emit_byte(0xff);
+  return current_chunk()->code.size() - 2;
+}
+
 void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
 
 uint8_t LoxCompiler::make_constant(Value value) {
@@ -226,6 +236,18 @@ uint8_t LoxCompiler::make_constant(Value value) {
 
 void LoxCompiler::emit_constant(Value value) {
   emit_bytes(OpCode::CONSTANT, make_constant(value));
+}
+
+void LoxCompiler::patch_jump(std::size_t offset) {
+  // -2 to adjust for the bytecode for the jump offset itself.
+  std::size_t const jump = current_chunk()->code.size() - offset - 2;
+
+  if (jump > std::numeric_limits<std::uint16_t>::max()) {
+    error("Too much code to jump over.");
+  }
+
+  current_chunk()->code.at(offset) = (jump >> 8) & 0xff;
+  current_chunk()->code.at(offset + 1) = jump & 0xff;
 }
 
 void LoxCompiler::init_compiler(Context *compiler) {
@@ -537,6 +559,26 @@ void LoxCompiler::expression_statement() {
   emit_byte(OpCode::POP);
 }
 
+void LoxCompiler::if_statement() {
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'if'.");
+  expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.");
+
+  auto const then_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+  emit_byte(OpCode::POP);
+  statement();
+
+  auto const else_jump = emit_jump(OpCode::JUMP);
+
+  patch_jump(then_jump);
+  emit_byte(OpCode::POP);
+
+  if (match(TokenType::ELSE)) {
+    statement();
+  }
+  patch_jump(else_jump);
+}
+
 void LoxCompiler::print_statement() {
   expression();
   consume(TokenType::SEMICOLON, "Expect ';' after value.");
@@ -572,6 +614,8 @@ void LoxCompiler::var_declaration() {
 void LoxCompiler::statement() {
   if (match(TokenType::PRINT)) {
     print_statement();
+  } else if (match(TokenType::IF)) {
+    if_statement();
   } else if (match(TokenType::LEFT_BRACE)) {
     begin_scope();
     block();
