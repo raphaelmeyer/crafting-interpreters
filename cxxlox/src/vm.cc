@@ -291,6 +291,12 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::LOOP: {
+      auto const offset = read_short();
+      vm.ip -= offset;
+      break;
+    }
+
     case OpCode::RETURN: {
       return InterpretResult::OK;
     }

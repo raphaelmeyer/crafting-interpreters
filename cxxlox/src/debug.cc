@@ -123,6 +123,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
   case OpCode::JUMP_IF_FALSE:
     return jump_instruction("OP_JUMP_IF_FALSE", Direction::Forward, chunk,
                             offset);
+  case OpCode::LOOP:
+    return jump_instruction("OP_LOOP", Direction::Backward, chunk, offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

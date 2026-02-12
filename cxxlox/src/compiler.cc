@@ -61,6 +61,7 @@ private:
   void emit_byte(OpCode op_code);
   void emit_bytes(OpCode op_code, std::uint8_t byte);
   void emit_bytes(OpCode op_code_a, OpCode op_code_b);
+  void emit_loop(std::size_t loop_start);
   std::size_t emit_jump(OpCode instruction);
   void emit_return();
   std::uint8_t make_constant(Value value);
@@ -95,6 +96,7 @@ private:
   void expression_statement();
   void if_statement();
   void print_statement();
+  void while_statement();
 
   void named_variable(Token const &name, bool can_assign);
 
@@ -215,6 +217,18 @@ void LoxCompiler::emit_bytes(OpCode op_code, std::uint8_t byte) {
 void LoxCompiler::emit_bytes(OpCode op_code_a, OpCode op_code_b) {
   emit_byte(op_code_a);
   emit_byte(op_code_b);
+}
+
+void LoxCompiler::emit_loop(std::size_t loop_start) {
+  emit_byte(OpCode::LOOP);
+
+  std::size_t const offset = current_chunk()->code.size() - loop_start + 2;
+  if (offset > std::numeric_limits<std::uint16_t>::max()) {
+    error("Loop body too large.");
+  }
+
+  emit_byte((offset >> 8) & 0xff);
+  emit_byte(offset & 0xff);
 }
 
 std::size_t LoxCompiler::emit_jump(OpCode instruction) {
@@ -607,6 +621,21 @@ void LoxCompiler::print_statement() {
   emit_byte(OpCode::PRINT);
 }
 
+void LoxCompiler::while_statement() {
+  auto const loop_start = current_chunk()->code.size();
+  consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
+  expression();
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.");
+
+  auto const exit_jump = emit_jump(OpCode::JUMP_IF_FALSE);
+  emit_byte(OpCode::POP);
+  statement();
+  emit_loop(loop_start);
+
+  patch_jump(exit_jump);
+  emit_byte(OpCode::POP);
+}
+
 void LoxCompiler::declaration() {
   if (match(TokenType::VAR)) {
     var_declaration();
@@ -638,6 +667,8 @@ void LoxCompiler::statement() {
     print_statement();
   } else if (match(TokenType::IF)) {
     if_statement();
+  } else if (match(TokenType::WHILE)) {
+    while_statement();
   } else if (match(TokenType::LEFT_BRACE)) {
     begin_scope();
     block();
