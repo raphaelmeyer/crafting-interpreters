@@ -146,6 +146,9 @@ private
    procedure Number (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure String_Literal
      (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Logical_And (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Logical_Or (C : in out Compiler_Context; Can_Assign : Boolean);
+
    procedure Named_Variable
      (C          : in out Compiler_Context;
       Name       : Lox_Scanner.Token;

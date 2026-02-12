@@ -39,7 +39,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_STRING        =>
         (String_Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_NUMBER        => (Number'Access, null, PREC_NONE),
-      Lox_Scanner.TOKEN_AND           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_AND           => (null, Logical_And'Access, PREC_AND),
       Lox_Scanner.TOKEN_CLASS         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_ELSE          => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_FALSE         => (Literal'Access, null, PREC_NONE),
@@ -47,7 +47,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_FUN           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_IF            => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_NIL           => (Literal'Access, null, PREC_NONE),
-      Lox_Scanner.TOKEN_OR            => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_OR            => (null, Logical_Or'Access, PREC_OR),
       Lox_Scanner.TOKEN_PRINT         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RETURN        => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_SUPER         => (null, null, PREC_NONE),
@@ -423,6 +423,31 @@ package body Lox_Compiler is
    begin
       Emit_Constant (C, Lox_Value.Make_String (Str));
    end String_Literal;
+
+   procedure Logical_And
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
+      End_Jump : constant Natural := Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+   begin
+      Emit_Byte (C, Lox_Chunk.OP_POP);
+      Parse_Precedence (C, PREC_AND);
+
+      Patch_Jump (C, End_Jump);
+   end Logical_And;
+
+   procedure Logical_Or
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
+      Else_Jump : constant Natural :=
+        Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+      End_Jump  : constant Natural := Emit_Jump (C, Lox_Chunk.OP_JUMP);
+   begin
+      Patch_Jump (C, Else_Jump);
+      Emit_Byte (C, Lox_Chunk.OP_POP);
+
+      Parse_Precedence (C, PREC_OR);
+      Patch_Jump (C, End_Jump);
+   end Logical_Or;
 
    procedure Named_Variable
      (C          : in out Compiler_Context;
