@@ -108,6 +108,9 @@ package body Debug is
             return
               Jump_Instruction ("OP_JUMP_IF_FALSE", Forward, Chunk, Offset);
 
+         when Lox_Chunk.OP_LOOP'Enum_Rep          =>
+            return Jump_Instruction ("OP_LOOP", Backward, Chunk, Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 

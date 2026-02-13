@@ -228,6 +228,24 @@ package body Lox_Compiler is
       Emit_Byte (C, Byte_2);
    end Emit_Bytes;
 
+   procedure Emit_Loop (C : in out Compiler_Context; Loop_Start : Natural) is
+   begin
+      Emit_Byte (C, Lox_Chunk.OP_LOOP);
+
+      declare
+         Offset : constant Natural :=
+           Natural (Current_Chunk (C).Code.Length) - Loop_Start + 2;
+      begin
+         if Offset > Natural (Short'Last) then
+            Error (C, "Loop body too large.");
+            return;
+         end if;
+
+         Emit_Byte (C, Byte (Offset / 256));
+         Emit_Byte (C, Byte (Offset mod 256));
+      end;
+   end Emit_Loop;
+
    function Emit_Jump
      (C : in out Compiler_Context; Instruction : Lox_Chunk.Op_Code)
       return Natural is
@@ -548,6 +566,27 @@ package body Lox_Compiler is
       Emit_Byte (C, Lox_Chunk.OP_PRINT);
    end Print_Statement;
 
+   procedure While_Statement (C : in out Compiler_Context) is
+      Loop_Start : constant Natural := Natural (Current_Chunk (C).Code.Length);
+   begin
+      Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+      Expression (C);
+      Consume
+        (C, Lox_Scanner.TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+      declare
+         Exit_Jump : constant Natural :=
+           Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+      begin
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+         Statement (C);
+         Emit_Loop (C, Loop_Start);
+
+         Patch_Jump (C, Exit_Jump);
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+      end;
+   end While_Statement;
+
    procedure If_Statement (C : in out Compiler_Context) is
    begin
       Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
@@ -594,6 +633,8 @@ package body Lox_Compiler is
          Print_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_IF) then
          If_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_WHILE) then
+         While_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_LEFT_BRACE) then
          Begin_Scope (C);
          Block (C);

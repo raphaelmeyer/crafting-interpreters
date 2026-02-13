@@ -399,6 +399,16 @@ package body Lox_VM is
                   end if;
                end;
 
+            when Lox_Chunk.OP_LOOP'Enum_Rep          =>
+               declare
+                  Offset : constant Short := Read_Short (VM);
+               begin
+                  VM.IP :=
+                    VM.Chunk.Code.To_Cursor
+                      (Lox_Chunk.Byte_Vectors.To_Index (VM.IP)
+                       - Natural (Offset));
+               end;
+
             when Lox_Chunk.OP_RETURN'Enum_Rep        =>
                return INTERPRET_OK;
 
