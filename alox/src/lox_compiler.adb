@@ -679,6 +679,9 @@ package body Lox_Compiler is
    end If_Statement;
 
    procedure Switch_Statement (C : in out Compiler_Context) is
+      Next_Case : Natural;
+      Exit_Jump : Natural;
+      End_Jump  : Natural;
    begin
       Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
       Expression (C);
@@ -689,8 +692,28 @@ package body Lox_Compiler is
 
       Consume (C, Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{'.");
 
+      --  put fake constant because each case will pop result from comparison
+      Emit_Constant (C, Lox_Value.Make_Bool (False));
+      --  jump to first case (could also be op_jump)
+      Next_Case := Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+
+      Exit_Jump := Natural (Current_Chunk (C).Code.Length);
+      End_Jump := Emit_Jump (C, Lox_Chunk.OP_JUMP);
+
       while Match (C, Lox_Scanner.TOKEN_CASE) loop
+         Patch_Jump (C, Next_Case);
+         --  pop comparison result
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+
+         --  duplicate switch expression
+         Emit_Byte (C, Lox_Chunk.OP_PUSH);
+         --  case expression
          Expression (C);
+         Emit_Byte (C, Lox_Chunk.OP_EQUAL);
+         Next_Case := Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+
+         --  pop comparison result
+         Emit_Byte (C, Lox_Chunk.OP_POP);
          Consume
            (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after case expression.");
 
@@ -701,9 +724,12 @@ package body Lox_Compiler is
             Statement (C);
          end loop;
 
+         Emit_Loop (C, Exit_Jump);
       end loop;
 
       if Match (C, Lox_Scanner.TOKEN_DEFAULT) then
+         Patch_Jump (C, Next_Case);
+         Emit_Byte (C, Lox_Chunk.OP_POP);
          Consume (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after 'default'.");
 
          while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE)
@@ -716,6 +742,8 @@ package body Lox_Compiler is
       end if;
 
       Consume (C, Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}'.");
+
+      Patch_Jump (C, End_Jump);
    end Switch_Statement;
 
    procedure Declaration (C : in out Compiler_Context) is
