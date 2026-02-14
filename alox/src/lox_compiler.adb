@@ -679,6 +679,9 @@ package body Lox_Compiler is
    end If_Statement;
 
    procedure Switch_Statement (C : in out Compiler_Context) is
+      Next_Case : Natural;
+      Exit_Jump : Natural;
+      End_Jump  : Natural;
    begin
       Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
       Expression (C);
@@ -686,11 +689,26 @@ package body Lox_Compiler is
         (C,
          Lox_Scanner.TOKEN_RIGHT_PAREN,
          "Expect ')' after switch expression.");
-
       Consume (C, Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{'.");
 
+      Emit_Byte (C, Lox_Chunk.OP_FALSE);
+      Next_Case := Emit_Jump (C, Lox_Chunk.OP_JUMP);
+
+      Exit_Jump := Natural (Current_Chunk (C).Code.Length);
+      End_Jump := Emit_Jump (C, Lox_Chunk.OP_JUMP);
+
+      --  case
       while Match (C, Lox_Scanner.TOKEN_CASE) loop
+         Patch_Jump (C, Next_Case);
+         Emit_Byte (C, Lox_Chunk.OP_POP); --  OP_EQUAL result
+
+         Emit_Byte (C, Lox_Chunk.OP_PUSH);
          Expression (C);
+         Emit_Byte (C, Lox_Chunk.OP_EQUAL);
+         Next_Case := Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE);
+
+         --  matching case
+         Emit_Byte (C, Lox_Chunk.OP_POP); --  OP_EQUAL result
          Consume
            (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after case expression.");
 
@@ -701,21 +719,26 @@ package body Lox_Compiler is
             Statement (C);
          end loop;
 
+         Emit_Loop (C, Exit_Jump);
       end loop;
 
+      --  no matching case
+      Patch_Jump (C, Next_Case);
+      Emit_Byte (C, Lox_Chunk.OP_POP); --  OP_EQUAL result
+
+      --  default
       if Match (C, Lox_Scanner.TOKEN_DEFAULT) then
          Consume (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after 'default'.");
 
-         while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE)
-           and then not Check (C, Lox_Scanner.TOKEN_CASE)
-           and then not Check (C, Lox_Scanner.TOKEN_DEFAULT)
-         loop
+         while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE) loop
             Statement (C);
          end loop;
-
       end if;
 
+      Patch_Jump (C, End_Jump);
       Consume (C, Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}'.");
+
+      Emit_Byte (C, Lox_Chunk.OP_POP); --  switch expression
    end Switch_Statement;
 
    procedure Declaration (C : in out Compiler_Context) is
