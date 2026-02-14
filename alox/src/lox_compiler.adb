@@ -55,6 +55,10 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_TRUE          => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_VAR           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_WHILE         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_CASE          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_COLON         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_DEFAULT       => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_SWITCH        => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_ERROR         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_EOF           => (null, null, PREC_NONE)];
 

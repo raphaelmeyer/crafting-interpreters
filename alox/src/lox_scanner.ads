@@ -62,6 +62,12 @@ package Lox_Scanner is
       TOKEN_VAR,
       TOKEN_WHILE,
 
+      --  Chapter 23 Challenge 1
+      TOKEN_CASE,
+      TOKEN_COLON,
+      TOKEN_DEFAULT,
+      TOKEN_SWITCH,
+
       TOKEN_ERROR,
       TOKEN_EOF);
 

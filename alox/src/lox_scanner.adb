@@ -67,6 +67,9 @@ package body Lox_Scanner is
             when '*'    =>
                return Make_Token (S, TOKEN_STAR);
 
+            when ':'    =>
+               return Make_Token (S, TOKEN_COLON);
+
             when '!'    =>
                return
                  Make_Token
@@ -246,7 +249,21 @@ package body Lox_Scanner is
             return Check_Keyword (S, "and", TOKEN_AND);
 
          when 'c'    =>
-            return Check_Keyword (S, "class", TOKEN_CLASS);
+            if Positive'Succ (S.Start) < S.Current then
+               case S.Source (Positive'Succ (S.Start)) is
+                  when 'a'    =>
+                     return Check_Keyword (S, "case", TOKEN_CASE);
+
+                  when 'l'    =>
+                     return Check_Keyword (S, "class", TOKEN_CLASS);
+
+                  when others =>
+                     null;
+               end case;
+            end if;
+
+         when 'd'    =>
+            return Check_Keyword (S, "default", TOKEN_DEFAULT);
 
          when 'e'    =>
             return Check_Keyword (S, "else", TOKEN_ELSE);
@@ -284,7 +301,18 @@ package body Lox_Scanner is
             return Check_Keyword (S, "return", TOKEN_RETURN);
 
          when 's'    =>
-            return Check_Keyword (S, "super", TOKEN_SUPER);
+            if Positive'Succ (S.Start) < S.Current then
+               case S.Source (Positive'Succ (S.Start)) is
+                  when 'u'    =>
+                     return Check_Keyword (S, "super", TOKEN_SUPER);
+
+                  when 'w'    =>
+                     return Check_Keyword (S, "switch", TOKEN_SWITCH);
+
+                  when others =>
+                     null;
+               end case;
+            end if;
 
          when 't'    =>
             if Positive'Succ (S.Start) < S.Current then
