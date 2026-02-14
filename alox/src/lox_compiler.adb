@@ -678,6 +678,46 @@ package body Lox_Compiler is
       end;
    end If_Statement;
 
+   procedure Switch_Statement (C : in out Compiler_Context) is
+   begin
+      Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'switch'.");
+      Expression (C);
+      Consume
+        (C,
+         Lox_Scanner.TOKEN_RIGHT_PAREN,
+         "Expect ')' after switch expression.");
+
+      Consume (C, Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{'.");
+
+      while Match (C, Lox_Scanner.TOKEN_CASE) loop
+         Expression (C);
+         Consume
+           (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after case expression.");
+
+         while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE)
+           and then not Check (C, Lox_Scanner.TOKEN_CASE)
+           and then not Check (C, Lox_Scanner.TOKEN_DEFAULT)
+         loop
+            Statement (C);
+         end loop;
+
+      end loop;
+
+      if Match (C, Lox_Scanner.TOKEN_DEFAULT) then
+         Consume (C, Lox_Scanner.TOKEN_COLON, "Expect ':' after 'default'.");
+
+         while not Check (C, Lox_Scanner.TOKEN_RIGHT_BRACE)
+           and then not Check (C, Lox_Scanner.TOKEN_CASE)
+           and then not Check (C, Lox_Scanner.TOKEN_DEFAULT)
+         loop
+            Statement (C);
+         end loop;
+
+      end if;
+
+      Consume (C, Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}'.");
+   end Switch_Statement;
+
    procedure Declaration (C : in out Compiler_Context) is
    begin
       if Match (C, Lox_Scanner.TOKEN_VAR) then
@@ -701,6 +741,8 @@ package body Lox_Compiler is
          If_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_WHILE) then
          While_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_SWITCH) then
+         Switch_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_LEFT_BRACE) then
          Begin_Scope (C);
          Block (C);

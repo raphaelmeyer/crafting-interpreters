@@ -164,6 +164,7 @@ private
    procedure If_Statement (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);
    procedure While_Statement (C : in out Compiler_Context);
+   procedure Switch_Statement (C : in out Compiler_Context);
    procedure Declaration (C : in out Compiler_Context);
    procedure Statement (C : in out Compiler_Context);
 
