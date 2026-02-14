@@ -1,0 +1,49 @@
+var a = nil;
+switch(a) {
+  case nil: print 1;
+  case true: print 2;
+  case 7: print 3;
+  case "x": print 4;
+  default: print 5;
+}
+// expect: 1
+
+a = true;
+switch(a) {
+  case nil: print 1;
+  case true: print 2;
+  case 7: print 3;
+  case "x": print 4;
+  default: print 5;
+}
+// expect: 2
+
+a = 7;
+switch(a) {
+  case nil: print 1;
+  case true: print 2;
+  case 7: print 3;
+  case "x": print 4;
+  default: print 5;
+}
+// expect: 3
+
+a = "x";
+switch(a) {
+  case nil: print 1;
+  case true: print 2;
+  case 7: print 3;
+  case "x": print 4;
+  default: print 5;
+}
+// expect: 4
+
+a = false;
+switch(a) {
+  case nil: print 1;
+  case true: print 2;
+  case 7: print 3;
+  case "x": print 4;
+  default: print 5;
+}
+// expect: 5
