@@ -234,6 +234,9 @@ package body Lox_VM is
                   null;
                end;
 
+            when Lox_Chunk.OP_PUSH'Enum_Rep          =>
+               Push (VM, Peek (VM, 0));
+
             when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
                declare
                   Slot : constant Byte := Read_Byte (VM);

@@ -56,6 +56,9 @@ package body Debug is
          when Lox_Chunk.OP_POP'Enum_Rep           =>
             return Simple_Instruction ("OP_POP", Offset);
 
+         when Lox_Chunk.OP_PUSH'Enum_Rep          =>
+            return Simple_Instruction ("OP_PUSH", Offset);
+
          when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
             return Byte_Instruction ("OP_GET_LOCAL", Chunk, Offset);
 
