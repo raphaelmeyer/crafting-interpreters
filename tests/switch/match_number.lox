@@ -1,0 +1,15 @@
+var a = 0;
+switch (a) { case 0: print 0; case 1: print 1; default: print "default"; }
+// expect: 0
+
+a = 1;
+switch (a) { case 0: print 0; case 1: print 1; default: print "default"; }
+// expect: 1
+
+a = 2;
+switch (a) { case 0: print 0; case 1: print 1; default: print "default"; }
+// expect: default
+
+a = 3;
+switch (a) { case 0: print 0; case 1: print 1; default: print "default"; }
+// expect: default

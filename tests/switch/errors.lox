@@ -1,0 +1,17 @@
+// [line 10] Error at 'true': Expect '(' after 'switch'.
+// [line 11] Error at '{': Expect ')' after switch expression.
+// [line 12] Error at '}': Expect '{'.
+// [line 13] Error at ';': Expect '}'.
+// [line 14] Error at '{': Expect ':' after case expression.
+// [line 15] Error at '{': Expect ':' after 'default'.
+
+
+
+switch true {}  ;
+switch (true {} ;
+switch (true) } ;
+switch (true) { ;
+switch (true) { case true {} } ;
+switch (true) { default {} } ;
+
+print "end";

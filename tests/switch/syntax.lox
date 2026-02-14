@@ -1,0 +1,19 @@
+switch (false) {}
+
+switch (nil) { default: print "default"; }
+// expect: default
+
+switch (23) { case 23: print 23; }
+// expect: 23
+
+switch (42) { case 23: print 23; }
+
+switch (23) { case 17: print 17; case 23: print 23; default: print 42; }
+// expect: 23
+
+switch (nil) { case 17: print 17; case 23: print 23; default: print 42; }
+// expect: 42
+
+switch (false) { case true: print 0; print 1; case false: print 2; print 3; }
+// expect: 2
+// expect: 3
