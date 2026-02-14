@@ -160,6 +160,7 @@ private
    procedure Block (C : in out Compiler_Context);
    procedure Variable_Declaration (C : in out Compiler_Context);
    procedure Expression_Statement (C : in out Compiler_Context);
+   procedure For_Statement (C : in out Compiler_Context);
    procedure If_Statement (C : in out Compiler_Context);
    procedure Print_Statement (C : in out Compiler_Context);
    procedure While_Statement (C : in out Compiler_Context);

@@ -559,6 +559,66 @@ package body Lox_Compiler is
       Emit_Byte (C, Lox_Chunk.OP_POP);
    end Expression_Statement;
 
+   procedure For_Statement (C : in out Compiler_Context) is
+      Loop_Start : Natural;
+      Exit_Jump  : Maybe_Natural := None;
+   begin
+      Begin_Scope (C);
+
+      Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+      if Match (C, Lox_Scanner.TOKEN_SEMICOLON) then
+         --  No initializer
+         null;
+      elsif Match (C, Lox_Scanner.TOKEN_VAR) then
+         Variable_Declaration (C);
+      else
+         Expression_Statement (C);
+      end if;
+
+      Loop_Start := Natural (Current_Chunk (C).Code.Length);
+      if not Match (C, Lox_Scanner.TOKEN_SEMICOLON) then
+         Expression (C);
+         Consume
+           (C,
+            Lox_Scanner.TOKEN_SEMICOLON,
+            "Expect ';' after loop condition.");
+
+         --  Jump out of the loop if the condition is false
+         Exit_Jump := Just (Emit_Jump (C, Lox_Chunk.OP_JUMP_IF_FALSE));
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+      end if;
+
+      if not Match (C, Lox_Scanner.TOKEN_RIGHT_PAREN) then
+         declare
+            Body_Jump       : constant Natural :=
+              Emit_Jump (C, Lox_Chunk.OP_JUMP);
+            Increment_Start : constant Natural :=
+              Natural (Current_Chunk (C).Code.Length);
+         begin
+            Expression (C);
+            Emit_Byte (C, Lox_Chunk.OP_POP);
+            Consume
+              (C,
+               Lox_Scanner.TOKEN_RIGHT_PAREN,
+               "Expect ')' after for clauses.");
+
+            Emit_Loop (C, Loop_Start);
+            Loop_Start := Increment_Start;
+            Patch_Jump (C, Body_Jump);
+         end;
+      end if;
+
+      Statement (C);
+      Emit_Loop (C, Loop_Start);
+
+      if Exit_Jump.Has_Value then
+         Patch_Jump (C, Exit_Jump.Value);
+         Emit_Byte (C, Lox_Chunk.OP_POP);
+      end if;
+
+      End_Scope (C);
+   end For_Statement;
+
    procedure Print_Statement (C : in out Compiler_Context) is
    begin
       Expression (C);
@@ -631,6 +691,8 @@ package body Lox_Compiler is
    begin
       if Match (C, Lox_Scanner.TOKEN_PRINT) then
          Print_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_FOR) then
+         For_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_IF) then
          If_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_WHILE) then
