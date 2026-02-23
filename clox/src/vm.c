@@ -288,7 +288,7 @@ InterpretResult interpret(char const *source) {
   Chunk chunk;
   init_chunk(&chunk);
 
-  if (!compile(source, &chunk)) {
+  if (!compile(source)) {
     free_chunk(&chunk);
     return INTERPRET_COMPILE_ERROR;
   }

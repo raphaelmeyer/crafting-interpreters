@@ -1,6 +1,6 @@
 #pragma once
 
-#include "chunk.h"
+#include "object.h"
 
 #include <stddef.h>
 
@@ -8,9 +8,7 @@
 extern "C" {
 #endif
 
-constexpr const size_t UINT8_COUNT = UINT8_MAX + 1;
-
-bool compile(char const *source, Chunk *chunk);
+ObjFunction *compile(char const *source);
 
 #ifdef __cplusplus
 } // extern "C"
