@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static constexpr const size_t UINT8_COUNT = UINT8_MAX + 1;
+
 typedef struct Parser_t {
   Token current;
   Token previous;
@@ -42,7 +44,15 @@ typedef struct Local_t {
   int32_t depth;
 } Local;
 
+typedef enum FunctionType_t {
+  TYPE_FUNCTION,
+  TYPE_SCRIPT,
+} FunctionType;
+
 typedef struct Compiler_t {
+  ObjFunction *function;
+  FunctionType type;
+
   Local locals[UINT8_COUNT];
   int32_t local_count;
   int32_t scope_depth;
@@ -50,9 +60,8 @@ typedef struct Compiler_t {
 
 static Parser parser;
 static Compiler *current = NULL;
-static Chunk *compiling_chunk;
 
-static Chunk *current_chunk() { return compiling_chunk; }
+static Chunk *current_chunk() { return &current->function->chunk; }
 
 static void error_at(Token const *token, char const *message) {
   if (parser.panic_mode) {
@@ -167,20 +176,33 @@ static void patch_jump(int32_t offset) {
   current_chunk()->code[offset + 1] = jump & 0xff;
 }
 
-static void init_compiler(Compiler *compiler) {
+static void init_compiler(Compiler *compiler, FunctionType type) {
+  compiler->function = NULL;
+  compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
+  compiler->function = new_function();
   current = compiler;
+
+  Local *local = &current->locals[current->local_count++];
+  local->depth = 0;
+  local->name.start = "";
+  local->name.length = 0;
 }
 
-static void end_compiler() {
+static ObjFunction *end_compiler() {
   emit_return();
+  ObjFunction *function = current->function;
 
   if (DEBUG_PRINT_CODE) {
     if (!parser.had_error) {
-      disassemble_chunk(current_chunk(), "code");
+      disassemble_chunk(current_chunk(), function->name != NULL
+                                             ? function->name->chars
+                                             : "<script>");
     }
   }
+
+  return function;
 }
 
 static void begin_scope() { current->scope_depth++; }
@@ -658,11 +680,10 @@ static void statement() {
   }
 }
 
-bool compile(char const *source, Chunk *chunk) {
+ObjFunction *compile(char const *source) {
   init_scanner(source);
   Compiler compiler;
-  init_compiler(&compiler);
-  compiling_chunk = chunk;
+  init_compiler(&compiler, TYPE_SCRIPT);
 
   parser.had_error = false;
   parser.panic_mode = false;
@@ -673,7 +694,6 @@ bool compile(char const *source, Chunk *chunk) {
     declaration();
   }
 
-  end_compiler();
-
-  return !parser.had_error;
+  ObjFunction *function = end_compiler();
+  return parser.had_error ? NULL : function;
 }
