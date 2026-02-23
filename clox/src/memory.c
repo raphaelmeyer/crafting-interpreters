@@ -7,10 +7,20 @@ static void free_string(ObjString *string) {
   reallocate(string, sizeof(ObjString), 0);
 }
 
+static void free_function(ObjFunction *function) {
+  reallocate(function, sizeof(ObjFunction), 0);
+}
+
 static void free_object(Obj *object) {
   switch (object->type) {
   case OBJ_STRING: {
     free_string((ObjString *)object);
+    break;
+  }
+  case OBJ_FUNCTION: {
+    ObjFunction *function = (ObjFunction *)object;
+    free_chunk(&function->chunk);
+    free_function(function);
     break;
   }
   }
