@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "object.h"
 #include "table.h"
 
 #include <stddef.h>
@@ -9,11 +10,19 @@
 extern "C" {
 #endif
 
+static constexpr size_t const FRAMES_MAX = 64;
 static constexpr size_t const STACK_MAX = 256;
 
-typedef struct VM_t {
-  Chunk const *chunk;
+typedef struct CallFrame_t {
+  ObjFunction *function;
   uint8_t *ip;
+  Value *slots;
+} CallFrame;
+
+typedef struct VM_t {
+  CallFrame frames[FRAMES_MAX];
+  size_t frame_count;
+
   Value stack[STACK_MAX];
   Value *stack_top;
   Table globals;
