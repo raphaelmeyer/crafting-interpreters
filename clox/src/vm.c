@@ -23,10 +23,18 @@ static void runtime_error(char const *format, ...) {
   va_end(args);
   fputs("\n", stderr);
 
-  CallFrame *frame = &vm.frames[vm.frame_count - 1];
-  size_t instruction = frame->ip - frame->function->chunk.code - 1;
-  int32_t line = frame->function->chunk.lines[instruction];
-  fprintf(stderr, "[line %d] in script\n", line);
+  for (int32_t i = vm.frame_count - 1; i >= 0; --i) {
+    CallFrame const *frame = &vm.frames[i];
+    ObjFunction const *function = frame->function;
+    size_t instruction = frame->ip - function->chunk.code - 1;
+    fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+    if (function->name == NULL) {
+      fprintf(stderr, "script\n");
+    } else {
+      fprintf(stderr, "%s()\n", function->name->chars);
+    }
+  }
+
   reset_stack();
 }
 
