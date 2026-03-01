@@ -52,6 +52,39 @@ static Value pop() {
 
 static Value peek(int distance) { return vm.stack_top[-1 - distance]; }
 
+static bool call(ObjFunction *function, int arg_count) {
+  if (arg_count != function->arity) {
+    runtime_error("Expected %d arguments but got %d.", function->arity,
+                  arg_count);
+    return false;
+  }
+
+  if (vm.frame_count == FRAMES_MAX) {
+    runtime_error("Stack overflow.");
+    return false;
+  }
+
+  CallFrame *frame = &vm.frames[vm.frame_count++];
+  frame->function = function;
+  frame->ip = function->chunk.code;
+  frame->slots = vm.stack_top - arg_count - 1;
+  return true;
+}
+
+static bool call_value(Value callee, int arg_count) {
+  if (is_obj(callee)) {
+    switch (obj_type(callee)) {
+    case OBJ_FUNCTION:
+      return call(as_function(callee), arg_count);
+    default:
+      // Non-callable object type
+      break;
+    }
+  }
+  runtime_error("Can only call functions and classes.");
+  return false;
+}
+
 static bool is_falsey(Value value) {
   return is_nil(value) || (is_bool(value) && !value.as.boolean);
 }
@@ -288,6 +321,15 @@ static InterpretResult run() {
       break;
     }
 
+    case OP_CALL: {
+      int32_t arg_count = read_byte(frame);
+      if (!call_value(peek(arg_count), arg_count)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frame_count - 1];
+      break;
+    }
+
     case OP_RETURN: {
       return INTERPRET_OK;
     }
@@ -302,10 +344,7 @@ InterpretResult interpret(char const *source) {
   }
 
   push(obj_value(function));
-  CallFrame *frame = &vm.frames[vm.frame_count++];
-  frame->function = function;
-  frame->ip = function->chunk.code;
-  frame->slots = vm.stack;
+  call(function, 0);
 
   return run();
 }
