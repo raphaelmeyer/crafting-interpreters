@@ -50,6 +50,7 @@ typedef enum FunctionType_t {
 } FunctionType;
 
 typedef struct Compiler_t {
+  struct Compiler_t *enclosing;
   ObjFunction *function;
   FunctionType type;
 
@@ -177,6 +178,7 @@ static void patch_jump(int32_t offset) {
 }
 
 static void init_compiler(Compiler *compiler, FunctionType type) {
+  compiler->enclosing = current;
   compiler->function = NULL;
   compiler->type = type;
   compiler->local_count = 0;
@@ -202,6 +204,7 @@ static ObjFunction *end_compiler() {
     }
   }
 
+  current = current->enclosing;
   return function;
 }
 
