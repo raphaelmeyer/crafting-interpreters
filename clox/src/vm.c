@@ -339,7 +339,17 @@ static InterpretResult run() {
     }
 
     case OP_RETURN: {
-      return INTERPRET_OK;
+      Value result = pop();
+      vm.frame_count--;
+      if (vm.frame_count == 0) {
+        pop();
+        return INTERPRET_OK;
+      }
+
+      vm.stack_top = frame->slots;
+      push(result);
+      frame = &vm.frames[vm.frame_count - 1];
+      break;
     }
     }
   }

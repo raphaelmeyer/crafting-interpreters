@@ -149,7 +149,10 @@ static int32_t emit_jump(uint8_t instruction) {
   return current_chunk()->count - 2;
 }
 
-static void emit_return() { emit_byte(OP_RETURN); }
+static void emit_return() {
+  emit_byte(OP_NIL);
+  emit_byte(OP_RETURN);
+}
 
 static uint8_t make_constant(Value value) {
   int32_t constant = add_constant(current_chunk(), value);
