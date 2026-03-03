@@ -8,8 +8,13 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 static VM vm;
+
+static Value clock_native(int32_t, Value *) {
+  return number_value((double)clock() / CLOCKS_PER_SEC);
+}
 
 static void reset_stack() {
   vm.stack_top = vm.stack;
@@ -60,6 +65,12 @@ static Value pop() {
 
 static Value peek(int distance) { return vm.stack_top[-1 - distance]; }
 
+static void define_native(const char *name, NativeFn function) {
+  push(obj_value(copy_string(name, strlen(name))));
+  push(obj_value(new_native(function)));
+  table_set(&vm.globals, as_string(vm.stack[0]), vm.stack[1]);
+}
+
 static bool call(ObjFunction *function, int arg_count) {
   if (arg_count != function->arity) {
     runtime_error("Expected %d arguments but got %d.", function->arity,
@@ -84,6 +95,13 @@ static bool call_value(Value callee, int arg_count) {
     switch (obj_type(callee)) {
     case OBJ_FUNCTION:
       return call(as_function(callee), arg_count);
+    case OBJ_NATIVE: {
+      NativeFn native = as_native(callee);
+      Value const result = native(arg_count, vm.stack_top - arg_count);
+      vm.stack_top -= arg_count + 1;
+      push(result);
+      return true;
+    }
     default:
       // Non-callable object type
       break;
@@ -118,6 +136,8 @@ void init_vm() {
 
   init_table(&vm.globals);
   init_table(&vm.strings);
+
+  define_native("clock", clock_native);
 }
 
 void free_vm() {

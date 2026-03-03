@@ -13,6 +13,7 @@ typedef struct VM_t VM;
 
 typedef enum ObjType_t {
   OBJ_FUNCTION,
+  OBJ_NATIVE,
   OBJ_STRING,
 } ObjType;
 
@@ -28,6 +29,13 @@ typedef struct Objfunction_t {
   ObjString *name;
 } ObjFunction;
 
+typedef Value (*NativeFn)(int arg_count, Value *args);
+
+typedef struct ObjNative_t {
+  Obj obj;
+  NativeFn function;
+} ObjNative;
+
 typedef struct ObjString_t {
   Obj obj;
   size_t length;
@@ -36,6 +44,7 @@ typedef struct ObjString_t {
 } ObjString;
 
 ObjFunction *new_function();
+ObjNative *new_native(NativeFn function);
 ObjString *take_string(char *chars, size_t length);
 ObjString *copy_string(char const *chars, size_t length);
 void print_object(Value const value);
@@ -50,12 +59,21 @@ static inline bool is_obj_type(Value const value, ObjType type) {
 static inline bool is_function(Value const value) {
   return is_obj_type(value, OBJ_FUNCTION);
 }
+
+static inline bool is_native(Value const value) {
+  return is_obj_type(value, OBJ_NATIVE);
+}
+
 static inline bool is_string(Value const value) {
   return is_obj_type(value, OBJ_STRING);
 }
 
 static inline ObjFunction *as_function(Value const value) {
   return (ObjFunction *)value.as.obj;
+}
+
+static inline NativeFn as_native(Value const value) {
+  return ((ObjNative *)value.as.obj)->function;
 }
 
 static inline ObjString *as_string(Value const value) {

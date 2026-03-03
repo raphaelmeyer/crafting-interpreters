@@ -11,16 +11,25 @@ static void free_function(ObjFunction *function) {
   reallocate(function, sizeof(ObjFunction), 0);
 }
 
+static void free_native(ObjNative *native) {
+  reallocate(native, sizeof(ObjNative), 0);
+}
+
 static void free_object(Obj *object) {
   switch (object->type) {
-  case OBJ_STRING: {
-    free_string((ObjString *)object);
-    break;
-  }
+
   case OBJ_FUNCTION: {
     ObjFunction *function = (ObjFunction *)object;
     free_chunk(&function->chunk);
     free_function(function);
+    break;
+  }
+  case OBJ_NATIVE: {
+    free_native((ObjNative *)object);
+    break;
+  }
+  case OBJ_STRING: {
+    free_string((ObjString *)object);
     break;
   }
   }
