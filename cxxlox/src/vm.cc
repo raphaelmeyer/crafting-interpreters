@@ -22,6 +22,31 @@ public:
   InterpretResult interpret(std::string_view source) override;
 
 private:
+  constexpr static std::size_t const UINT8_COUNT =
+      std::numeric_limits<std::uint8_t>::max() + 1;
+
+  constexpr static std::size_t const FRAMES_MAX = 64;
+  constexpr static std::size_t const STACK_MAX = FRAMES_MAX * UINT8_COUNT;
+
+  using Stack = std::array<Value, STACK_MAX>;
+  using StackPointer = Stack::iterator;
+
+  struct CallFrame {
+    ObjFunction function;
+    Chunk::CodeIterator ip;
+    StackPointer slots;
+  };
+
+  struct Context {
+    std::array<CallFrame, FRAMES_MAX> frames;
+    std::size_t frame_count;
+
+    Chunk::CodeIterator ip;
+    Stack stack;
+    StackPointer stack_top;
+    std::unordered_map<std::string, Value> globals;
+  };
+
   void init_vm();
   void free_vm();
 
@@ -37,18 +62,20 @@ private:
   void runtime_error(std::format_string<Args...> format, Args &&...args) {
     std::cerr << std::format(format, args...) << "\n";
 
-    auto const instruction = std::distance(vm.chunk->code.begin(), vm.ip) - 1;
-    auto const line = vm.chunk->lines[instruction];
+    auto &frame = vm.frames.at(vm.frame_count - 1);
+    auto const instruction =
+        std::distance(frame.function->chunk.code.cbegin(), frame.ip) - 1;
+    auto const line = frame.function->chunk.lines.at(instruction);
     std::cerr << std::format("[line {:d}] in script", line) << "\n";
 
     reset_stack();
   }
 
-  std::uint8_t read_byte();
-  std::uint16_t read_short();
-  Value read_constant();
-  OpCode read_opcode();
-  std::string read_string();
+  std::uint8_t read_byte(CallFrame &frame);
+  std::uint16_t read_short(CallFrame &frame);
+  Value read_constant(CallFrame &frame);
+  OpCode read_opcode(CallFrame &frame);
+  std::string read_string(CallFrame &frame);
 
   InterpretResult run();
 
@@ -64,17 +91,6 @@ private:
     return InterpretResult::OK;
   }
 
-  constexpr static std::size_t const STACK_MAX = 256;
-
-  struct Context {
-    Chunk const *chunk;
-    Chunk::CodeIterator ip;
-    std::array<Value, STACK_MAX> stack;
-    using StackPointer = decltype(stack)::iterator;
-    StackPointer stack_top;
-    std::unordered_map<std::string, Value> globals;
-  };
-
   Context vm{};
   std::unique_ptr<Compiler> compiler{Compiler::create()};
 };
@@ -83,7 +99,10 @@ void LoxVM::init_vm() { reset_stack(); }
 
 void LoxVM::free_vm() {}
 
-void LoxVM::reset_stack() { vm.stack_top = vm.stack.begin(); }
+void LoxVM::reset_stack() {
+  vm.stack_top = vm.stack.begin();
+  vm.frame_count = 0;
+}
 
 void LoxVM::push(Value value) {
   *vm.stack_top = value;
@@ -110,21 +129,29 @@ void LoxVM::concatenate() {
   push(string_value(a + b));
 }
 
-std::uint8_t LoxVM::read_byte() { return *vm.ip++; }
+std::uint8_t LoxVM::read_byte(CallFrame &frame) { return *frame.ip++; }
 
-std::uint16_t LoxVM::read_short() {
-  auto const high_byte = *vm.ip++;
-  auto const low_byte = *vm.ip++;
+std::uint16_t LoxVM::read_short(CallFrame &frame) {
+  auto const high_byte = *frame.ip++;
+  auto const low_byte = *frame.ip++;
   return static_cast<std::uint16_t>((high_byte << 8) | low_byte);
 }
 
-Value LoxVM::read_constant() { return vm.chunk->constants[read_byte()]; }
+Value LoxVM::read_constant(CallFrame &frame) {
+  return frame.function->chunk.constants[read_byte(frame)];
+}
 
-OpCode LoxVM::read_opcode() { return static_cast<OpCode>(read_byte()); }
+OpCode LoxVM::read_opcode(CallFrame &frame) {
+  return static_cast<OpCode>(read_byte(frame));
+}
 
-std::string LoxVM::read_string() { return as_string(read_constant()); }
+std::string LoxVM::read_string(CallFrame &frame) {
+  return as_string(read_constant(frame));
+}
 
 InterpretResult LoxVM::run() {
+  auto &frame = vm.frames.at(vm.frame_count - 1);
+
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
       std::cout << "          ";
@@ -135,14 +162,15 @@ InterpretResult LoxVM::run() {
       }
       std::cout << "\n";
 
-      disassemble_instruction(*vm.chunk,
-                              std::distance(vm.chunk->code.begin(), vm.ip));
+      disassemble_instruction(
+          frame.function->chunk,
+          std::distance(frame.function->chunk.code.cbegin(), frame.ip));
     }
 
-    auto const instruction = read_opcode();
+    auto const instruction = read_opcode(frame);
     switch (instruction) {
     case OpCode::CONSTANT: {
-      Value constant = read_constant();
+      Value constant = read_constant(frame);
       push(constant);
       break;
     }
@@ -162,19 +190,19 @@ InterpretResult LoxVM::run() {
       break;
 
     case OpCode::GET_LOCAL: {
-      auto const slot = read_byte();
-      push(vm.stack.at(slot));
+      auto const slot = read_byte(frame);
+      push(*(frame.slots + slot));
       break;
     }
 
     case OpCode::SET_LOCAL: {
-      auto const slot = read_byte();
-      vm.stack.at(slot) = peek(0);
+      auto const slot = read_byte(frame);
+      *(frame.slots + slot) = peek(0);
       break;
     }
 
     case OpCode::GET_GLOBAL: {
-      auto const name = read_string();
+      auto const name = read_string(frame);
       if (not vm.globals.contains(name)) {
         runtime_error("Undefined variable '{}'.", name);
         return InterpretResult::RUNTIME_ERROR;
@@ -185,14 +213,14 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::DEFINE_GLOBAL: {
-      auto const name = read_string();
+      auto const name = read_string(frame);
       vm.globals.insert_or_assign(name, peek(0));
       pop();
       break;
     }
 
     case OpCode::SET_GLOBAL: {
-      auto const name = read_string();
+      auto const name = read_string(frame);
       if (not vm.globals.contains(name)) {
         runtime_error("Undefined variable '{}'.", name);
         return InterpretResult::RUNTIME_ERROR;
@@ -278,22 +306,22 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::JUMP: {
-      auto const offset = read_short();
-      vm.ip += offset;
+      auto const offset = read_short(frame);
+      frame.ip += offset;
       break;
     }
 
     case OpCode::JUMP_IF_FALSE: {
-      auto const offset = read_short();
+      auto const offset = read_short(frame);
       if (is_falsey(peek(0))) {
-        vm.ip += offset;
+        frame.ip += offset;
       }
       break;
     }
 
     case OpCode::LOOP: {
-      auto const offset = read_short();
-      vm.ip -= offset;
+      auto const offset = read_short(frame);
+      frame.ip -= offset;
       break;
     }
 
@@ -308,18 +336,18 @@ InterpretResult LoxVM::run() {
 }
 
 InterpretResult LoxVM::interpret(std::string_view source) {
-  Chunk chunk{};
-
-  if (not compiler->compile(source)) {
+  ObjFunction function = compiler->compile(source);
+  if (function == nullptr) {
     return InterpretResult::COMPILE_ERROR;
   }
 
-  vm.chunk = &chunk;
-  vm.ip = vm.chunk->code.begin();
+  push(function);
+  auto &frame = vm.frames.at(vm.frame_count++);
+  frame.function = function;
+  frame.ip = function->chunk.code.begin();
+  frame.slots = vm.stack.begin();
 
-  auto const result = run();
-
-  return result;
+  return run();
 }
 
 } // namespace
