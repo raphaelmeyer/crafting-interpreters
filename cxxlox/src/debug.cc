@@ -125,6 +125,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
                             offset);
   case OpCode::LOOP:
     return jump_instruction("OP_LOOP", Direction::Backward, chunk, offset);
+  case OpCode::CALL:
+    return byte_instruction("OP_CALL", chunk, offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

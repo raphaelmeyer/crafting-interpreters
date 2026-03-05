@@ -55,6 +55,9 @@ private:
   Value pop();
   Value const &peek(size_t distance) const;
 
+  bool call(ObjFunction function, std::size_t arg_count);
+  bool call_value(Value const &callee, std::size_t arg_count);
+
   bool is_falsey(Value const &value) const;
   void concatenate();
 
@@ -118,6 +121,33 @@ Value const &LoxVM::peek(size_t distance) const {
   return *std::prev(vm.stack_top, 1 + distance);
 }
 
+bool LoxVM::call(ObjFunction function, std::size_t arg_count) {
+  if (arg_count != function->arity) {
+    runtime_error("Expected {} arguments but got {}.", function->arity,
+                  arg_count);
+    return false;
+  }
+
+  if (vm.frame_count == FRAMES_MAX) {
+    runtime_error("Stack overflow.");
+    return false;
+  }
+
+  auto &frame = vm.frames.at(vm.frame_count++);
+  frame.function = function;
+  frame.ip = function->chunk.code.begin();
+  frame.slots = vm.stack_top - arg_count - 1;
+  return true;
+}
+
+bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
+  if (is_function(callee)) {
+    return call(as_function(callee), arg_count);
+  }
+  runtime_error("Can only call functions and classes.");
+  return false;
+}
+
 bool LoxVM::is_falsey(Value const &value) const {
   return is_nil(value) || (is_bool(value) && not as_bool(value));
 }
@@ -150,7 +180,7 @@ std::string LoxVM::read_string(CallFrame &frame) {
 }
 
 InterpretResult LoxVM::run() {
-  auto &frame = vm.frames.at(vm.frame_count - 1);
+  auto frame = vm.frames.begin() + vm.frame_count - 1;
 
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
@@ -163,14 +193,14 @@ InterpretResult LoxVM::run() {
       std::cout << "\n";
 
       disassemble_instruction(
-          frame.function->chunk,
-          std::distance(frame.function->chunk.code.cbegin(), frame.ip));
+          frame->function->chunk,
+          std::distance(frame->function->chunk.code.cbegin(), frame->ip));
     }
 
-    auto const instruction = read_opcode(frame);
+    auto const instruction = read_opcode(*frame);
     switch (instruction) {
     case OpCode::CONSTANT: {
-      Value constant = read_constant(frame);
+      Value constant = read_constant(*frame);
       push(constant);
       break;
     }
@@ -190,19 +220,19 @@ InterpretResult LoxVM::run() {
       break;
 
     case OpCode::GET_LOCAL: {
-      auto const slot = read_byte(frame);
-      push(*(frame.slots + slot));
+      auto const slot = read_byte(*frame);
+      push(*(frame->slots + slot));
       break;
     }
 
     case OpCode::SET_LOCAL: {
-      auto const slot = read_byte(frame);
-      *(frame.slots + slot) = peek(0);
+      auto const slot = read_byte(*frame);
+      *(frame->slots + slot) = peek(0);
       break;
     }
 
     case OpCode::GET_GLOBAL: {
-      auto const name = read_string(frame);
+      auto const name = read_string(*frame);
       if (not vm.globals.contains(name)) {
         runtime_error("Undefined variable '{}'.", name);
         return InterpretResult::RUNTIME_ERROR;
@@ -213,14 +243,14 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::DEFINE_GLOBAL: {
-      auto const name = read_string(frame);
+      auto const name = read_string(*frame);
       vm.globals.insert_or_assign(name, peek(0));
       pop();
       break;
     }
 
     case OpCode::SET_GLOBAL: {
-      auto const name = read_string(frame);
+      auto const name = read_string(*frame);
       if (not vm.globals.contains(name)) {
         runtime_error("Undefined variable '{}'.", name);
         return InterpretResult::RUNTIME_ERROR;
@@ -306,22 +336,31 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::JUMP: {
-      auto const offset = read_short(frame);
-      frame.ip += offset;
+      auto const offset = read_short(*frame);
+      frame->ip += offset;
       break;
     }
 
     case OpCode::JUMP_IF_FALSE: {
-      auto const offset = read_short(frame);
+      auto const offset = read_short(*frame);
       if (is_falsey(peek(0))) {
-        frame.ip += offset;
+        frame->ip += offset;
       }
       break;
     }
 
     case OpCode::LOOP: {
-      auto const offset = read_short(frame);
-      frame.ip -= offset;
+      auto const offset = read_short(*frame);
+      frame->ip -= offset;
+      break;
+    }
+
+    case OpCode::CALL: {
+      auto const arg_count = read_byte(*frame);
+      if (not call_value(peek(arg_count), arg_count)) {
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      frame = vm.frames.begin() + vm.frame_count - 1;
       break;
     }
 
@@ -342,10 +381,7 @@ InterpretResult LoxVM::interpret(std::string_view source) {
   }
 
   push(function);
-  auto &frame = vm.frames.at(vm.frame_count++);
-  frame.function = function;
-  frame.ip = function->chunk.code.begin();
-  frame.slots = vm.stack.begin();
+  call(function, 0);
 
   return run();
 }

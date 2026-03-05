@@ -37,6 +37,7 @@ public:
   ObjFunction compile(std::string_view source) override;
 
   void binary(bool can_assign);
+  void call(bool can_assign);
   void literal(bool can_assign);
   void grouping(bool can_assign);
   void number(bool can_assign);
@@ -90,6 +91,7 @@ private:
   std::uint8_t parse_variable(std::string_view error_message);
   void mark_initialized();
   void define_variable(std::uint8_t global);
+  std::uint8_t argument_list();
 
   void expression();
   void block();
@@ -381,6 +383,11 @@ void LoxCompiler::binary(bool) {
   }
 }
 
+void LoxCompiler::call(bool) {
+  auto const arg_count = argument_list();
+  emit_bytes(OpCode::CALL, arg_count);
+}
+
 void LoxCompiler::literal(bool) {
   switch (parser.previous.type) {
   case TokenType::FALSE:
@@ -461,7 +468,7 @@ using L = LoxCompiler;
 
 // clang-format off
 std::map<TokenType, ParseRule> const rules{
-  {TokenType::LEFT_PAREN,    {&L::grouping, nullptr,          Precedence::NONE}},
+  {TokenType::LEFT_PAREN,    {&L::grouping, &L::call,         Precedence::CALL}},
   {TokenType::RIGHT_PAREN,   {nullptr,      nullptr,          Precedence::NONE}},
   {TokenType::LEFT_BRACE,    {nullptr,      nullptr,          Precedence::NONE}}, 
   {TokenType::RIGHT_BRACE,   {nullptr,      nullptr,          Precedence::NONE}},
@@ -615,6 +622,21 @@ void LoxCompiler::define_variable(std::uint8_t global) {
   }
 
   emit_bytes(OpCode::DEFINE_GLOBAL, global);
+}
+
+std::uint8_t LoxCompiler::argument_list() {
+  uint8_t arg_count = 0;
+  if (not check(TokenType::RIGHT_PAREN)) {
+    do {
+      expression();
+      if (arg_count == 255) {
+        error("Can't have more than 255 arguments.");
+      }
+      arg_count++;
+    } while (match(TokenType::COMMA));
+  }
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after arguments.");
+  return arg_count;
 }
 
 void LoxCompiler::expression() { parse_precedence(Precedence::ASSIGNMENT); }
