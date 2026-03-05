@@ -310,7 +310,7 @@ InterpretResult LoxVM::run() {
 InterpretResult LoxVM::interpret(std::string_view source) {
   Chunk chunk{};
 
-  if (not compiler->compile(source, chunk)) {
+  if (not compiler->compile(source)) {
     return InterpretResult::COMPILE_ERROR;
   }
 

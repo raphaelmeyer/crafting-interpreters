@@ -1,5 +1,7 @@
 #pragma once
 
+#include "object.h"
+
 #include <memory>
 #include <string_view>
 
@@ -9,7 +11,7 @@ class Compiler {
 public:
   virtual ~Compiler() = default;
 
-  virtual bool compile(std::string_view source, Chunk &chunk) = 0;
+  virtual ObjFunction compile(std::string_view source) = 0;
 
   static std::unique_ptr<Compiler> create();
 };

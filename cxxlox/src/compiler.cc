@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "debug.h"
+#include "object.h"
 #include "scanner.h"
 
 #include <algorithm>
@@ -33,7 +34,7 @@ public:
   LoxCompiler(std::unique_ptr<Scanner> &&scanner_)
       : scanner{std::move(scanner_)} {}
 
-  bool compile(std::string_view source, Chunk &chunk) override;
+  ObjFunction compile(std::string_view source) override;
 
   void binary(bool can_assign);
   void literal(bool can_assign);
@@ -46,7 +47,7 @@ public:
   void logical_or(bool can_assign);
 
 private:
-  Chunk *current_chunk() { return compiling_chunk; }
+  Chunk *current_chunk();
 
   void error_at(Token const &token, std::string_view message);
   void error(std::string_view message);
@@ -69,8 +70,10 @@ private:
   void patch_jump(std::size_t offset);
 
   struct Context;
-  void init_compiler(Context *compiler);
-  void end_compiler();
+  enum class FunctionType;
+
+  void init_compiler(Context *compiler, FunctionType type);
+  ObjFunction end_compiler();
 
   void begin_scope();
   void end_scope();
@@ -116,10 +119,18 @@ private:
     std::optional<std::size_t> depth;
   };
 
+  enum class FunctionType {
+    FUNCTION,
+    SCRIPT,
+  };
+
   constexpr static std::size_t const UINT8_COUNT =
       std::numeric_limits<std::uint8_t>::max() + 1;
 
   struct Context {
+    ObjFunction function;
+    FunctionType type;
+
     std::array<Local, UINT8_COUNT> locals;
     std::size_t local_count;
     std::size_t scope_depth;
@@ -127,7 +138,6 @@ private:
 
   Parser parser{};
   Context *current{};
-  Chunk *compiling_chunk{};
 
   std::unique_ptr<Scanner> scanner{};
 };
@@ -139,6 +149,8 @@ struct ParseRule {
   ParseFn infix;
   Precedence precedence;
 };
+
+Chunk *LoxCompiler::current_chunk() { return &current->function->chunk; }
 
 void LoxCompiler::error_at(Token const &token, std::string_view message) {
   if (parser.panic_mode) {
@@ -267,20 +279,32 @@ void LoxCompiler::patch_jump(std::size_t offset) {
   current_chunk()->code.at(offset + 1) = jump & 0xff;
 }
 
-void LoxCompiler::init_compiler(Context *compiler) {
+void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
+  compiler->function = nullptr;
+  compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
+  compiler->function = new_function();
   current = compiler;
+
+  Local &local = current->locals.at(current->local_count++);
+  local.depth = 0;
+  local.name.start = "";
+  local.name.length = 0;
 }
 
-void LoxCompiler::end_compiler() {
+ObjFunction LoxCompiler::end_compiler() {
   emit_return();
+  ObjFunction function = current->function;
 
   if (Debug::PRINT_CODE) {
     if (not parser.had_error) {
-      disassemble_chunk(*current_chunk(), "code");
+      disassemble_chunk(*current_chunk(),
+                        function->name.empty() ? "<script>" : function->name);
     }
   }
+
+  return function;
 }
 
 void LoxCompiler::begin_scope() { current->scope_depth++; }
@@ -777,11 +801,10 @@ void LoxCompiler::synchronize() {
   }
 }
 
-bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
+ObjFunction LoxCompiler::compile(std::string_view source) {
   scanner->init_scanner(source);
   Context compiler{};
-  init_compiler(&compiler);
-  compiling_chunk = &chunk;
+  init_compiler(&compiler, FunctionType::SCRIPT);
 
   parser.had_error = false;
   parser.panic_mode = false;
@@ -792,9 +815,8 @@ bool LoxCompiler::compile(std::string_view source, Chunk &chunk) {
     declaration();
   }
 
-  end_compiler();
-
-  return not parser.had_error;
+  auto function = end_compiler();
+  return parser.had_error ? nullptr : function;
 }
 
 } // namespace

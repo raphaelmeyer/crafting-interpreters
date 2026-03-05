@@ -16,6 +16,9 @@ std::string to_string(double value) { return std::format("{:g}", value); }
 std::string to_string(std::string value) { return value; }
 
 std::string to_string(ObjFunction function) {
+  if (function->name.empty()) {
+    return "<script>";
+  }
   return std::format("<fn {}>", function->name);
 }
 

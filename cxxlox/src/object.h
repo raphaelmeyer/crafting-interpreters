@@ -12,4 +12,6 @@ struct Function {
   std::string name;
 };
 
-std::shared_ptr<Function> new_function();
+using ObjFunction = std::shared_ptr<Function>;
+
+ObjFunction new_function();
