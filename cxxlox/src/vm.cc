@@ -33,7 +33,7 @@ private:
 
   struct CallFrame {
     ObjFunction function;
-    Chunk::CodeIterator ip;
+    CodeIterator ip;
     StackPointer slots;
   };
 
@@ -41,7 +41,7 @@ private:
     std::array<CallFrame, FRAMES_MAX> frames;
     std::size_t frame_count;
 
-    Chunk::CodeIterator ip;
+    CodeIterator ip;
     Stack stack;
     StackPointer stack_top;
     std::unordered_map<std::string, Value> globals;

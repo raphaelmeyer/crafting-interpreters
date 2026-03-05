@@ -47,7 +47,7 @@ public:
   void logical_or(bool can_assign);
 
 private:
-  Chunk *current_chunk();
+  Chunk &current_chunk();
 
   void error_at(Token const &token, std::string_view message);
   void error(std::string_view message);
@@ -150,7 +150,7 @@ struct ParseRule {
   Precedence precedence;
 };
 
-Chunk *LoxCompiler::current_chunk() { return &current->function->chunk; }
+Chunk &LoxCompiler::current_chunk() { return current->function->chunk; }
 
 void LoxCompiler::error_at(Token const &token, std::string_view message) {
   if (parser.panic_mode) {
@@ -215,7 +215,7 @@ bool LoxCompiler::match(TokenType type) {
 }
 
 void LoxCompiler::emit_byte(std::uint8_t byte) {
-  current_chunk()->write(byte, parser.previous.line);
+  write_chunk(current_chunk(), byte, parser.previous.line);
 }
 
 void LoxCompiler::emit_byte(OpCode op_code) {
@@ -235,7 +235,7 @@ void LoxCompiler::emit_bytes(OpCode op_code_a, OpCode op_code_b) {
 void LoxCompiler::emit_loop(std::size_t loop_start) {
   emit_byte(OpCode::LOOP);
 
-  std::size_t const offset = current_chunk()->code.size() - loop_start + 2;
+  std::size_t const offset = current_chunk().code.size() - loop_start + 2;
   if (offset > std::numeric_limits<std::uint16_t>::max()) {
     error("Loop body too large.");
   }
@@ -248,13 +248,13 @@ std::size_t LoxCompiler::emit_jump(OpCode instruction) {
   emit_byte(instruction);
   emit_byte(0xff);
   emit_byte(0xff);
-  return current_chunk()->code.size() - 2;
+  return current_chunk().code.size() - 2;
 }
 
 void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
 
 uint8_t LoxCompiler::make_constant(Value value) {
-  auto const constant = current_chunk()->add_constant(value);
+  auto const constant = add_constant(current_chunk(), value);
   if (constant > std::numeric_limits<std::uint8_t>::max()) {
     error("Too many constants in one chunk.");
     return 0;
@@ -269,14 +269,14 @@ void LoxCompiler::emit_constant(Value value) {
 
 void LoxCompiler::patch_jump(std::size_t offset) {
   // -2 to adjust for the bytecode for the jump offset itself.
-  std::size_t const jump = current_chunk()->code.size() - offset - 2;
+  std::size_t const jump = current_chunk().code.size() - offset - 2;
 
   if (jump > std::numeric_limits<std::uint16_t>::max()) {
     error("Too much code to jump over.");
   }
 
-  current_chunk()->code.at(offset) = (jump >> 8) & 0xff;
-  current_chunk()->code.at(offset + 1) = jump & 0xff;
+  current_chunk().code.at(offset) = (jump >> 8) & 0xff;
+  current_chunk().code.at(offset + 1) = jump & 0xff;
 }
 
 void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
@@ -299,7 +299,7 @@ ObjFunction LoxCompiler::end_compiler() {
 
   if (Debug::PRINT_CODE) {
     if (not parser.had_error) {
-      disassemble_chunk(*current_chunk(),
+      disassemble_chunk(current_chunk(),
                         function->name.empty() ? "<script>" : function->name);
     }
   }
@@ -631,7 +631,7 @@ void LoxCompiler::for_statement() {
     expression_statement();
   }
 
-  auto loop_start = current_chunk()->code.size();
+  auto loop_start = current_chunk().code.size();
   std::optional<std::size_t> exit_jump{};
   if (not match(TokenType::SEMICOLON)) {
     expression();
@@ -644,7 +644,7 @@ void LoxCompiler::for_statement() {
 
   if (not match(TokenType::RIGHT_PAREN)) {
     auto const body_jump = emit_jump(OpCode::JUMP);
-    auto const increment_start = current_chunk()->code.size();
+    auto const increment_start = current_chunk().code.size();
     expression();
     emit_byte(OpCode::POP);
     consume(TokenType::RIGHT_PAREN, "Expect ')' after for clauses.");
@@ -692,7 +692,7 @@ void LoxCompiler::print_statement() {
 }
 
 void LoxCompiler::while_statement() {
-  auto const loop_start = current_chunk()->code.size();
+  auto const loop_start = current_chunk().code.size();
   consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
   expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after condition.");

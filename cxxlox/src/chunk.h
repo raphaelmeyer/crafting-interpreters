@@ -36,9 +36,9 @@ struct Chunk {
   std::vector<std::uint8_t> code;
   std::vector<std::int32_t> lines;
   ValueArray constants;
-
-  using CodeIterator = decltype(Chunk::code)::const_iterator;
-
-  void write(uint8_t byte, std::int32_t line);
-  std::size_t add_constant(Value value);
 };
+
+using CodeIterator = decltype(Chunk::code)::const_iterator;
+
+void write_chunk(Chunk &chunk, uint8_t byte, std::int32_t line);
+std::size_t add_constant(Chunk &chunk, Value value);
