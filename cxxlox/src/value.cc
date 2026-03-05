@@ -1,5 +1,7 @@
 #include "value.h"
 
+#include "object.h"
+
 #include <format>
 #include <iostream>
 
@@ -12,6 +14,10 @@ std::string to_string(Nil) { return "nil"; }
 std::string to_string(double value) { return std::format("{:g}", value); }
 
 std::string to_string(std::string value) { return value; }
+
+std::string to_string(ObjFunction function) {
+  return std::format("<fn {}>", function->name);
+}
 
 } // namespace
 

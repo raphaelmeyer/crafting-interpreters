@@ -1,12 +1,17 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <variant>
 #include <vector>
 
 struct Nil {};
 
-using Value = std::variant<Nil, bool, double, std::string>;
+struct Function;
+
+using ObjFunction = std::shared_ptr<Function>;
+
+using Value = std::variant<Nil, bool, double, std::string, ObjFunction>;
 
 inline Value bool_value(bool value) { return {value}; }
 
@@ -38,6 +43,14 @@ inline bool is_string(Value const &value) {
 
 inline std::string as_string(Value const &value) {
   return std::get<std::string>(value);
+}
+
+inline bool is_function(Value const &value) {
+  return std::holds_alternative<ObjFunction>(value);
+}
+
+inline ObjFunction as_function(Value const &value) {
+  return std::get<ObjFunction>(value);
 }
 
 using ValueArray = std::vector<Value>;

@@ -16,6 +16,7 @@ target_sources(cxxlox PRIVATE
   src/compiler.cc
   src/debug.cc
   src/main.cc
+  src/object.cc
   src/scanner.cc
   src/value.cc
   src/vm.cc
