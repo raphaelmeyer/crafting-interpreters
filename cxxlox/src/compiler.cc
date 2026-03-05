@@ -93,7 +93,9 @@ private:
 
   void expression();
   void block();
+  void function(FunctionType type);
   void declaration();
+  void fun_declaration();
   void var_declaration();
   void statement();
   void expression_statement();
@@ -128,6 +130,7 @@ private:
       std::numeric_limits<std::uint8_t>::max() + 1;
 
   struct Context {
+    Context *enclosing;
     ObjFunction function;
     FunctionType type;
 
@@ -137,7 +140,7 @@ private:
   };
 
   Parser parser{};
-  Context *current{};
+  Context *current{nullptr};
 
   std::unique_ptr<Scanner> scanner{};
 };
@@ -280,12 +283,18 @@ void LoxCompiler::patch_jump(std::size_t offset) {
 }
 
 void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
+  compiler->enclosing = current;
   compiler->function = nullptr;
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
   compiler->function = new_function();
   current = compiler;
+
+  if (type != FunctionType::SCRIPT) {
+    current->function->name =
+        std::string{parser.previous.start, parser.previous.length};
+  }
 
   Local &local = current->locals.at(current->local_count++);
   local.depth = 0;
@@ -304,6 +313,7 @@ ObjFunction LoxCompiler::end_compiler() {
     }
   }
 
+  current = current->enclosing;
   return function;
 }
 
@@ -592,6 +602,9 @@ std::uint8_t LoxCompiler::parse_variable(std::string_view error_message) {
 }
 
 void LoxCompiler::mark_initialized() {
+  if (current->scope_depth == 0) {
+    return;
+  }
   current->locals.at(current->local_count - 1).depth = current->scope_depth;
 }
 
@@ -612,6 +625,30 @@ void LoxCompiler::block() {
   }
 
   consume(TokenType::RIGHT_BRACE, "Expect '}' after block.");
+}
+
+void LoxCompiler::function(FunctionType type) {
+  Context compiler{};
+  init_compiler(&compiler, type);
+  begin_scope();
+
+  consume(TokenType::LEFT_PAREN, "Expect '(' after function name.");
+  if (not check(TokenType::RIGHT_PAREN)) {
+    do {
+      current->function->arity++;
+      if (current->function->arity > 255) {
+        error_at_current("Can't have more than 255 parameters.");
+      }
+      auto const constant = parse_variable("Expect parameter name.");
+      define_variable(constant);
+    } while (match(TokenType::COMMA));
+  }
+  consume(TokenType::RIGHT_PAREN, "Expect ')' after parameters.");
+  consume(TokenType::LEFT_BRACE, "Expect '{' before function body.");
+  block();
+
+  auto function = end_compiler();
+  emit_bytes(OpCode::CONSTANT, make_constant(function));
 }
 
 void LoxCompiler::expression_statement() {
@@ -707,7 +744,9 @@ void LoxCompiler::while_statement() {
 }
 
 void LoxCompiler::declaration() {
-  if (match(TokenType::VAR)) {
+  if (match(TokenType::FUN)) {
+    fun_declaration();
+  } else if (match(TokenType::VAR)) {
     var_declaration();
   } else {
     statement();
@@ -716,6 +755,13 @@ void LoxCompiler::declaration() {
   if (parser.panic_mode) {
     synchronize();
   }
+}
+
+void LoxCompiler::fun_declaration() {
+  auto const global = parse_variable("Expect function name.");
+  mark_initialized();
+  function(FunctionType::FUNCTION);
+  define_variable(global);
 }
 
 void LoxCompiler::var_declaration() {
