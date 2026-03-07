@@ -9,6 +9,7 @@
 #include <functional>
 #include <iostream>
 #include <iterator>
+#include <random>
 #include <ranges>
 #include <unordered_map>
 
@@ -115,6 +116,9 @@ private:
     return InterpretResult::OK;
   }
 
+  std::random_device random_device{};
+  std::mt19937 rng{random_device()};
+
   Context vm{};
   std::unique_ptr<Compiler> compiler{Compiler::create()};
 };
@@ -126,6 +130,14 @@ void LoxVM::init_vm() {
     std::chrono::duration<double> now =
         std::chrono::steady_clock::now().time_since_epoch();
     return now.count();
+  });
+
+  define_native("random", [this](auto, auto args) {
+    auto const from = as_number(args[0]);
+    auto const to = as_number(args[1]);
+    std::uniform_real_distribution<double> distribution{from, to};
+
+    return distribution(rng);
   });
 }
 
