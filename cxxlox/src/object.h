@@ -18,10 +18,9 @@ struct Function {
 using NativeFn = std::function<Value(std::size_t, std::span<Value>)>;
 
 struct Native {
+  std::size_t arity;
   NativeFn function;
 };
 
 ObjFunction new_function();
-ObjNative new_native(NativeFn function);
-
-NativeFn as_native(Value const &value);
+ObjNative new_native(std::size_t arity, NativeFn function);

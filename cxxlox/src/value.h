@@ -57,6 +57,10 @@ inline bool is_native(Value const &value) {
   return std::holds_alternative<ObjNative>(value);
 }
 
+inline ObjNative as_native(Value const &value) {
+  return std::get<ObjNative>(value);
+}
+
 using ValueArray = std::vector<Value>;
 
 void print_value(Value value);

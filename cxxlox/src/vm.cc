@@ -63,6 +63,7 @@ private:
 
   bool call(ObjFunction function, std::size_t arg_count);
   bool call_value(Value const &callee, std::size_t arg_count);
+  bool call_native(ObjNative native, std::size_t arg_count);
 
   bool is_falsey(Value const &value) const;
   void concatenate();
@@ -88,9 +89,9 @@ private:
     reset_stack();
   }
 
-  void define_native(std::string name, NativeFn function) {
+  void define_native(std::string name, std::size_t arity, NativeFn function) {
     push(name);
-    push(new_native(function));
+    push(new_native(arity, function));
     vm.globals.insert_or_assign(as_string(vm.stack.front()), vm.stack.at(1));
     pop();
     pop();
@@ -126,13 +127,13 @@ private:
 void LoxVM::init_vm() {
   reset_stack();
 
-  define_native("clock", [](auto, auto) {
+  define_native("clock", 0, [](auto, auto) {
     std::chrono::duration<double> now =
         std::chrono::steady_clock::now().time_since_epoch();
     return now.count();
   });
 
-  define_native("random", [this](auto, auto args) {
+  define_native("random", 2, [this](auto, auto args) {
     auto const from = as_number(args[0]);
     auto const to = as_number(args[1]);
     std::uniform_real_distribution<double> distribution{from, to};
@@ -181,16 +182,25 @@ bool LoxVM::call(ObjFunction function, std::size_t arg_count) {
   return true;
 }
 
+bool LoxVM::call_native(ObjNative native, std::size_t arg_count) {
+  if (arg_count != native->arity) {
+    runtime_error("Expected {} arguments but got {}.", native->arity,
+                  arg_count);
+    return false;
+  }
+
+  std::span<Value> args{std::prev(vm.stack_top, arg_count), arg_count};
+  auto const result = native->function(arg_count, args);
+  std::advance(vm.stack_top, -(arg_count + 1));
+  push(result);
+  return true;
+}
+
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   if (is_function(callee)) {
     return call(as_function(callee), arg_count);
   } else if (is_native(callee)) {
-    auto native = as_native(callee);
-    std::span<Value> args{std::prev(vm.stack_top, arg_count), arg_count};
-    auto const result = native(arg_count, args);
-    std::advance(vm.stack_top, -(arg_count + 1));
-    push(result);
-    return true;
+    return call_native(as_native(callee), arg_count);
   }
 
   runtime_error("Can only call functions and classes.");
