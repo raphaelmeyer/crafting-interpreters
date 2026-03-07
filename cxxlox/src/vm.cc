@@ -4,9 +4,11 @@
 #include "compiler.h"
 #include "debug.h"
 
+#include <chrono>
 #include <format>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <ranges>
 #include <unordered_map>
 
@@ -85,6 +87,14 @@ private:
     reset_stack();
   }
 
+  void define_native(std::string name, NativeFn function) {
+    push(name);
+    push(new_native(function));
+    vm.globals.insert_or_assign(as_string(vm.stack.front()), vm.stack.at(1));
+    pop();
+    pop();
+  }
+
   std::uint8_t read_byte(CallFrame &frame);
   std::uint16_t read_short(CallFrame &frame);
   Value read_constant(CallFrame &frame);
@@ -109,7 +119,15 @@ private:
   std::unique_ptr<Compiler> compiler{Compiler::create()};
 };
 
-void LoxVM::init_vm() { reset_stack(); }
+void LoxVM::init_vm() {
+  reset_stack();
+
+  define_native("clock", [](auto, auto) {
+    std::chrono::duration<double> now =
+        std::chrono::steady_clock::now().time_since_epoch();
+    return now.count();
+  });
+}
 
 void LoxVM::free_vm() {}
 
@@ -154,7 +172,15 @@ bool LoxVM::call(ObjFunction function, std::size_t arg_count) {
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   if (is_function(callee)) {
     return call(as_function(callee), arg_count);
+  } else if (is_native(callee)) {
+    auto native = as_native(callee);
+    std::span<Value> args{std::prev(vm.stack_top, arg_count), arg_count};
+    auto const result = native(arg_count, args);
+    std::advance(vm.stack_top, -(arg_count + 1));
+    push(result);
+    return true;
   }
+
   runtime_error("Can only call functions and classes.");
   return false;
 }

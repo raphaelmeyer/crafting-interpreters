@@ -1,9 +1,12 @@
 #pragma once
 
+#include "object_fwd.h"
+
 #include "chunk.h"
 
 #include <cstddef>
-#include <memory>
+#include <functional>
+#include <span>
 #include <string>
 
 struct Function {
@@ -12,6 +15,13 @@ struct Function {
   std::string name;
 };
 
-using ObjFunction = std::shared_ptr<Function>;
+using NativeFn = std::function<Value(std::size_t, std::span<Value>)>;
+
+struct Native {
+  NativeFn function;
+};
 
 ObjFunction new_function();
+ObjNative new_native(NativeFn function);
+
+NativeFn as_native(Value const &value);

@@ -1,17 +1,17 @@
 #pragma once
 
-#include <memory>
+#include "object_fwd.h"
+
 #include <string>
 #include <variant>
 #include <vector>
 
 struct Nil {};
 
-struct Function;
+using Value =
+    std::variant<Nil, bool, double, std::string, ObjFunction, ObjNative>;
 
-using ObjFunction = std::shared_ptr<Function>;
-
-using Value = std::variant<Nil, bool, double, std::string, ObjFunction>;
+ObjFunction new_function();
 
 inline Value bool_value(bool value) { return {value}; }
 
@@ -51,6 +51,10 @@ inline bool is_function(Value const &value) {
 
 inline ObjFunction as_function(Value const &value) {
   return std::get<ObjFunction>(value);
+}
+
+inline bool is_native(Value const &value) {
+  return std::holds_alternative<ObjNative>(value);
 }
 
 using ValueArray = std::vector<Value>;

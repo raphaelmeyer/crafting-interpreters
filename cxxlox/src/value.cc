@@ -22,6 +22,8 @@ std::string to_string(ObjFunction function) {
   return std::format("<fn {}>", function->name);
 }
 
+std::string to_string(ObjNative) { return "<native fn>"; }
+
 } // namespace
 
 void print_value(Value value) {
