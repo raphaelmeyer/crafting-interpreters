@@ -104,6 +104,7 @@ private:
   void for_statement();
   void if_statement();
   void print_statement();
+  void return_statement();
   void while_statement();
 
   void named_variable(Token const &name, bool can_assign);
@@ -753,6 +754,20 @@ void LoxCompiler::print_statement() {
   emit_byte(OpCode::PRINT);
 }
 
+void LoxCompiler::return_statement() {
+  if (current->type == FunctionType::SCRIPT) {
+    error("Can't return from top-level code.");
+  }
+
+  if (match(TokenType::SEMICOLON)) {
+    emit_return();
+  } else {
+    expression();
+    consume(TokenType ::SEMICOLON, "Expect ';' after return value.");
+    emit_byte(OpCode::RETURN);
+  }
+}
+
 void LoxCompiler::while_statement() {
   auto const loop_start = current_chunk().code.size();
   consume(TokenType::LEFT_PAREN, "Expect '(' after 'while'.");
@@ -810,6 +825,8 @@ void LoxCompiler::statement() {
     for_statement();
   } else if (match(TokenType::IF)) {
     if_statement();
+  } else if (match(TokenType::RETURN)) {
+    return_statement();
   } else if (match(TokenType::WHILE)) {
     while_statement();
   } else if (match(TokenType::LEFT_BRACE)) {
