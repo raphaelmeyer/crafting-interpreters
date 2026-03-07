@@ -7,7 +7,10 @@
 #include <format>
 #include <functional>
 #include <iostream>
+#include <ranges>
 #include <unordered_map>
+
+namespace views = std::ranges::views;
 
 namespace {
 
@@ -65,11 +68,19 @@ private:
   void runtime_error(std::format_string<Args...> format, Args &&...args) {
     std::cerr << std::format(format, args...) << "\n";
 
-    auto &frame = vm.frames.at(vm.frame_count - 1);
-    auto const instruction =
-        std::distance(frame.function->chunk.code.cbegin(), frame.ip) - 1;
-    auto const line = frame.function->chunk.lines.at(instruction);
-    std::cerr << std::format("[line {:d}] in script", line) << "\n";
+    for (auto const &frame :
+         views::reverse(views::take(vm.frames, vm.frame_count))) {
+      auto const function = frame.function;
+      auto const instruction =
+          std::distance(function->chunk.code.cbegin(), frame.ip) - 1;
+      auto const line = frame.function->chunk.lines.at(instruction);
+      std::cerr << std::format("[line {:d}] in ", line);
+      if (function->name.empty()) {
+        std::cerr << "script" << "\n";
+      } else {
+        std::cerr << std::format("{}()\n", function->name);
+      }
+    }
 
     reset_stack();
   }
