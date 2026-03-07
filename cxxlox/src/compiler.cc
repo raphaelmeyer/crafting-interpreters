@@ -256,7 +256,10 @@ std::size_t LoxCompiler::emit_jump(OpCode instruction) {
   return current_chunk().code.size() - 2;
 }
 
-void LoxCompiler::emit_return() { emit_byte(OpCode::RETURN); }
+void LoxCompiler::emit_return() {
+  emit_byte(OpCode::NIL);
+  emit_byte(OpCode::RETURN);
+}
 
 uint8_t LoxCompiler::make_constant(Value value) {
   auto const constant = add_constant(current_chunk(), value);

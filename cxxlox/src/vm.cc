@@ -376,7 +376,17 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::RETURN: {
-      return InterpretResult::OK;
+      auto const result = pop();
+      vm.frame_count--;
+      if (vm.frame_count == 0) {
+        pop();
+        return InterpretResult::OK;
+      }
+
+      vm.stack_top = frame->slots;
+      push(result);
+      frame = vm.frames.begin() + vm.frame_count - 1;
+      break;
     }
 
     default:
