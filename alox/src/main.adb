@@ -1,6 +1,5 @@
 with Debug;
 with Exceptions;
-with Lox_Chunk;
 with Lox_Scanner;
 with Lox_VM;
 
@@ -11,8 +10,6 @@ with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
 package body Main is
-   Main_Chunk : aliased Lox_Chunk.Chunk;
-
    procedure Main is
       package Unbounded renames Ada.Strings.Unbounded;
 
@@ -74,9 +71,7 @@ package body Main is
             begin
                Unused :=
                  Lox_VM.Interpret
-                   (VM,
-                    Lox_Scanner.Source_Code (Source.Content),
-                    Main_Chunk'Access);
+                   (VM, Lox_Scanner.Source_Code (Source.Content));
             end;
 
          exception
@@ -97,8 +92,7 @@ package body Main is
       Lox_VM.Init (VM);
 
       Result :=
-        Lox_VM.Interpret
-          (VM, Lox_Scanner.Source_Code (Source.Content), Main_Chunk'Access);
+        Lox_VM.Interpret (VM, Lox_Scanner.Source_Code (Source.Content));
 
       if Result = Lox_VM.INTERPRET_COMPILE_ERROR then
          raise Exceptions.Compile_Error;

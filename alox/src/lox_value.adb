@@ -120,6 +120,12 @@ package body Lox_Value is
       return V.Kind = VAL_STRING;
    end Is_String;
 
+   function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value
+   is
+   begin
+      return (VAL_FUNCTION, Function_Value => Func);
+   end Make_Function;
+
    function Is_Function (V : Value) return Boolean is
    begin
       return V.Kind = VAL_FUNCTION;

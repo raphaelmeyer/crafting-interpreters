@@ -68,6 +68,7 @@ package Lox_Value is
    function Make_String (Str : Unbounded_String) return Value;
    function Is_String (V : Value) return Boolean;
 
+   function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value;
    function Is_Function (V : Value) return Boolean;
 
    procedure Write (VA : in out Value_Array; V : Value);

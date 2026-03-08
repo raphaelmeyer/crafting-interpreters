@@ -1,4 +1,5 @@
 with Lox_Chunk;
+with Lox_Object;
 with Lox_Scanner;
 with Lox_Value;
 with Lox_Types; use Lox_Types;
@@ -11,15 +12,23 @@ package Lox_VM is
    type Interpret_Result is
      (INTERPRET_OK, INTERPRET_COMPILE_ERROR, INTERPRET_RUNTIME_ERROR);
 
-   type Stack_Index is range 0 .. 255;
+   type Stack_Index is range 0 .. 16383;
    type Stack_Array is array (Stack_Index) of Lox_Value.Value;
+
+   type Call_Frame is limited record
+      Func  : Lox_Object.Obj_Function_Access;
+      IP    : Lox_Chunk.Byte_Vectors.Cursor;
+      Slots : Stack_Index;
+   end record;
+
+   type Call_Frame_Index is range 0 .. 63;
+   type Call_Frame_Array is array (Call_Frame_Index) of Call_Frame;
 
    procedure Init (VM : in out VM_Context);
 
    function Interpret
-     (VM     : in out VM_Context;
-      Source : Lox_Scanner.Source_Code;
-      Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result;
+     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
+      return Interpret_Result;
 
 private
    function Hash_String
@@ -34,8 +43,9 @@ private
         "="             => Lox_Value.Values_Equal);
 
    type VM_Context is limited record
-      Chunk     : Lox_Chunk.Chunk_Read_Access;
-      IP        : Lox_Chunk.Byte_Vectors.Cursor;
+      Frames      : Call_Frame_Array;
+      Frame_Count : Natural;
+
       Stack     : Stack_Array;
       Stack_Top : Stack_Index;
       Globals   : Hash_Table.Map;
@@ -52,11 +62,12 @@ private
    procedure Reset_Stack (VM : in out VM_Context);
    procedure Runtime_Error (VM : in out VM_Context; Message : String);
 
-   function Read_Byte (VM : in out VM_Context) return Byte;
-   function Read_Short (VM : in out VM_Context) return Short;
-   function Read_Constant (VM : in out VM_Context) return Lox_Value.Value;
+   function Read_Byte (Frame : in out Call_Frame) return Byte;
+   function Read_Short (Frame : in out Call_Frame) return Short;
+   function Read_Constant (Frame : in out Call_Frame) return Lox_Value.Value;
    function Read_String
-     (VM : in out VM_Context) return Lox_Value.Unbounded_String;
+     (Frame : in out Call_Frame) return Lox_Value.Unbounded_String;
+
    function Run (VM : in out VM_Context) return Interpret_Result;
 
 end Lox_VM;
