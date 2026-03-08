@@ -211,7 +211,7 @@ package body Lox_VM is
                Frame  : Call_Frame renames VM.Frames (Frame_Index);
                Unused : Natural :=
                  Debug.Disassemble_Instruction
-                   (Frame.Func.Chunk'Access,
+                   (Frame.Func.Chunk,
                     Lox_Chunk.Byte_Vectors.To_Index (Frame.IP));
             begin
                null;

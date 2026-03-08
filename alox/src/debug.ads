@@ -1,11 +1,10 @@
 with Lox_Chunk;
 
 package Debug is
-   procedure Disassemble_Chunk
-     (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String);
+   procedure Disassemble_Chunk (Chunk : Lox_Chunk.Chunk; Name : String);
 
    function Disassemble_Instruction
-     (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural;
+     (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
 
    procedure Enable_Trace_Execution;
    procedure Enable_Print_Code;
@@ -20,16 +19,14 @@ private
    type Direction is (Forward, Backward);
 
    function Constant_Instruction
-     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
-      return Natural;
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
    function Simple_Instruction
      (Name : String; Offset : Natural) return Natural;
    function Byte_Instruction
-     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
-      return Natural;
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
    function Jump_Instruction
      (Name           : String;
       Jump_Direction : Direction;
-      Chunk          : Lox_Chunk.Chunk_Read_Access;
+      Chunk          : Lox_Chunk.Chunk;
       Offset         : Natural) return Natural;
 end Debug;

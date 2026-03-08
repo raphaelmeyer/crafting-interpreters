@@ -8,9 +8,7 @@ with Ada.Text_IO;
 
 package body Debug is
 
-   procedure Disassemble_Chunk
-     (Chunk : Lox_Chunk.Chunk_Read_Access; Name : String)
-   is
+   procedure Disassemble_Chunk (Chunk : Lox_Chunk.Chunk; Name : String) is
       Offset : Natural := Chunk.Code.First_Index;
    begin
       Ada.Text_IO.Put_Line ("== " & Name & " ==");
@@ -20,7 +18,7 @@ package body Debug is
    end Disassemble_Chunk;
 
    function Disassemble_Instruction
-     (Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural) return Natural
+     (Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
    is
       Instruction : Byte;
       Buffer      : String (1 .. 32);
@@ -146,8 +144,7 @@ package body Debug is
    end Print_Code_Enabled;
 
    function Constant_Instruction
-     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
-      return Natural
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
    is
       Const : constant Byte := Chunk.Code (Offset + 1);
    begin
@@ -167,8 +164,7 @@ package body Debug is
    end Simple_Instruction;
 
    function Byte_Instruction
-     (Name : String; Chunk : Lox_Chunk.Chunk_Read_Access; Offset : Natural)
-      return Natural
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
    is
       Slot : constant Byte := Chunk.Code (Offset + 1);
    begin
@@ -180,7 +176,7 @@ package body Debug is
    function Jump_Instruction
      (Name           : String;
       Jump_Direction : Direction;
-      Chunk          : Lox_Chunk.Chunk_Read_Access;
+      Chunk          : Lox_Chunk.Chunk;
       Offset         : Natural) return Natural
    is
       High        : constant Byte := Chunk.Code (Offset + 1);

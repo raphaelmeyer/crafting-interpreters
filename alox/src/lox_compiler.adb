@@ -347,8 +347,7 @@ package body Lox_Compiler is
                   then "<script>"
                   else Unbounded.To_String (Func.Name));
             begin
-               Debug.Disassemble_Chunk
-                 (Lox_Chunk.Chunk_Read_Access (Current_Chunk (C)), Name);
+               Debug.Disassemble_Chunk (Current_Chunk (C).all, Name);
             end;
          end if;
       end if;

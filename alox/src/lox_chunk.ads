@@ -45,7 +45,6 @@ package Lox_Chunk is
    end record;
 
    type Chunk_Access is access all Chunk;
-   type Chunk_Read_Access is access constant Chunk;
 
    procedure Init (C : in out Chunk);
 
