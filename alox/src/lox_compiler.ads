@@ -1,4 +1,5 @@
 with Lox_Chunk;
+with Lox_Object;
 with Lox_Scanner;
 with Lox_Value;
 with Lox_Types; use Lox_Types;
@@ -8,8 +9,7 @@ with Ada.Unchecked_Deallocation;
 
 package Lox_Compiler is
    function Compile
-     (Source : Lox_Scanner.Source_Code; Chunk : Lox_Chunk.Chunk_Access)
-      return Boolean;
+     (Source : Lox_Scanner.Source_Code) return Lox_Object.Obj_Function_Access;
 
 private
    use type Lox_Scanner.TokenType;
@@ -55,7 +55,12 @@ private
    type Local_Index is range 0 .. 255;
    type Locals_Array is array (Local_Index) of Local_Type;
 
+   type Function_Kind is (TYPE_FUNCTION, TYPE_SCRIPT);
+
    type Compiler_Type is limited record
+      Func : Lox_Object.Obj_Function_Access;
+      Kind : Function_Kind;
+
       Locals      : Locals_Array;
       Local_Count : Natural;
       Scope_Depth : Natural;
@@ -69,10 +74,9 @@ private
    end record;
 
    type Compiler_Context is limited record
-      Scanner         : Lox_Scanner.Scanner;
-      Parser          : Parser_Context;
-      Current         : Compiler_Access;
-      Compiling_Chunk : Lox_Chunk.Chunk_Access;
+      Scanner : Lox_Scanner.Scanner;
+      Parser  : Parser_Context;
+      Current : Compiler_Access;
    end record;
 
    type Parse_Fn is
@@ -135,8 +139,11 @@ private
      (C : in out Compiler_Context; Value : Lox_Value.Value);
 
    procedure Init_Compiler
-     (C : in out Compiler_Context; Compiler : Compiler_Access);
-   procedure End_Compiler (C : in out Compiler_Context);
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Kind     : Function_Kind);
+   function End_Compiler
+     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access;
 
    procedure Begin_Scope (C : in out Compiler_Context);
    procedure End_Scope (C : in out Compiler_Context);

@@ -9,7 +9,11 @@ package body Lox_Object is
    end New_Function;
 
    function To_String (Function_Object : Obj_Function) return String is
+      use type Unbounded.Unbounded_String;
    begin
+      if Function_Object.Name = Unbounded.Null_Unbounded_String then
+         return "<script>";
+      end if;
       return "<fn " & Unbounded.To_String (Function_Object.Name) & ">";
    end To_String;
 

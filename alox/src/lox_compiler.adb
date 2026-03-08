@@ -63,15 +63,14 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_EOF           => (null, null, PREC_NONE)];
 
    function Compile
-     (Source : Lox_Scanner.Source_Code; Chunk : Lox_Chunk.Chunk_Access)
-      return Boolean
+     (Source : Lox_Scanner.Source_Code) return Lox_Object.Obj_Function_Access
    is
       C        : Compiler_Context;
       Compiler : Compiler_Instance;
+      Func     : Lox_Object.Obj_Function_Access := null;
    begin
       C.Scanner := Lox_Scanner.Init (Source);
-      Init_Compiler (C, Compiler.Instance);
-      C.Compiling_Chunk := Chunk;
+      Init_Compiler (C, Compiler.Instance, TYPE_SCRIPT);
 
       C.Parser.Had_Error := False;
       C.Parser.Panic_Mode := False;
@@ -82,9 +81,13 @@ package body Lox_Compiler is
          Declaration (C);
       end loop;
 
-      End_Compiler (C);
+      Func := End_Compiler (C);
 
-      return not C.Parser.Had_Error;
+      if C.Parser.Had_Error then
+         return null;
+      else
+         return Func;
+      end if;
    end Compile;
 
    function Just (Value : Natural) return Maybe_Natural is
@@ -112,7 +115,7 @@ package body Lox_Compiler is
    function Current_Chunk
      (C : in out Compiler_Context) return Lox_Chunk.Chunk_Access is
    begin
-      return C.Compiling_Chunk;
+      return C.Current.Func.Chunk'Access;
    end Current_Chunk;
 
    procedure Error_At
@@ -306,23 +309,51 @@ package body Lox_Compiler is
    end Patch_Jump;
 
    procedure Init_Compiler
-     (C : in out Compiler_Context; Compiler : Compiler_Access) is
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Kind     : Function_Kind) is
    begin
+      Compiler.Func := null;
+      Compiler.Kind := Kind;
       Compiler.Local_Count := 0;
       Compiler.Scope_Depth := 0;
+      Compiler.Func := Lox_Object.New_Function;
       C.Current := Compiler;
+
+      declare
+         Local : Local_Type renames
+           C.Current.Locals (Local_Index (C.Current.Local_Count));
+      begin
+         C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
+         Local.Depth := Just (0);
+         Local.Name.Lexeme := Unbounded.Null_Unbounded_String;
+      end;
    end Init_Compiler;
 
-   procedure End_Compiler (C : in out Compiler_Context) is
+   function End_Compiler
+     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access
+   is
+      Func : Lox_Object.Obj_Function_Access := null;
+      use type Unbounded.Unbounded_String;
    begin
       Emit_Return (C);
+      Func := C.Current.Func;
 
       if Debug.Print_Code_Enabled then
          if not C.Parser.Had_Error then
-            Debug.Disassemble_Chunk
-              (Lox_Chunk.Chunk_Read_Access (Current_Chunk (C)), "code");
+            declare
+               Name : constant String :=
+                 (if Func.Name = Unbounded.Null_Unbounded_String
+                  then "<script>"
+                  else Unbounded.To_String (Func.Name));
+            begin
+               Debug.Disassemble_Chunk
+                 (Lox_Chunk.Chunk_Read_Access (Current_Chunk (C)), Name);
+            end;
          end if;
       end if;
+
+      return Func;
    end End_Compiler;
 
    procedure Begin_Scope (C : in out Compiler_Context) is

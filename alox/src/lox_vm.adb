@@ -1,5 +1,6 @@
 with Debug;
 with Lox_Compiler;
+with Lox_Object;
 
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
@@ -19,10 +20,11 @@ package body Lox_VM is
       Chunk  : Lox_Chunk.Chunk_Access) return Interpret_Result
    is
       Result : Interpret_Result;
+      use type Lox_Object.Obj_Function_Access;
    begin
       Lox_Chunk.Init (Chunk.all);
 
-      if not Lox_Compiler.Compile (Source, Chunk) then
+      if Lox_Compiler.Compile (Source) = null then
          return INTERPRET_COMPILE_ERROR;
       end if;
 
