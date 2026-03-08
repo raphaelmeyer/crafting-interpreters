@@ -13,7 +13,7 @@ package Lox_Object is
    type Obj_Function is record
       Arity : Natural;
       Name  : Unbounded_String;
-      Chunk : aliased Lox_Chunk.Chunk;
+      Chunk : Lox_Chunk.Chunk;
 
       Next : Obj_Function_Access;
    end record;

@@ -58,15 +58,16 @@ private
    type Function_Kind is (TYPE_FUNCTION, TYPE_SCRIPT);
 
    type Compiler_Type is limited record
-      Func : Lox_Object.Obj_Function_Access;
-      Kind : Function_Kind;
+      Enclosing : access Compiler_Type;
+      Func      : Lox_Object.Obj_Function_Access;
+      Kind      : Function_Kind;
 
       Locals      : Locals_Array;
       Local_Count : Natural;
       Scope_Depth : Natural;
    end record;
 
-   type Compiler_Access is access Compiler_Type;
+   type Compiler_Access is access all Compiler_Type;
 
    type Compiler_Instance is new Ada.Finalization.Limited_Controlled
    with record
@@ -97,8 +98,8 @@ private
        (Object => Compiler_Type,
         Name   => Compiler_Access);
 
-   function Current_Chunk
-     (C : in out Compiler_Context) return Lox_Chunk.Chunk_Access;
+   function Current_Func
+     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access;
 
    procedure Error_At
      (C       : in out Compiler_Context;
@@ -165,6 +166,9 @@ private
    procedure Unary (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Expression (C : in out Compiler_Context);
    procedure Block (C : in out Compiler_Context);
+   procedure Function_Declaration (C : in out Compiler_Context);
+   procedure Function_Definition
+     (C : in out Compiler_Context; Kind : Function_Kind);
    procedure Variable_Declaration (C : in out Compiler_Context);
    procedure Expression_Statement (C : in out Compiler_Context);
    procedure For_Statement (C : in out Compiler_Context);

@@ -113,11 +113,11 @@ package body Lox_Compiler is
       Free (Compiler.Instance);
    end Finalize;
 
-   function Current_Chunk
-     (C : in out Compiler_Context) return Lox_Chunk.Chunk_Access is
+   function Current_Func
+     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access is
    begin
-      return C.Current.Func.Chunk'Access;
-   end Current_Chunk;
+      return C.Current.Func;
+   end Current_Func;
 
    procedure Error_At
      (C : in out Compiler_Context; Token : Lox_Scanner.Token; Message : String)
@@ -210,13 +210,14 @@ package body Lox_Compiler is
 
    procedure Emit_Byte (C : in out Compiler_Context; Value : Byte) is
    begin
-      Lox_Chunk.Write (Current_Chunk (C).all, Value, C.Parser.Previous.Line);
+      Lox_Chunk.Write (Current_Func (C).Chunk, Value, C.Parser.Previous.Line);
    end Emit_Byte;
 
    procedure Emit_Byte
      (C : in out Compiler_Context; Op_Code : Lox_Chunk.Op_Code) is
    begin
-      Lox_Chunk.Write (Current_Chunk (C).all, Op_Code, C.Parser.Previous.Line);
+      Lox_Chunk.Write
+        (Current_Func (C).Chunk, Op_Code, C.Parser.Previous.Line);
    end Emit_Byte;
 
    procedure Emit_Bytes
@@ -242,7 +243,7 @@ package body Lox_Compiler is
 
       declare
          Offset : constant Natural :=
-           Natural (Current_Chunk (C).Code.Length) - Loop_Start + 2;
+           Natural (Current_Func (C).Chunk.Code.Length) - Loop_Start + 2;
       begin
          if Offset > Natural (Short'Last) then
             Error (C, "Loop body too large.");
@@ -261,7 +262,7 @@ package body Lox_Compiler is
       Emit_Byte (C, Instruction);
       declare
          Patch_Index : constant Natural :=
-           Natural (Current_Chunk (C).Code.Length);
+           Natural (Current_Func (C).Chunk.Code.Length);
       begin
          Emit_Byte (C, Byte'Last);
          Emit_Byte (C, Byte'Last);
@@ -278,7 +279,7 @@ package body Lox_Compiler is
      (C : in out Compiler_Context; Value : Lox_Value.Value) return Byte
    is
       Id : constant Natural :=
-        Lox_Chunk.Add_Constant (Current_Chunk (C).all, Value);
+        Lox_Chunk.Add_Constant (Current_Func (C).Chunk, Value);
    begin
       if Id > Natural (Byte'Last) then
          Error (C, "Too many constants in one chunk.");
@@ -298,15 +299,16 @@ package body Lox_Compiler is
 
    procedure Patch_Jump (C : in out Compiler_Context; Offset : Natural) is
       Jump : constant Natural :=
-        Natural (Current_Chunk (C).Code.Length) - Offset - 2;
+        Natural (Current_Func (C).Chunk.Code.Length) - Offset - 2;
    begin
       if Jump > Natural (Short'Last) then
          Error (C, "Too much code to jump over.");
          return;
       end if;
 
-      Current_Chunk (C).Code (Offset) := Byte (Jump / 256);
-      Current_Chunk (C).Code (Natural'Succ (Offset)) := Byte (Jump mod 256);
+      Current_Func (C).Chunk.Code (Offset) := Byte (Jump / 256);
+      Current_Func (C).Chunk.Code (Natural'Succ (Offset)) :=
+        Byte (Jump mod 256);
    end Patch_Jump;
 
    procedure Init_Compiler
@@ -314,12 +316,17 @@ package body Lox_Compiler is
       Compiler : Compiler_Access;
       Kind     : Function_Kind) is
    begin
+      Compiler.Enclosing := C.Current;
       Compiler.Func := null;
       Compiler.Kind := Kind;
       Compiler.Local_Count := 0;
       Compiler.Scope_Depth := 0;
       Compiler.Func := Lox_VM.New_Function;
       C.Current := Compiler;
+
+      if Kind /= TYPE_SCRIPT then
+         C.Current.Func.Name := C.Parser.Previous.Lexeme;
+      end if;
 
       declare
          Local : Local_Type renames
@@ -348,11 +355,12 @@ package body Lox_Compiler is
                   then "<script>"
                   else Unbounded.To_String (Func.Name));
             begin
-               Debug.Disassemble_Chunk (Current_Chunk (C).all, Name);
+               Debug.Disassemble_Chunk (Current_Func (C).Chunk, Name);
             end;
          end if;
       end if;
 
+      C.Current := Compiler_Access (C.Current.Enclosing);
       return Func;
    end End_Compiler;
 
@@ -571,6 +579,54 @@ package body Lox_Compiler is
       Consume (C, Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after block.");
    end Block;
 
+   procedure Function_Declaration (C : in out Compiler_Context) is
+      Global : constant Byte := Parse_Variable (C, "Expect function name.");
+   begin
+      Mark_Initialized (C);
+      Function_Definition (C, TYPE_FUNCTION);
+      Define_Variable (C, Global);
+   end Function_Declaration;
+
+   procedure Function_Definition
+     (C : in out Compiler_Context; Kind : Function_Kind)
+   is
+      Compiler : Compiler_Instance;
+      Func     : Lox_Object.Obj_Function_Access := null;
+   begin
+      Init_Compiler (C, Compiler.Instance, Kind);
+      Begin_Scope (C);
+
+      Consume
+        (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+
+      if not Check (C, Lox_Scanner.TOKEN_RIGHT_PAREN) then
+         loop
+            C.Current.Func.Arity := Natural'Succ (C.Current.Func.Arity);
+            if C.Current.Func.Arity > 255 then
+               Error_At_Current (C, "Can't have more than 255 parameters.");
+            end if;
+            declare
+               Arg : constant Byte := Parse_Variable (C, "");
+            begin
+               Define_Variable (C, Arg);
+            end;
+            exit when not Match (C, Lox_Scanner.TOKEN_COMMA);
+         end loop;
+      end if;
+
+      Consume
+        (C, Lox_Scanner.TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+      Consume
+        (C, Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+      Block (C);
+
+      Func := End_Compiler (C);
+      Emit_Bytes
+        (C,
+         Lox_Chunk.OP_CONSTANT,
+         Make_Constant (C, Lox_Value.Make_Function (Func)));
+   end Function_Definition;
+
    procedure Variable_Declaration (C : in out Compiler_Context) is
       Global : constant Byte := Parse_Variable (C, "Expect variable name.");
    begin
@@ -610,7 +666,7 @@ package body Lox_Compiler is
          Expression_Statement (C);
       end if;
 
-      Loop_Start := Natural (Current_Chunk (C).Code.Length);
+      Loop_Start := Natural (Current_Func (C).Chunk.Code.Length);
       if not Match (C, Lox_Scanner.TOKEN_SEMICOLON) then
          Expression (C);
          Consume
@@ -628,7 +684,7 @@ package body Lox_Compiler is
             Body_Jump       : constant Natural :=
               Emit_Jump (C, Lox_Chunk.OP_JUMP);
             Increment_Start : constant Natural :=
-              Natural (Current_Chunk (C).Code.Length);
+              Natural (Current_Func (C).Chunk.Code.Length);
          begin
             Expression (C);
             Emit_Byte (C, Lox_Chunk.OP_POP);
@@ -662,7 +718,8 @@ package body Lox_Compiler is
    end Print_Statement;
 
    procedure While_Statement (C : in out Compiler_Context) is
-      Loop_Start : constant Natural := Natural (Current_Chunk (C).Code.Length);
+      Loop_Start : constant Natural :=
+        Natural (Current_Func (C).Chunk.Code.Length);
    begin
       Consume (C, Lox_Scanner.TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
       Expression (C);
@@ -725,7 +782,7 @@ package body Lox_Compiler is
       Emit_Byte (C, Lox_Chunk.OP_FALSE);
       Next_Case := Emit_Jump (C, Lox_Chunk.OP_JUMP);
 
-      Exit_Jump := Natural (Current_Chunk (C).Code.Length);
+      Exit_Jump := Natural (Current_Func (C).Chunk.Code.Length);
       End_Jump := Emit_Jump (C, Lox_Chunk.OP_JUMP);
 
       --  case
@@ -774,7 +831,9 @@ package body Lox_Compiler is
 
    procedure Declaration (C : in out Compiler_Context) is
    begin
-      if Match (C, Lox_Scanner.TOKEN_VAR) then
+      if Match (C, Lox_Scanner.TOKEN_FUN) then
+         Function_Declaration (C);
+      elsif Match (C, Lox_Scanner.TOKEN_VAR) then
          Variable_Declaration (C);
       else
          Statement (C);
@@ -948,10 +1007,17 @@ package body Lox_Compiler is
    end Parse_Variable;
 
    procedure Mark_Initialized (C : in out Compiler_Context) is
-      Top_Index : constant Local_Index :=
-        Local_Index (Natural'Pred (C.Current.Local_Count));
    begin
-      C.Current.Locals (Top_Index).Depth := Just (C.Current.Scope_Depth);
+      if C.Current.Scope_Depth = 0 then
+         return;
+      end if;
+
+      declare
+         Top_Index : constant Local_Index :=
+           Local_Index (Natural'Pred (C.Current.Local_Count));
+      begin
+         C.Current.Locals (Top_Index).Depth := Just (C.Current.Scope_Depth);
+      end;
    end Mark_Initialized;
 
    procedure Define_Variable (C : in out Compiler_Context; Global : Byte) is
