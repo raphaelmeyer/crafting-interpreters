@@ -1,3 +1,5 @@
+with Lox_Object;
+
 with Ada.Long_Float_Text_IO;
 with Ada.Strings;
 with Ada.Strings.Fixed;
@@ -118,6 +120,11 @@ package body Lox_Value is
       return V.Kind = VAL_STRING;
    end Is_String;
 
+   function Is_Function (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_FUNCTION;
+   end Is_Function;
+
    procedure Write (VA : in out Value_Array; V : Value) is
    begin
       VA.Append (V);
@@ -126,16 +133,19 @@ package body Lox_Value is
    procedure Print_Value (V : Value) is
    begin
       case V.Kind is
-         when VAL_BOOL   =>
+         when VAL_BOOL     =>
             Ada.Text_IO.Put ((if V.Bool_Value then "true" else "false"));
 
-         when VAL_NUMBER =>
+         when VAL_NUMBER   =>
             Ada.Text_IO.Put (To_String (V.Number_Value));
 
-         when VAL_STRING =>
+         when VAL_STRING   =>
             Ada.Text_IO.Put (Unbounded.To_String (V.String_Value));
 
-         when others     =>
+         when VAL_FUNCTION =>
+            Ada.Text_IO.Put (Lox_Object.To_String (V.Function_Value.all));
+
+         when others       =>
             Ada.Text_IO.Put ("nil");
       end case;
    end Print_Value;
@@ -147,17 +157,21 @@ package body Lox_Value is
          return False;
       end if;
       case A.Kind is
-         when VAL_BOOL   =>
+         when VAL_BOOL     =>
             return A.Bool_Value = B.Bool_Value;
 
-         when VAL_NIL    =>
+         when VAL_NIL      =>
             return True;
 
-         when VAL_NUMBER =>
+         when VAL_NUMBER   =>
             return A.Number_Value = B.Number_Value;
 
-         when VAL_STRING =>
+         when VAL_STRING   =>
             return A.String_Value = B.String_Value;
+
+         when VAL_FUNCTION =>
+            return A.Function_Value = B.Function_Value;
+
       end case;
    end Values_Equal;
 

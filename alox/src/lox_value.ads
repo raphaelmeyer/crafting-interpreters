@@ -1,3 +1,5 @@
+limited with Lox_Object;
+
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;
 
@@ -5,7 +7,8 @@ package Lox_Value is
    package Unbounded renames Ada.Strings.Unbounded;
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
-   type Value_Type is (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING);
+   type Value_Type is
+     (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING, VAL_FUNCTION);
 
    type Lox_Float (Is_Valid : Boolean := True) is record
       case Is_Valid is
@@ -40,6 +43,9 @@ package Lox_Value is
          when VAL_STRING =>
             String_Value : Unbounded_String;
 
+         when VAL_FUNCTION =>
+            Function_Value : access Lox_Object.Obj_Function;
+
          when others =>
             null;
       end case;
@@ -61,6 +67,8 @@ package Lox_Value is
 
    function Make_String (Str : Unbounded_String) return Value;
    function Is_String (V : Value) return Boolean;
+
+   function Is_Function (V : Value) return Boolean;
 
    procedure Write (VA : in out Value_Array; V : Value);
 
