@@ -24,11 +24,13 @@ package Lox_VM is
    type Call_Frame_Index is range 0 .. 63;
    type Call_Frame_Array is array (Call_Frame_Index) of Call_Frame;
 
-   procedure Init (VM : in out VM_Context);
+   procedure Init_VM;
+   procedure Free_VM;
 
    function Interpret
-     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
-      return Interpret_Result;
+     (Source : Lox_Scanner.Source_Code) return Interpret_Result;
+
+   function New_Function return Lox_Object.Obj_Function_Access;
 
 private
    function Hash_String
@@ -49,18 +51,19 @@ private
       Stack     : Stack_Array;
       Stack_Top : Stack_Index;
       Globals   : Hash_Table.Map;
+
+      Objects : Lox_Object.Objects;
    end record;
 
-   procedure Push (VM : in out VM_Context; Value : Lox_Value.Value);
-   function Pop (VM : in out VM_Context) return Lox_Value.Value;
-   function Peek
-     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value;
+   procedure Push (Value : Lox_Value.Value);
+   function Pop return Lox_Value.Value;
+   function Peek (Distance : Integer) return Lox_Value.Value;
 
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;
-   procedure Concatenate (VM : in out VM_Context);
+   procedure Concatenate;
 
-   procedure Reset_Stack (VM : in out VM_Context);
-   procedure Runtime_Error (VM : in out VM_Context; Message : String);
+   procedure Reset_Stack;
+   procedure Runtime_Error (Message : String);
 
    function Read_Byte (Frame : in out Call_Frame) return Byte;
    function Read_Short (Frame : in out Call_Frame) return Short;
@@ -68,6 +71,6 @@ private
    function Read_String
      (Frame : in out Call_Frame) return Lox_Value.Unbounded_String;
 
-   function Run (VM : in out VM_Context) return Interpret_Result;
+   function Run return Interpret_Result;
 
 end Lox_VM;

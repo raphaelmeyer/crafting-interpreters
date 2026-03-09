@@ -4,6 +4,7 @@ with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
+with Lox_VM;
 
 package body Lox_Compiler is
 
@@ -317,7 +318,7 @@ package body Lox_Compiler is
       Compiler.Kind := Kind;
       Compiler.Local_Count := 0;
       Compiler.Scope_Depth := 0;
-      Compiler.Func := Lox_Object.New_Function;
+      Compiler.Func := Lox_VM.New_Function;
       C.Current := Compiler;
 
       declare

@@ -33,11 +33,15 @@ package body Main is
          end if;
       end loop;
 
+      Lox_VM.Init_VM;
+
       if Unbounded.Length (File_Name) = 0 then
          Repl;
       else
          Run_File (Unbounded.To_String (File_Name));
       end if;
+
+      Lox_VM.Free_VM;
 
    end Main;
 
@@ -57,10 +61,7 @@ package body Main is
    end Make;
 
    procedure Repl is
-      VM : Lox_VM.VM_Context;
    begin
-      Lox_VM.Init (VM);
-
       loop
          begin
             Ada.Text_IO.Put ("> ");
@@ -70,8 +71,7 @@ package body Main is
                Unused : Lox_VM.Interpret_Result;
             begin
                Unused :=
-                 Lox_VM.Interpret
-                   (VM, Lox_Scanner.Source_Code (Source.Content));
+                 Lox_VM.Interpret (Lox_Scanner.Source_Code (Source.Content));
             end;
 
          exception
@@ -84,15 +84,11 @@ package body Main is
    procedure Run_File (Path : String) is
       File_Content : constant String := Read_File (Path);
       Source       : constant Managed_Source := Make (File_Content);
-      VM           : Lox_VM.VM_Context;
       Result       : Lox_VM.Interpret_Result;
 
       use type Lox_VM.Interpret_Result;
    begin
-      Lox_VM.Init (VM);
-
-      Result :=
-        Lox_VM.Interpret (VM, Lox_Scanner.Source_Code (Source.Content));
+      Result := Lox_VM.Interpret (Lox_Scanner.Source_Code (Source.Content));
 
       if Result = Lox_VM.INTERPRET_COMPILE_ERROR then
          raise Exceptions.Compile_Error;

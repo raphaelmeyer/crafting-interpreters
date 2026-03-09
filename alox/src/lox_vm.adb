@@ -8,14 +8,20 @@ with Ada.Text_IO;
 package body Lox_VM is
    use type Lox_Value.Lox_Float;
 
-   procedure Init (VM : in out VM_Context) is
+   VM : VM_Context;
+
+   procedure Init_VM is
    begin
-      Reset_Stack (VM);
-   end Init;
+      Reset_Stack;
+   end Init_VM;
+
+   procedure Free_VM is
+   begin
+      Lox_Object.Free_Objects (VM.Objects);
+   end Free_VM;
 
    function Interpret
-     (VM : in out VM_Context; Source : Lox_Scanner.Source_Code)
-      return Interpret_Result
+     (Source : Lox_Scanner.Source_Code) return Interpret_Result
    is
       Func : Lox_Object.Obj_Function_Access;
       use type Lox_Object.Obj_Function_Access;
@@ -25,7 +31,7 @@ package body Lox_VM is
          return INTERPRET_COMPILE_ERROR;
       end if;
 
-      Push (VM, Lox_Value.Make_Function (Func));
+      Push (Lox_Value.Make_Function (Func));
       declare
          Frame : Call_Frame renames
            VM.Frames (Call_Frame_Index (VM.Frame_Count));
@@ -36,8 +42,13 @@ package body Lox_VM is
          Frame.Slots := Stack_Index'First;
       end;
 
-      return Run (VM);
+      return Run;
    end Interpret;
+
+   function New_Function return Lox_Object.Obj_Function_Access is
+   begin
+      return Lox_Object.New_Function (VM.Objects);
+   end New_Function;
 
    function Hash_String
      (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type
@@ -54,21 +65,19 @@ package body Lox_VM is
       return Hash;
    end Hash_String;
 
-   procedure Push (VM : in out VM_Context; Value : Lox_Value.Value) is
+   procedure Push (Value : Lox_Value.Value) is
    begin
       VM.Stack (VM.Stack_Top) := Value;
       VM.Stack_Top := Stack_Index'Succ (VM.Stack_Top);
    end Push;
 
-   function Pop (VM : in out VM_Context) return Lox_Value.Value is
+   function Pop return Lox_Value.Value is
    begin
       VM.Stack_Top := Stack_Index'Pred (VM.Stack_Top);
       return VM.Stack (VM.Stack_Top);
    end Pop;
 
-   function Peek
-     (VM : in out VM_Context; Distance : Integer) return Lox_Value.Value
-   is
+   function Peek (Distance : Integer) return Lox_Value.Value is
       Peek_Index : constant Integer := Integer (VM.Stack_Top) - Distance - 1;
    begin
       if Peek_Index < 0 then
@@ -84,25 +93,22 @@ package body Lox_VM is
         or else (Lox_Value.Is_Bool (Value) and then not Value.Bool_Value);
    end Is_Falsey;
 
-   procedure Concatenate (VM : in out VM_Context) is
-      B : constant String :=
-        Lox_Value.Unbounded.To_String (Pop (VM).String_Value);
-      A : constant String :=
-        Lox_Value.Unbounded.To_String (Pop (VM).String_Value);
+   procedure Concatenate is
+      B : constant String := Lox_Value.Unbounded.To_String (Pop.String_Value);
+      A : constant String := Lox_Value.Unbounded.To_String (Pop.String_Value);
    begin
       Push
-        (VM,
-         Lox_Value.Make_String
+        (Lox_Value.Make_String
            (Lox_Value.Unbounded.To_Unbounded_String (A & B)));
    end Concatenate;
 
-   procedure Reset_Stack (VM : in out VM_Context) is
+   procedure Reset_Stack is
    begin
       VM.Stack_Top := 0;
       VM.Frame_Count := 0;
    end Reset_Stack;
 
-   procedure Runtime_Error (VM : in out VM_Context; Message : String) is
+   procedure Runtime_Error (Message : String) is
       Frame  : Call_Frame renames
         VM.Frames (Call_Frame_Index'Pred (Call_Frame_Index (VM.Frame_Count)));
       Index  : constant Natural :=
@@ -120,7 +126,7 @@ package body Lox_VM is
          & Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both)
          & "] in script");
 
-      Reset_Stack (VM);
+      Reset_Stack;
    end Runtime_Error;
 
    function Read_Byte (Frame : in out Call_Frame) return Byte is
@@ -160,23 +166,23 @@ package body Lox_VM is
           (A : Lox_Value.Lox_Float; B : Lox_Value.Lox_Float)
            return Result_Type;
       with function Make (R : Result_Type) return Lox_Value.Value;
-   function Binary_Op (VM : in out VM_Context) return Interpret_Result;
+   function Binary_Op return Interpret_Result;
 
-   function Binary_Op (VM : in out VM_Context) return Interpret_Result is
+   function Binary_Op return Interpret_Result is
    begin
-      if not Lox_Value.Is_Number (Peek (VM, 0))
-        or else not Lox_Value.Is_Number (Peek (VM, 1))
+      if not Lox_Value.Is_Number (Peek (0))
+        or else not Lox_Value.Is_Number (Peek (1))
       then
-         Runtime_Error (VM, "Operands must be numbers.");
+         Runtime_Error ("Operands must be numbers.");
          return INTERPRET_RUNTIME_ERROR;
       end if;
 
       declare
-         B      : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
-         A      : constant Lox_Value.Lox_Float := Pop (VM).Number_Value;
+         B      : constant Lox_Value.Lox_Float := Pop.Number_Value;
+         A      : constant Lox_Value.Lox_Float := Pop.Number_Value;
          Result : constant Result_Type := Op (A, B);
       begin
-         Push (VM, Make (Result));
+         Push (Make (Result));
          return INTERPRET_OK;
       end;
    end Binary_Op;
@@ -192,7 +198,7 @@ package body Lox_VM is
    function Binary_Op_Divide is new
      Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
-   function Run (VM : in out VM_Context) return Interpret_Result is
+   function Run return Interpret_Result is
       Frame_Index : constant Call_Frame_Index :=
         Call_Frame_Index (Natural'Pred (VM.Frame_Count));
    begin
@@ -228,27 +234,27 @@ package body Lox_VM is
                   declare
                      Value : constant Lox_Value.Value := Read_Constant (Frame);
                   begin
-                     Push (VM, Value);
+                     Push (Value);
                   end;
 
                when Lox_Chunk.OP_NIL'Enum_Rep           =>
-                  Push (VM, Lox_Value.Make_Nil);
+                  Push (Lox_Value.Make_Nil);
 
                when Lox_Chunk.OP_TRUE'Enum_Rep          =>
-                  Push (VM, Lox_Value.Make_Bool (True));
+                  Push (Lox_Value.Make_Bool (True));
 
                when Lox_Chunk.OP_FALSE'Enum_Rep         =>
-                  Push (VM, Lox_Value.Make_Bool (False));
+                  Push (Lox_Value.Make_Bool (False));
 
                when Lox_Chunk.OP_POP'Enum_Rep           =>
                   declare
-                     Unused : constant Lox_Value.Value := Pop (VM);
+                     Unused : constant Lox_Value.Value := Pop;
                   begin
                      null;
                   end;
 
                when Lox_Chunk.OP_PUSH'Enum_Rep          =>
-                  Push (VM, Peek (VM, 0));
+                  Push (Peek (0));
 
                when Lox_Chunk.OP_GET_LOCAL'Enum_Rep     =>
                   declare
@@ -256,7 +262,7 @@ package body Lox_VM is
                      Index : constant Stack_Index :=
                        Frame.Slots + Stack_Index (Slot);
                   begin
-                     Push (VM, VM.Stack (Index));
+                     Push (VM.Stack (Index));
                   end;
 
                when Lox_Chunk.OP_SET_LOCAL'Enum_Rep     =>
@@ -265,7 +271,7 @@ package body Lox_VM is
                      Index : constant Stack_Index :=
                        Frame.Slots + Stack_Index (Slot);
                   begin
-                     VM.Stack (Index) := Peek (VM, 0);
+                     VM.Stack (Index) := Peek (0);
                   end;
 
                when Lox_Chunk.OP_GET_GLOBAL'Enum_Rep    =>
@@ -278,13 +284,12 @@ package body Lox_VM is
                   begin
                      if Value = Hash_Table.No_Element then
                         Runtime_Error
-                          (VM,
-                           "Undefined variable '"
+                          ("Undefined variable '"
                            & Lox_Value.Unbounded.To_String (Name)
                            & "'.");
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
-                     Push (VM, Hash_Table.Element (Value));
+                     Push (Hash_Table.Element (Value));
                   end;
 
                when Lox_Chunk.OP_DEFINE_GLOBAL'Enum_Rep =>
@@ -294,11 +299,11 @@ package body Lox_VM is
                      Unused : Lox_Value.Value;
                   begin
                      if VM.Globals.Contains (Name) then
-                        VM.Globals.Replace (Name, Peek (VM, 0));
+                        VM.Globals.Replace (Name, Peek (0));
                      else
-                        VM.Globals.Insert (Name, Peek (VM, 0));
+                        VM.Globals.Insert (Name, Peek (0));
                      end if;
-                     Unused := Pop (VM);
+                     Unused := Pop;
                   end;
 
                when Lox_Chunk.OP_SET_GLOBAL'Enum_Rep    =>
@@ -311,95 +316,90 @@ package body Lox_VM is
                   begin
                      if Item = Hash_Table.No_Element then
                         Runtime_Error
-                          (VM,
-                           "Undefined variable '"
+                          ("Undefined variable '"
                            & Lox_Value.Unbounded.To_String (Name)
                            & "'.");
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
-                     VM.Globals.Replace_Element (Item, Peek (VM, 0));
+                     VM.Globals.Replace_Element (Item, Peek (0));
                   end;
 
                when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
                   declare
-                     B : constant Lox_Value.Value := Pop (VM);
-                     A : constant Lox_Value.Value := Pop (VM);
+                     B : constant Lox_Value.Value := Pop;
+                     A : constant Lox_Value.Value := Pop;
                   begin
                      Push
-                       (VM,
-                        Lox_Value.Make_Bool (Lox_Value.Values_Equal (A, B)));
+                       (Lox_Value.Make_Bool (Lox_Value.Values_Equal (A, B)));
                   end;
 
                when Lox_Chunk.OP_GREATER'Enum_Rep       =>
-                  Result := Binary_Op_Greater (VM);
+                  Result := Binary_Op_Greater;
                   if Result /= INTERPRET_OK then
                      return Result;
                   end if;
 
                when Lox_Chunk.OP_LESS'Enum_Rep          =>
-                  Result := Binary_Op_Less (VM);
+                  Result := Binary_Op_Less;
                   if Result /= INTERPRET_OK then
                      return Result;
                   end if;
 
                when Lox_Chunk.OP_ADD'Enum_Rep           =>
-                  if Lox_Value.Is_String (Peek (VM, 0))
-                    and then Lox_Value.Is_String (Peek (VM, 1))
+                  if Lox_Value.Is_String (Peek (0))
+                    and then Lox_Value.Is_String (Peek (1))
                   then
-                     Concatenate (VM);
-                  elsif Lox_Value.Is_Number (Peek (VM, 0))
-                    and then Lox_Value.Is_Number (Peek (VM, 1))
+                     Concatenate;
+                  elsif Lox_Value.Is_Number (Peek (0))
+                    and then Lox_Value.Is_Number (Peek (1))
                   then
                      declare
-                        B : constant Lox_Value.Lox_Float :=
-                          Pop (VM).Number_Value;
-                        A : constant Lox_Value.Lox_Float :=
-                          Pop (VM).Number_Value;
+                        B : constant Lox_Value.Lox_Float := Pop.Number_Value;
+                        A : constant Lox_Value.Lox_Float := Pop.Number_Value;
                      begin
-                        Push (VM, Lox_Value.Make_Number (A + B));
+                        Push (Lox_Value.Make_Number (A + B));
                      end;
                   else
                      Runtime_Error
-                       (VM, "Operands must be two numbers or two strings.");
+                       ("Operands must be two numbers or two strings.");
                      return INTERPRET_RUNTIME_ERROR;
                   end if;
 
                when Lox_Chunk.OP_SUBTRACT'Enum_Rep      =>
-                  Result := Binary_Op_Subtract (VM);
+                  Result := Binary_Op_Subtract;
                   if Result /= INTERPRET_OK then
                      return Result;
                   end if;
 
                when Lox_Chunk.OP_MULTIPLY'Enum_Rep      =>
-                  Result := Binary_Op_Multiply (VM);
+                  Result := Binary_Op_Multiply;
                   if Result /= INTERPRET_OK then
                      return Result;
                   end if;
 
                when Lox_Chunk.OP_DIVIDE'Enum_Rep        =>
-                  Result := Binary_Op_Divide (VM);
+                  Result := Binary_Op_Divide;
                   if Result /= INTERPRET_OK then
                      return Result;
                   end if;
 
                when Lox_Chunk.OP_NOT'Enum_Rep           =>
-                  Push (VM, Lox_Value.Make_Bool (Is_Falsey (Pop (VM))));
+                  Push (Lox_Value.Make_Bool (Is_Falsey (Pop)));
 
                when Lox_Chunk.OP_NEGATE'Enum_Rep        =>
-                  if not Lox_Value.Is_Number (Peek (VM, 0)) then
-                     Runtime_Error (VM, "Operand must be a number.");
+                  if not Lox_Value.Is_Number (Peek (0)) then
+                     Runtime_Error ("Operand must be a number.");
                      return INTERPRET_RUNTIME_ERROR;
                   end if;
 
                   declare
-                     Value : constant Lox_Value.Lox_Float :=
-                       Pop (VM).Number_Value;
+                     Value : constant Lox_Value.Lox_Float := Pop.Number_Value;
                   begin
-                     Push (VM, Lox_Value.Make_Number (-Value));
+                     Push (Lox_Value.Make_Number (-Value));
                   end;
 
                when Lox_Chunk.OP_PRINT'Enum_Rep         =>
-                  Lox_Value.Print_Value (Pop (VM));
+                  Lox_Value.Print_Value (Pop);
                   Ada.Text_IO.New_Line;
 
                when Lox_Chunk.OP_JUMP'Enum_Rep          =>
@@ -416,7 +416,7 @@ package body Lox_VM is
                   declare
                      Offset : constant Short := Read_Short (Frame);
                   begin
-                     if Is_Falsey (Peek (VM, 0)) then
+                     if Is_Falsey (Peek (0)) then
                         Frame.IP :=
                           Frame.Func.Chunk.Code.To_Cursor
                             (Lox_Chunk.Byte_Vectors.To_Index (Frame.IP)
