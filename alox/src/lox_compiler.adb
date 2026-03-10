@@ -12,7 +12,8 @@ package body Lox_Compiler is
 
    type Rules_Type is array (Lox_Scanner.TokenType) of Parse_Rule;
    Rules : constant Rules_Type :=
-     [Lox_Scanner.TOKEN_LEFT_PAREN    => (Grouping'Access, null, PREC_NONE),
+     [Lox_Scanner.TOKEN_LEFT_PAREN    =>
+        (Grouping'Access, Call'Access, PREC_CALL),
       Lox_Scanner.TOKEN_RIGHT_PAREN   => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_LEFT_BRACE    => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RIGHT_BRACE   => (null, null, PREC_NONE),
@@ -272,6 +273,7 @@ package body Lox_Compiler is
 
    procedure Emit_Return (C : in out Compiler_Context) is
    begin
+      Emit_Byte (C, Lox_Chunk.OP_NIL);
       Emit_Byte (C, Lox_Chunk.OP_RETURN);
    end Emit_Return;
 
@@ -435,6 +437,14 @@ package body Lox_Compiler is
             return;
       end case;
    end Binary;
+
+   procedure Call
+     (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced)
+   is
+      Arg_Count : constant Byte := Argument_List (C);
+   begin
+      Emit_Bytes (C, Lox_Chunk.OP_CALL, Arg_Count);
+   end Call;
 
    procedure Literal
      (C : in out Compiler_Context; Can_Assign : Boolean with Unreferenced) is
@@ -1029,6 +1039,24 @@ package body Lox_Compiler is
 
       Emit_Bytes (C, Lox_Chunk.OP_DEFINE_GLOBAL, Global);
    end Define_Variable;
+
+   function Argument_List (C : in out Compiler_Context) return Byte is
+      Arg_Count : Byte := 0;
+   begin
+      if not Check (C, Lox_Scanner.TOKEN_RIGHT_PAREN) then
+         loop
+            Expression (C);
+            if Arg_Count = 255 then
+               Error (C, "Can't have more than 255 arguments.");
+            end if;
+            Arg_Count := Byte'Succ (Arg_Count);
+            exit when not Match (C, Lox_Scanner.TOKEN_COMMA);
+         end loop;
+      end if;
+      Consume
+        (C, Lox_Scanner.TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+      return Arg_Count;
+   end Argument_List;
 
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule is
    begin

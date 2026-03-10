@@ -8,7 +8,7 @@ package Lox_Object is
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
    type Obj_Function;
-   type Obj_Function_Access is access Obj_Function;
+   type Obj_Function_Access is access all Obj_Function;
 
    type Obj_Function is record
       Arity : Natural;

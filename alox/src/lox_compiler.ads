@@ -150,6 +150,7 @@ private
    procedure End_Scope (C : in out Compiler_Context);
 
    procedure Binary (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Call (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Literal (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Grouping (C : in out Compiler_Context; Can_Assign : Boolean);
    procedure Number (C : in out Compiler_Context; Can_Assign : Boolean);
@@ -196,6 +197,7 @@ private
      (C : in out Compiler_Context; Error_Message : String) return Byte;
    procedure Mark_Initialized (C : in out Compiler_Context);
    procedure Define_Variable (C : in out Compiler_Context; Global : Byte);
+   function Argument_List (C : in out Compiler_Context) return Byte;
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
    procedure Synchronize (C : in out Compiler_Context);

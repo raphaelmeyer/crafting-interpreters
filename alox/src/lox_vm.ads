@@ -59,6 +59,12 @@ private
    function Pop return Lox_Value.Value;
    function Peek (Distance : Integer) return Lox_Value.Value;
 
+   function Call
+     (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
+      return Boolean;
+   function Call_Value
+     (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;
    procedure Concatenate;
 

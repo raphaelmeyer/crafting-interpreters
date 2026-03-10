@@ -112,12 +112,15 @@ package body Debug is
          when Lox_Chunk.OP_LOOP'Enum_Rep          =>
             return Jump_Instruction ("OP_LOOP", Backward, Chunk, Offset);
 
+         when Lox_Chunk.OP_CALL'Enum_Rep          =>
+            return Byte_Instruction ("OP_CALL", Chunk, Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 
          when others                              =>
             Ada.Text_IO.Put ("Unknown opcode ");
-            Ada.Integer_Text_IO.Put (Integer (Instruction));
+            Ada.Integer_Text_IO.Put (Integer (Instruction), Width => 0);
             Ada.Text_IO.New_Line;
             return Offset + 1;
       end case;
@@ -170,6 +173,7 @@ package body Debug is
    begin
       Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
       Ada.Integer_Text_IO.Put (Natural (Slot), Width => 4);
+      Ada.Text_IO.New_Line;
       return Offset + 2;
    end Byte_Instruction;
 

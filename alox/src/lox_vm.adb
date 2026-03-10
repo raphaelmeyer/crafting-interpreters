@@ -3,9 +3,11 @@ with Lox_Compiler;
 
 with Ada.Integer_Text_IO;
 with Ada.Strings.Fixed;
+with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 
 package body Lox_VM is
+   package Unbounded renames Ada.Strings.Unbounded;
    use type Lox_Value.Lox_Float;
 
    VM : VM_Context;
@@ -23,7 +25,8 @@ package body Lox_VM is
    function Interpret
      (Source : Lox_Scanner.Source_Code) return Interpret_Result
    is
-      Func : Lox_Object.Obj_Function_Access;
+      Unused : Boolean;
+      Func   : Lox_Object.Obj_Function_Access;
       use type Lox_Object.Obj_Function_Access;
    begin
       Func := Lox_Compiler.Compile (Source);
@@ -32,15 +35,7 @@ package body Lox_VM is
       end if;
 
       Push (Lox_Value.Make_Function (Func));
-      declare
-         Frame : Call_Frame renames
-           VM.Frames (Call_Frame_Index (VM.Frame_Count));
-      begin
-         VM.Frame_Count := Natural'Succ (VM.Frame_Count);
-         Frame.Func := Func;
-         Frame.IP := Func.Chunk.Code.First;
-         Frame.Slots := Stack_Index'First;
-      end;
+      Unused := Call (Func, 0);
 
       return Run;
    end Interpret;
@@ -86,6 +81,63 @@ package body Lox_VM is
       return VM.Stack (Stack_Index (Peek_Index));
    end Peek;
 
+   function Call
+     (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
+      return Boolean
+   is
+      function Arity_Error_Message return String is
+         Arity_String     : String (1 .. 16);
+         Arg_Count_String : String (1 .. 16);
+      begin
+         Ada.Integer_Text_IO.Put (To => Arity_String, Item => Func.Arity);
+         Ada.Integer_Text_IO.Put (To => Arg_Count_String, Item => Arg_Count);
+         return
+           "Expected "
+           & Ada.Strings.Fixed.Trim (Arity_String, Ada.Strings.Both)
+           & " arguments but got "
+           & Ada.Strings.Fixed.Trim (Arg_Count_String, Ada.Strings.Both)
+           & ".";
+      end Arity_Error_Message;
+
+   begin
+      if Arg_Count /= Func.Arity then
+         Runtime_Error (Arity_Error_Message);
+         return False;
+      end if;
+
+      if VM.Frame_Count > Natural (Call_Frame_Index'Last) then
+         Runtime_Error ("Stack overflow.");
+         return False;
+      end if;
+
+      declare
+         Frame : Call_Frame renames
+           VM.Frames (Call_Frame_Index (VM.Frame_Count));
+      begin
+
+         VM.Frame_Count := Natural'Succ (VM.Frame_Count);
+
+         Frame.Func := Func;
+         Frame.IP := Func.all.Chunk.Code.First;
+         Frame.Slots := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
+      end;
+      return True;
+   end Call;
+
+   function Call_Value
+     (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
+   begin
+      if Lox_Value.Is_Function (Callee) then
+         return
+           Call
+             (Lox_Object.Obj_Function_Access (Callee.Function_Value),
+              Arg_Count);
+      end if;
+
+      Runtime_Error ("Can only call functions and classes.");
+      return False;
+   end Call_Value;
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean is
    begin
       return
@@ -109,22 +161,35 @@ package body Lox_VM is
    end Reset_Stack;
 
    procedure Runtime_Error (Message : String) is
-      Frame  : Call_Frame renames
-        VM.Frames (Call_Frame_Index'Pred (Call_Frame_Index (VM.Frame_Count)));
-      Index  : constant Natural :=
-        Lox_Chunk.Byte_Vectors.To_Index
-          (Lox_Chunk.Byte_Vectors.Previous (Frame.IP));
-      Line   : constant Natural := Frame.Func.Chunk.Lines (Index);
-      Buffer : String (1 .. 8);
    begin
       Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, Message);
 
-      Ada.Integer_Text_IO.Put (To => Buffer, Item => Line);
-      Ada.Text_IO.Put_Line
-        (Ada.Text_IO.Standard_Error,
-         "[line "
-         & Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both)
-         & "] in script");
+      for I in reverse
+        Call_Frame_Index'First
+        .. Call_Frame_Index (Natural'Pred (VM.Frame_Count))
+      loop
+         declare
+            Frame       : Call_Frame renames VM.Frames (I);
+            Instruction : constant Natural :=
+              Lox_Chunk.Byte_Vectors.To_Index
+                (Lox_Chunk.Byte_Vectors.Previous (Frame.IP));
+            use type Unbounded.Unbounded_String;
+         begin
+            Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "[line ");
+            Ada.Integer_Text_IO.Put
+              (Ada.Text_IO.Standard_Error,
+               Frame.Func.Chunk.Lines (Instruction),
+               Width => 0);
+            Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "] in ");
+            if Frame.Func.Name = Unbounded.Null_Unbounded_String then
+               Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, "script");
+            else
+               Ada.Text_IO.Put_Line
+                 (Ada.Text_IO.Standard_Error,
+                  Unbounded.To_String (Frame.Func.Name) & "()");
+            end if;
+         end;
+      end loop;
 
       Reset_Stack;
    end Runtime_Error;
@@ -199,7 +264,7 @@ package body Lox_VM is
      Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
    function Run return Interpret_Result is
-      Frame_Index : constant Call_Frame_Index :=
+      Frame_Index : Call_Frame_Index :=
         Call_Frame_Index (Natural'Pred (VM.Frame_Count));
    begin
       loop
@@ -434,8 +499,35 @@ package body Lox_VM is
                           - Natural (Offset));
                   end;
 
+               when Lox_Chunk.OP_CALL'Enum_Rep          =>
+                  declare
+                     Arg_Count : constant Byte := Read_Byte (Frame);
+                  begin
+                     if not Call_Value
+                              (Peek (Integer (Arg_Count)), Natural (Arg_Count))
+                     then
+                        return INTERPRET_RUNTIME_ERROR;
+                     end if;
+                     Frame_Index :=
+                       Call_Frame_Index (Natural'Pred (VM.Frame_Count));
+                  end;
+
                when Lox_Chunk.OP_RETURN'Enum_Rep        =>
-                  return INTERPRET_OK;
+                  declare
+                     Result : constant Lox_Value.Value := Pop;
+                     Unused : Lox_Value.Value;
+                  begin
+                     VM.Frame_Count := Natural'Pred (VM.Frame_Count);
+                     if VM.Frame_Count = 0 then
+                        Unused := Pop;
+                        return INTERPRET_OK;
+                     end if;
+
+                     VM.Stack_Top := Frame.Slots;
+                     Push (Result);
+                     Frame_Index :=
+                       Call_Frame_Index (Natural'Pred (VM.Frame_Count));
+                  end;
 
                when others                              =>
                   return INTERPRET_RUNTIME_ERROR;
