@@ -727,6 +727,22 @@ package body Lox_Compiler is
       Emit_Byte (C, Lox_Chunk.OP_PRINT);
    end Print_Statement;
 
+   procedure Return_Statement (C : in out Compiler_Context) is
+   begin
+      if C.Current.Kind = TYPE_SCRIPT then
+         Error (C, "Can't return from top-level code.");
+      end if;
+
+      if Match (C, Lox_Scanner.TOKEN_SEMICOLON) then
+         Emit_Return (C);
+      else
+         Expression (C);
+         Consume
+           (C, Lox_Scanner.TOKEN_SEMICOLON, "Expect ';' after return value.");
+         Emit_Byte (C, Lox_Chunk.OP_RETURN);
+      end if;
+   end Return_Statement;
+
    procedure While_Statement (C : in out Compiler_Context) is
       Loop_Start : constant Natural :=
         Natural (Current_Func (C).Chunk.Code.Length);
@@ -862,6 +878,8 @@ package body Lox_Compiler is
          For_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_IF) then
          If_Statement (C);
+      elsif Match (C, Lox_Scanner.TOKEN_RETURN) then
+         Return_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_WHILE) then
          While_Statement (C);
       elsif Match (C, Lox_Scanner.TOKEN_SWITCH) then
