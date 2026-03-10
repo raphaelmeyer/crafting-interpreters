@@ -74,7 +74,8 @@ private
    procedure Runtime_Error (Message : String);
 
    procedure Define_Native (Name : String; Func : Lox_Value.Native_Fn);
-   function Clock_Native return Lox_Value.Value;
+   function Clock_Native (First_Arg : Natural) return Lox_Value.Value;
+   function Random_Native (First_Arg : Natural) return Lox_Value.Value;
 
    function Read_Byte (Frame : in out Call_Frame) return Byte;
    function Read_Short (Frame : in out Call_Frame) return Short;

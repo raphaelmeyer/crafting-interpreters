@@ -2,6 +2,7 @@ with Debug;
 with Lox_Compiler;
 
 with Ada.Integer_Text_IO;
+with Ada.Numerics.Float_Random;
 with Ada.Real_Time;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
@@ -13,12 +14,15 @@ package body Lox_VM is
 
    VM         : VM_Context;
    Start_Time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   Generator  : Ada.Numerics.Float_Random.Generator;
 
    procedure Init_VM is
    begin
+      Ada.Numerics.Float_Random.Reset (Generator);
       Reset_Stack;
 
       Define_Native ("clock", Clock_Native'Access);
+      Define_Native ("random", Random_Native'Access);
    end Init_VM;
 
    procedure Free_VM is
@@ -131,7 +135,8 @@ package body Lox_VM is
    function Call_Native
      (Native : Lox_Value.Native_Fn; Arg_Count : Natural) return Boolean
    is
-      Result : constant Lox_Value.Value := Native.all;
+      Result : constant Lox_Value.Value :=
+        Native (Natural (VM.Stack_Top) - Arg_Count);
    begin
       VM.Stack_Top := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
       Push (Result);
@@ -222,7 +227,9 @@ package body Lox_VM is
       Unused := Pop;
    end Define_Native;
 
-   function Clock_Native return Lox_Value.Value is
+   function Clock_Native
+     (First_Arg : Natural with Unreferenced) return Lox_Value.Value
+   is
       use type Ada.Real_Time.Time;
       Now : constant Ada.Real_Time.Time_Span :=
         Ada.Real_Time.Clock - Start_Time;
@@ -232,6 +239,22 @@ package body Lox_VM is
           ((Is_Valid => True,
             Value    => Long_Float (Ada.Real_Time.To_Duration (Now))));
    end Clock_Native;
+
+   function Random_Native (First_Arg : Natural) return Lox_Value.Value is
+      From         : constant Lox_Value.Value :=
+        VM.Stack (Stack_Index (First_Arg));
+      To           : constant Lox_Value.Value :=
+        VM.Stack (Stack_Index (First_Arg + 1));
+      Random_Value : constant Lox_Value.Lox_Float :=
+        (Is_Valid => True,
+         Value    =>
+           Long_Float (Ada.Numerics.Float_Random.Random (Generator)));
+   begin
+      return
+        Lox_Value.Make_Number
+          (From.Number_Value
+           + (To.Number_Value - From.Number_Value) * Random_Value);
+   end Random_Native;
 
    function Read_Byte (Frame : in out Call_Frame) return Byte is
       Result : constant Byte := Lox_Chunk.Byte_Vectors.Element (Frame.IP);

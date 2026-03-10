@@ -34,7 +34,7 @@ package Lox_Value is
 
    type Value;
 
-   type Native_Fn is access function return Value;
+   type Native_Fn is access function (First_Arg : Natural) return Value;
 
    type Value (Kind : Value_Type := VAL_NIL) is record
       case Kind is
