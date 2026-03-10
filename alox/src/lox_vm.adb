@@ -2,6 +2,7 @@ with Debug;
 with Lox_Compiler;
 
 with Ada.Integer_Text_IO;
+with Ada.Real_Time;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
@@ -10,11 +11,14 @@ package body Lox_VM is
    package Unbounded renames Ada.Strings.Unbounded;
    use type Lox_Value.Lox_Float;
 
-   VM : VM_Context;
+   VM         : VM_Context;
+   Start_Time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
 
    procedure Init_VM is
    begin
       Reset_Stack;
+
+      Define_Native ("clock", Clock_Native'Access);
    end Init_VM;
 
    procedure Free_VM is
@@ -124,6 +128,16 @@ package body Lox_VM is
       return True;
    end Call;
 
+   function Call_Native
+     (Native : Lox_Value.Native_Fn; Arg_Count : Natural) return Boolean
+   is
+      Result : constant Lox_Value.Value := Native.all;
+   begin
+      VM.Stack_Top := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
+      Push (Result);
+      return True;
+   end Call_Native;
+
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
@@ -132,6 +146,10 @@ package body Lox_VM is
            Call
              (Lox_Object.Obj_Function_Access (Callee.Function_Value),
               Arg_Count);
+
+      elsif Lox_Value.Is_Native (Callee) then
+         return Call_Native (Callee.Native_Value, Arg_Count);
+
       end if;
 
       Runtime_Error ("Can only call functions and classes.");
@@ -193,6 +211,27 @@ package body Lox_VM is
 
       Reset_Stack;
    end Runtime_Error;
+
+   procedure Define_Native (Name : String; Func : Lox_Value.Native_Fn) is
+      Unused : Lox_Value.Value;
+   begin
+      Push (Lox_Value.Make_String (Unbounded.To_Unbounded_String (Name)));
+      Push (Lox_Value.Make_Native (Func));
+      VM.Globals.Insert (VM.Stack (0).String_Value, VM.Stack (1));
+      Unused := Pop;
+      Unused := Pop;
+   end Define_Native;
+
+   function Clock_Native return Lox_Value.Value is
+      use type Ada.Real_Time.Time;
+      Now : constant Ada.Real_Time.Time_Span :=
+        Ada.Real_Time.Clock - Start_Time;
+   begin
+      return
+        Lox_Value.Make_Number
+          ((Is_Valid => True,
+            Value    => Long_Float (Ada.Real_Time.To_Duration (Now))));
+   end Clock_Native;
 
    function Read_Byte (Frame : in out Call_Frame) return Byte is
       Result : constant Byte := Lox_Chunk.Byte_Vectors.Element (Frame.IP);

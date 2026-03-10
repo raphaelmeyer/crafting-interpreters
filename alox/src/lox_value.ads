@@ -8,7 +8,7 @@ package Lox_Value is
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
    type Value_Type is
-     (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING, VAL_FUNCTION);
+     (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING, VAL_FUNCTION, VAL_NATIVE);
 
    type Lox_Float (Is_Valid : Boolean := True) is record
       case Is_Valid is
@@ -32,6 +32,10 @@ package Lox_Value is
 
    NaN : constant Lox_Float := (Is_Valid => False);
 
+   type Value;
+
+   type Native_Fn is access function return Value;
+
    type Value (Kind : Value_Type := VAL_NIL) is record
       case Kind is
          when VAL_BOOL =>
@@ -45,6 +49,9 @@ package Lox_Value is
 
          when VAL_FUNCTION =>
             Function_Value : access Lox_Object.Obj_Function;
+
+         when VAL_NATIVE =>
+            Native_Value : Native_Fn;
 
          when others =>
             null;
@@ -70,6 +77,9 @@ package Lox_Value is
 
    function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value;
    function Is_Function (V : Value) return Boolean;
+
+   function Make_Native (Func : Native_Fn) return Value;
+   function Is_Native (V : Value) return Boolean;
 
    procedure Write (VA : in out Value_Array; V : Value);
 

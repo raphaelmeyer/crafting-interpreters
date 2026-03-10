@@ -131,6 +131,16 @@ package body Lox_Value is
       return V.Kind = VAL_FUNCTION;
    end Is_Function;
 
+   function Make_Native (Func : Native_Fn) return Value is
+   begin
+      return (VAL_NATIVE, Native_Value => Func);
+   end Make_Native;
+
+   function Is_Native (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_NATIVE;
+   end Is_Native;
+
    procedure Write (VA : in out Value_Array; V : Value) is
    begin
       VA.Append (V);
@@ -150,6 +160,9 @@ package body Lox_Value is
 
          when VAL_FUNCTION =>
             Ada.Text_IO.Put (Lox_Object.To_String (V.Function_Value.all));
+
+         when VAL_NATIVE   =>
+            Ada.Text_IO.Put ("<native fn>");
 
          when others       =>
             Ada.Text_IO.Put ("nil");
@@ -177,6 +190,9 @@ package body Lox_Value is
 
          when VAL_FUNCTION =>
             return A.Function_Value = B.Function_Value;
+
+         when VAL_NATIVE   =>
+            return A.Native_Value = B.Native_Value;
 
       end case;
    end Values_Equal;

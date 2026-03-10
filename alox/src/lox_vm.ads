@@ -62,6 +62,8 @@ private
    function Call
      (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
       return Boolean;
+   function Call_Native
+     (Native : Lox_Value.Native_Fn; Arg_Count : Natural) return Boolean;
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 
@@ -70,6 +72,9 @@ private
 
    procedure Reset_Stack;
    procedure Runtime_Error (Message : String);
+
+   procedure Define_Native (Name : String; Func : Lox_Value.Native_Fn);
+   function Clock_Native return Lox_Value.Value;
 
    function Read_Byte (Frame : in out Call_Frame) return Byte;
    function Read_Short (Frame : in out Call_Frame) return Short;
