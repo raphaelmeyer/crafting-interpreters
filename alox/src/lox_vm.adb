@@ -21,8 +21,8 @@ package body Lox_VM is
       Ada.Numerics.Float_Random.Reset (Generator);
       Reset_Stack;
 
-      Define_Native ("clock", Clock_Native'Access);
-      Define_Native ("random", Random_Native'Access);
+      Define_Native ("clock", 0, Clock_Native'Access);
+      Define_Native ("random", 2, Random_Native'Access);
    end Init_VM;
 
    procedure Free_VM is
@@ -89,27 +89,28 @@ package body Lox_VM is
       return VM.Stack (Stack_Index (Peek_Index));
    end Peek;
 
+   function Arity_Error_Message
+     (Arity : Natural; Arg_Count : Natural) return String
+   is
+      Arity_String     : String (1 .. 16);
+      Arg_Count_String : String (1 .. 16);
+   begin
+      Ada.Integer_Text_IO.Put (To => Arity_String, Item => Arity);
+      Ada.Integer_Text_IO.Put (To => Arg_Count_String, Item => Arg_Count);
+      return
+        "Expected "
+        & Ada.Strings.Fixed.Trim (Arity_String, Ada.Strings.Both)
+        & " arguments but got "
+        & Ada.Strings.Fixed.Trim (Arg_Count_String, Ada.Strings.Both)
+        & ".";
+   end Arity_Error_Message;
+
    function Call
      (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
-      return Boolean
-   is
-      function Arity_Error_Message return String is
-         Arity_String     : String (1 .. 16);
-         Arg_Count_String : String (1 .. 16);
-      begin
-         Ada.Integer_Text_IO.Put (To => Arity_String, Item => Func.Arity);
-         Ada.Integer_Text_IO.Put (To => Arg_Count_String, Item => Arg_Count);
-         return
-           "Expected "
-           & Ada.Strings.Fixed.Trim (Arity_String, Ada.Strings.Both)
-           & " arguments but got "
-           & Ada.Strings.Fixed.Trim (Arg_Count_String, Ada.Strings.Both)
-           & ".";
-      end Arity_Error_Message;
-
+      return Boolean is
    begin
       if Arg_Count /= Func.Arity then
-         Runtime_Error (Arity_Error_Message);
+         Runtime_Error (Arity_Error_Message (Func.Arity, Arg_Count));
          return False;
       end if;
 
@@ -122,7 +123,6 @@ package body Lox_VM is
          Frame : Call_Frame renames
            VM.Frames (Call_Frame_Index (VM.Frame_Count));
       begin
-
          VM.Frame_Count := Natural'Succ (VM.Frame_Count);
 
          Frame.Func := Func;
@@ -133,11 +133,17 @@ package body Lox_VM is
    end Call;
 
    function Call_Native
-     (Native : Lox_Value.Native_Fn; Arg_Count : Natural) return Boolean
+     (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean
    is
-      Result : constant Lox_Value.Value :=
-        Native (Natural (VM.Stack_Top) - Arg_Count);
+      Result : Lox_Value.Value;
    begin
+      if Arg_Count /= Native.Arity then
+         Runtime_Error (Arity_Error_Message (Native.Arity, Arg_Count));
+         return False;
+      end if;
+
+      Result := Native.Func (Natural (VM.Stack_Top) - Arg_Count);
+
       VM.Stack_Top := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
       Push (Result);
       return True;
@@ -217,11 +223,13 @@ package body Lox_VM is
       Reset_Stack;
    end Runtime_Error;
 
-   procedure Define_Native (Name : String; Func : Lox_Value.Native_Fn) is
+   procedure Define_Native
+     (Name : String; Arity : Natural; Func : Lox_Value.Native_Fn)
+   is
       Unused : Lox_Value.Value;
    begin
       Push (Lox_Value.Make_String (Unbounded.To_Unbounded_String (Name)));
-      Push (Lox_Value.Make_Native (Func));
+      Push (Lox_Value.Make_Native (Arity, Func));
       VM.Globals.Insert (VM.Stack (0).String_Value, VM.Stack (1));
       Unused := Pop;
       Unused := Pop;

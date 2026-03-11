@@ -36,6 +36,11 @@ package Lox_Value is
 
    type Native_Fn is access function (First_Arg : Natural) return Value;
 
+   type Native is record
+      Arity : Natural;
+      Func  : Native_Fn;
+   end record;
+
    type Value (Kind : Value_Type := VAL_NIL) is record
       case Kind is
          when VAL_BOOL =>
@@ -51,7 +56,7 @@ package Lox_Value is
             Function_Value : access Lox_Object.Obj_Function;
 
          when VAL_NATIVE =>
-            Native_Value : Native_Fn;
+            Native_Value : Native;
 
          when others =>
             null;
@@ -78,7 +83,7 @@ package Lox_Value is
    function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value;
    function Is_Function (V : Value) return Boolean;
 
-   function Make_Native (Func : Native_Fn) return Value;
+   function Make_Native (Arity : Natural; Func : Native_Fn) return Value;
    function Is_Native (V : Value) return Boolean;
 
    procedure Write (VA : in out Value_Array; V : Value);

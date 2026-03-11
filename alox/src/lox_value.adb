@@ -131,9 +131,9 @@ package body Lox_Value is
       return V.Kind = VAL_FUNCTION;
    end Is_Function;
 
-   function Make_Native (Func : Native_Fn) return Value is
+   function Make_Native (Arity : Natural; Func : Native_Fn) return Value is
    begin
-      return (VAL_NATIVE, Native_Value => Func);
+      return (VAL_NATIVE, Native_Value => (Func => Func, Arity => Arity));
    end Make_Native;
 
    function Is_Native (V : Value) return Boolean is

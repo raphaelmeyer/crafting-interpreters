@@ -59,11 +59,13 @@ private
    function Pop return Lox_Value.Value;
    function Peek (Distance : Integer) return Lox_Value.Value;
 
+   function Arity_Error_Message
+     (Arity : Natural; Arg_Count : Natural) return String;
    function Call
      (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
       return Boolean;
    function Call_Native
-     (Native : Lox_Value.Native_Fn; Arg_Count : Natural) return Boolean;
+     (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean;
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 
@@ -73,7 +75,8 @@ private
    procedure Reset_Stack;
    procedure Runtime_Error (Message : String);
 
-   procedure Define_Native (Name : String; Func : Lox_Value.Native_Fn);
+   procedure Define_Native
+     (Name : String; Arity : Natural; Func : Lox_Value.Native_Fn);
    function Clock_Native (First_Arg : Natural) return Lox_Value.Value;
    function Random_Native (First_Arg : Natural) return Lox_Value.Value;
 
