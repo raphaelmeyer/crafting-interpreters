@@ -12,6 +12,7 @@ extern "C" {
 typedef struct VM_t VM;
 
 typedef enum ObjType_t {
+  OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_NATIVE,
   OBJ_STRING,
@@ -43,6 +44,12 @@ typedef struct ObjString_t {
   uint32_t hash;
 } ObjString;
 
+typedef struct ObjClosure_t {
+  Obj obj;
+  ObjFunction *function;
+} ObjClosure;
+
+ObjClosure *new_closure(ObjFunction *function);
 ObjFunction *new_function();
 ObjNative *new_native(NativeFn function);
 ObjString *take_string(char *chars, size_t length);
@@ -56,6 +63,10 @@ static inline bool is_obj_type(Value const value, ObjType type) {
   return is_obj(value) && value.as.obj->type == type;
 }
 
+static inline bool is_closure(Value const value) {
+  return is_obj_type(value, OBJ_CLOSURE);
+}
+
 static inline bool is_function(Value const value) {
   return is_obj_type(value, OBJ_FUNCTION);
 }
@@ -66,6 +77,10 @@ static inline bool is_native(Value const value) {
 
 static inline bool is_string(Value const value) {
   return is_obj_type(value, OBJ_STRING);
+}
+
+static inline ObjClosure *as_closure(Value const value) {
+  return (ObjClosure *)value.as.obj;
 }
 
 static inline ObjFunction *as_function(Value const value) {

@@ -573,7 +573,7 @@ static void function(FunctionType type) {
   block();
 
   ObjFunction *function = end_compiler();
-  emit_bytes(OP_CONSTANT, make_constant(obj_value(function)));
+  emit_bytes(OP_CLOSURE, make_constant(obj_value(function)));
 }
 
 static void fun_declaration() {

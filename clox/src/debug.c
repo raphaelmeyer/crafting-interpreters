@@ -5,13 +5,42 @@
 bool DEBUG_TRACE_EXECUTION = false;
 bool DEBUG_PRINT_CODE = false;
 
-static int32_t constant_instruction(char const *name, Chunk const *chunk,
-                                    int32_t offset);
-static int32_t simple_instruction(char const *name, int32_t offset);
-static int32_t byte_instruction(char const *name, Chunk const *chunk,
-                                int32_t offset);
-static int32_t jump_instruction(char const *name, int32_t sign,
-                                Chunk const *chunk, int32_t offset);
+int32_t constant_instruction(char const *name, Chunk const *chunk,
+                             int32_t offset) {
+  uint8_t const constant = chunk->code[offset + 1];
+  printf("%-16s %4d '", name, constant);
+  print_value(chunk->constants.values[constant]);
+  printf("'\n");
+  return offset + 2;
+}
+
+int32_t simple_instruction(char const *name, int32_t offset) {
+  printf("%s\n", name);
+  return offset + 1;
+}
+
+int32_t byte_instruction(char const *name, Chunk const *chunk, int32_t offset) {
+  uint8_t slot = chunk->code[offset + 1];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 2;
+}
+
+int32_t jump_instruction(char const *name, int32_t sign, Chunk const *chunk,
+                         int32_t offset) {
+  uint16_t const jump =
+      (uint16_t)(chunk->code[offset + 1] << 8) | chunk->code[offset + 2];
+  printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+  return offset + 3;
+}
+
+int32_t closure_instruction(Chunk const *chunk, int32_t offset) {
+  offset++;
+  uint8_t constant = chunk->code[offset++];
+  printf("%-16s %4d ", "OP_CLOSURE", constant);
+  print_value(chunk->constants.values[constant]);
+  printf("\n");
+  return offset;
+}
 
 void disassemble_chunk(Chunk const *chunk, char const *name) {
   printf("== %s ==\n", name);
@@ -80,38 +109,12 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return jump_instruction("OP_LOOP", -1, chunk, offset);
   case OP_CALL:
     return byte_instruction("OP_CALL", chunk, offset);
+  case OP_CLOSURE:
+    return closure_instruction(chunk, offset);
   case OP_RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:
     printf("Unknown opcode %d\n", instruction);
     return offset + 1;
   }
-}
-
-int32_t constant_instruction(char const *name, Chunk const *chunk,
-                             int32_t offset) {
-  uint8_t const constant = chunk->code[offset + 1];
-  printf("%-16s %4d '", name, constant);
-  print_value(chunk->constants.values[constant]);
-  printf("'\n");
-  return offset + 2;
-}
-
-int32_t simple_instruction(char const *name, int32_t offset) {
-  printf("%s\n", name);
-  return offset + 1;
-}
-
-int32_t byte_instruction(char const *name, Chunk const *chunk, int32_t offset) {
-  uint8_t slot = chunk->code[offset + 1];
-  printf("%-16s %4d\n", name, slot);
-  return offset + 2;
-}
-
-int32_t jump_instruction(char const *name, int32_t sign, Chunk const *chunk,
-                         int32_t offset) {
-  uint16_t const jump =
-      (uint16_t)(chunk->code[offset + 1] << 8) | chunk->code[offset + 2];
-  printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
-  return offset + 3;
 }

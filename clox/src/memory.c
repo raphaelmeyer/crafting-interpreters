@@ -15,9 +15,18 @@ static void free_native(ObjNative *native) {
   reallocate(native, sizeof(ObjNative), 0);
 }
 
+static void free_closure(ObjClosure *closure) {
+  reallocate(closure, sizeof(ObjClosure), 0);
+}
+
 static void free_object(Obj *object) {
   switch (object->type) {
 
+  case OBJ_CLOSURE: {
+    ObjClosure *closure = (ObjClosure *)object;
+    free_closure(closure);
+    break;
+  }
   case OBJ_FUNCTION: {
     ObjFunction *function = (ObjFunction *)object;
     free_chunk(&function->chunk);

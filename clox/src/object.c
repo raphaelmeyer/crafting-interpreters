@@ -41,6 +41,13 @@ static uint32_t hash_string(char const *key, size_t length) {
   return hash;
 }
 
+ObjClosure *new_closure(ObjFunction *function) {
+  ObjClosure *closure =
+      (ObjClosure *)allocate_object(sizeof(ObjClosure), OBJ_CLOSURE);
+  closure->function = function;
+  return closure;
+}
+
 ObjFunction *new_function() {
   ObjFunction *function =
       (ObjFunction *)allocate_object(sizeof(ObjFunction), OBJ_FUNCTION);
@@ -91,6 +98,9 @@ static void print_function(ObjFunction *function) {
 
 void print_object(Value const value) {
   switch (obj_type(value)) {
+  case OBJ_CLOSURE:
+    print_function(as_closure(value)->function);
+    break;
   case OBJ_FUNCTION:
     print_function(as_function(value));
     break;

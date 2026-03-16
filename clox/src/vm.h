@@ -14,7 +14,7 @@ static constexpr size_t const FRAMES_MAX = 64;
 static constexpr size_t const STACK_MAX = FRAMES_MAX * UINT8_COUNT;
 
 typedef struct CallFrame_t {
-  ObjFunction *function;
+  ObjClosure *closure;
   uint8_t *ip;
   Value *slots;
 } CallFrame;
