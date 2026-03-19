@@ -126,6 +126,8 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return byte_instruction("OP_CALL", chunk, offset);
   case OP_CLOSURE:
     return closure_instruction(chunk, offset);
+  case OP_CLOSE_UPVALUE:
+    return simple_instruction("OP_CLOSE_UPVALUE", offset);
   case OP_RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

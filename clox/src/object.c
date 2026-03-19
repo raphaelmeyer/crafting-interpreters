@@ -100,7 +100,9 @@ ObjString *copy_string(char const *chars, size_t length) {
 ObjUpvalue *new_upvalue(Value *slot) {
   ObjUpvalue *upvalue =
       (ObjUpvalue *)allocate_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
+  upvalue->closed = nil_value();
   upvalue->location = slot;
+  upvalue->next = NULL;
   return upvalue;
 }
 

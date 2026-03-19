@@ -49,6 +49,8 @@ typedef struct ObjString_t {
 typedef struct ObjUpvalue_t {
   Obj obj;
   Value *location;
+  Value closed;
+  struct ObjUpvalue_t *next;
 } ObjUpvalue;
 
 typedef struct ObjClosure_t {
