@@ -26,6 +26,7 @@ typedef struct Obj_t {
 typedef struct Objfunction_t {
   Obj obj;
   int arity;
+  size_t upvalue_count;
   Chunk chunk;
   ObjString *name;
 } ObjFunction;

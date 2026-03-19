@@ -1,5 +1,7 @@
 #include "debug.h"
 
+#include "object.h"
+
 #include <stdio.h>
 
 bool DEBUG_TRACE_EXECUTION = false;
@@ -39,6 +41,15 @@ int32_t closure_instruction(Chunk const *chunk, int32_t offset) {
   printf("%-16s %4d ", "OP_CLOSURE", constant);
   print_value(chunk->constants.values[constant]);
   printf("\n");
+
+  ObjFunction const *function = as_function(chunk->constants.values[constant]);
+  for (size_t j = 0; j < function->upvalue_count; ++j) {
+    uint8_t is_local = chunk->code[offset++];
+    uint8_t index = chunk->code[offset++];
+    printf("%04d    |                     %s %d\n", offset - 2,
+           is_local ? "local" : "upvalue", index);
+  }
+
   return offset;
 }
 
@@ -81,6 +92,10 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OP_SET_GLOBAL:
     return constant_instruction("OP_SET_GLOBAL", chunk, offset);
+  case OP_GET_UPVALUE:
+    return byte_instruction("OP_GET_UPVALUE", chunk, offset);
+  case OP_SET_UPVALUE:
+    return byte_instruction("OP_SET_UPVALUE", chunk, offset);
   case OP_EQUAL:
     return simple_instruction("OP_EQUAL", offset);
   case OP_GREATER:
