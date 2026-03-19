@@ -2,21 +2,17 @@
 
 #include <stdlib.h>
 
+static void free_item(size_t size, void *pointer) {
+  reallocate(pointer, size, 0);
+}
+
+static void free_items(size_t item_size, void *pointer, size_t count) {
+  reallocate(pointer, item_size * count, 0);
+}
+
 static void free_string(ObjString *string) {
   reallocate((char *)string->chars, sizeof(char) * (string->length + 1), 0);
   reallocate(string, sizeof(ObjString), 0);
-}
-
-static void free_function(ObjFunction *function) {
-  reallocate(function, sizeof(ObjFunction), 0);
-}
-
-static void free_native(ObjNative *native) {
-  reallocate(native, sizeof(ObjNative), 0);
-}
-
-static void free_closure(ObjClosure *closure) {
-  reallocate(closure, sizeof(ObjClosure), 0);
 }
 
 static void free_object(Obj *object) {
@@ -24,21 +20,26 @@ static void free_object(Obj *object) {
 
   case OBJ_CLOSURE: {
     ObjClosure *closure = (ObjClosure *)object;
-    free_closure(closure);
+    free_items(sizeof(ObjUpvalue *), closure->upvalues, closure->upvalue_count);
+    free_item(sizeof(ObjClosure), object);
     break;
   }
   case OBJ_FUNCTION: {
     ObjFunction *function = (ObjFunction *)object;
     free_chunk(&function->chunk);
-    free_function(function);
+    free_item(sizeof(ObjFunction), object);
     break;
   }
   case OBJ_NATIVE: {
-    free_native((ObjNative *)object);
+    free_item(sizeof(ObjNative), object);
     break;
   }
   case OBJ_STRING: {
     free_string((ObjString *)object);
+    break;
+  }
+  case OBJ_UPVALUE: {
+    free_item(sizeof(ObjUpvalue), object);
     break;
   }
   }

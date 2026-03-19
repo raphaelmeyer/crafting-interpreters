@@ -42,9 +42,17 @@ static uint32_t hash_string(char const *key, size_t length) {
 }
 
 ObjClosure *new_closure(ObjFunction *function) {
+  ObjUpvalue **upvalues =
+      allocate(sizeof(ObjUpvalue *), function->upvalue_count);
+  for (size_t i = 0; i < function->upvalue_count; ++i) {
+    upvalues[i] = NULL;
+  }
+
   ObjClosure *closure =
       (ObjClosure *)allocate_object(sizeof(ObjClosure), OBJ_CLOSURE);
   closure->function = function;
+  closure->upvalues = upvalues;
+  closure->upvalue_count = function->upvalue_count;
   return closure;
 }
 
@@ -89,6 +97,13 @@ ObjString *copy_string(char const *chars, size_t length) {
   return allocate_string(heap_chars, length, hash);
 }
 
+ObjUpvalue *new_upvalue(Value *slot) {
+  ObjUpvalue *upvalue =
+      (ObjUpvalue *)allocate_object(sizeof(ObjUpvalue), OBJ_UPVALUE);
+  upvalue->location = slot;
+  return upvalue;
+}
+
 static void print_function(ObjFunction *function) {
   if (function->name == NULL) {
     printf("<script>");
@@ -110,6 +125,9 @@ void print_object(Value const value) {
     break;
   case OBJ_STRING:
     printf("%s", as_cstring(value));
+    break;
+  case OBJ_UPVALUE:
+    printf("upvalue");
     break;
   }
 }

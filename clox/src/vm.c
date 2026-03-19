@@ -111,6 +111,11 @@ static bool call_value(Value callee, int arg_count) {
   return false;
 }
 
+static ObjUpvalue *capture_upvalue(Value *local) {
+  ObjUpvalue *created_upvalue = new_upvalue(local);
+  return created_upvalue;
+}
+
 static bool is_falsey(Value value) {
   return is_nil(value) || (is_bool(value) && !value.as.boolean);
 }
@@ -182,6 +187,10 @@ static inline InterpretResult binary_op(Value (*op)(double, double)) {
 static InterpretResult run() {
   CallFrame *frame = &vm.frames[vm.frame_count - 1];
 
+  if (DEBUG_TRACE_EXECUTION) {
+    printf("== run vm ==\n");
+  }
+
   for (;;) {
     if (DEBUG_TRACE_EXECUTION) {
       print_stack();
@@ -250,6 +259,18 @@ static InterpretResult run() {
         runtime_error("Undefined variable '%s'.", name->chars);
         return INTERPRET_RUNTIME_ERROR;
       }
+      break;
+    }
+
+    case OP_GET_UPVALUE: {
+      uint8_t slot = read_byte(frame);
+      push(*frame->closure->upvalues[slot]->location);
+      break;
+    }
+
+    case OP_SET_UPVALUE: {
+      uint8_t slot = read_byte(frame);
+      *frame->closure->upvalues[slot]->location = peek(0);
       break;
     }
 
@@ -362,6 +383,15 @@ static InterpretResult run() {
       ObjFunction *function = as_function(read_constant(frame));
       ObjClosure *closure = new_closure(function);
       push(obj_value(closure));
+      for (size_t i = 0; i < closure->upvalue_count; ++i) {
+        uint8_t is_local = read_byte(frame);
+        uint8_t index = read_byte(frame);
+        if (is_local) {
+          closure->upvalues[i] = capture_upvalue(frame->slots + index);
+        } else {
+          closure->upvalues[i] = frame->closure->upvalues[index];
+        }
+      }
       break;
     }
 
