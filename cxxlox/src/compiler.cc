@@ -12,6 +12,9 @@
 #include <limits>
 #include <map>
 #include <optional>
+#include <ranges>
+
+namespace views = std::ranges::views;
 
 namespace {
 
@@ -84,8 +87,12 @@ private:
 
   std::uint8_t identifier_constant(Token const &name);
   bool identifier_equals(Token const &a, Token const &b);
-  std::optional<uint8_t> resolve_local(Context const &compiler,
-                                       Token const &name);
+  std::optional<std::uint8_t> resolve_local(Context const &compiler,
+                                            Token const &name);
+  std::uint8_t add_upvalue(Context &compiler, std::uint8_t index,
+                           bool is_local);
+  std::optional<std::uint8_t> resolve_upvalue(Context &compiler,
+                                              Token const &name);
   void add_local(Token const &name);
   void declare_variable();
   std::uint8_t parse_variable(std::string_view error_message);
@@ -124,6 +131,11 @@ private:
     std::optional<std::size_t> depth;
   };
 
+  struct Upvalue {
+    std::uint8_t index;
+    bool is_local;
+  };
+
   enum class FunctionType {
     FUNCTION,
     SCRIPT,
@@ -139,6 +151,7 @@ private:
 
     std::array<Local, UINT8_COUNT> locals;
     std::size_t local_count;
+    std::array<Upvalue, UINT8_COUNT> upvalues;
     std::size_t scope_depth;
   };
 
@@ -551,8 +564,8 @@ bool LoxCompiler::identifier_equals(Token const &a, Token const &b) {
                             b.start + b.length);
 }
 
-std::optional<uint8_t> LoxCompiler::resolve_local(Context const &compiler,
-                                                  Token const &name) {
+std::optional<std::uint8_t> LoxCompiler::resolve_local(Context const &compiler,
+                                                       Token const &name) {
   for (std::int32_t i = compiler.local_count - 1; i >= 0; --i) {
     auto const &local = compiler.locals.at(i);
     if (identifier_equals(name, local.name)) {
@@ -561,6 +574,46 @@ std::optional<uint8_t> LoxCompiler::resolve_local(Context const &compiler,
       }
       return i;
     }
+  }
+
+  return {};
+}
+
+std::uint8_t LoxCompiler::add_upvalue(Context &compiler, std::uint8_t index,
+                                      bool is_local) {
+  auto const upvalue_count = compiler.function->upvalue_count;
+
+  for (std::size_t i = 0; i < upvalue_count; ++i) {
+    auto const &upvalue = compiler.upvalues.at(i);
+    if (upvalue.index == index && upvalue.is_local == is_local) {
+      return i;
+    }
+  }
+
+  if (upvalue_count == UINT8_COUNT) {
+    error("Too many closure variables in function.");
+    return {};
+  }
+
+  compiler.upvalues.at(upvalue_count).is_local = is_local;
+  compiler.upvalues.at(upvalue_count).index = index;
+  return compiler.function->upvalue_count++;
+}
+
+std::optional<std::uint8_t> LoxCompiler::resolve_upvalue(Context &compiler,
+                                                         Token const &name) {
+  if (compiler.enclosing == nullptr) {
+    return {};
+  }
+
+  auto const maybe_local = resolve_local(*compiler.enclosing, name);
+  if (maybe_local.has_value()) {
+    return add_upvalue(compiler, maybe_local.value(), true);
+  }
+
+  auto const maybe_upvalue = resolve_upvalue(*compiler.enclosing, name);
+  if (maybe_upvalue.has_value()) {
+    return add_upvalue(compiler, maybe_upvalue.value(), false);
   }
 
   return {};
@@ -675,6 +728,12 @@ void LoxCompiler::function(FunctionType type) {
 
   auto function = end_compiler();
   emit_bytes(OpCode::CLOSURE, make_constant(function));
+
+  for (auto const &upvalue :
+       views::take(compiler.upvalues, function->upvalue_count)) {
+    emit_byte(upvalue.is_local ? 1 : 0);
+    emit_byte(upvalue.index);
+  }
 }
 
 void LoxCompiler::expression_statement() {
@@ -843,11 +902,15 @@ void LoxCompiler::named_variable(Token const &name, bool can_assign) {
   OpCode set_op{};
   uint8_t arg{};
 
-  auto maybe_arg = resolve_local(*current, name);
-  if (maybe_arg.has_value()) {
+  if (auto maybe_arg = resolve_local(*current, name); maybe_arg.has_value()) {
     arg = maybe_arg.value();
     get_op = OpCode::GET_LOCAL;
     set_op = OpCode::SET_LOCAL;
+  } else if (auto maybe_arg = resolve_upvalue(*current, name);
+             maybe_arg.has_value()) {
+    arg = maybe_arg.value();
+    get_op = OpCode::GET_UPVALUE;
+    set_op = OpCode::SET_UPVALUE;
   } else {
     arg = identifier_constant(name);
     get_op = OpCode::GET_GLOBAL;

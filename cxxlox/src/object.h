@@ -11,6 +11,7 @@
 
 struct Function {
   std::size_t arity;
+  std::size_t upvalue_count;
   Chunk chunk;
   std::string name;
 };

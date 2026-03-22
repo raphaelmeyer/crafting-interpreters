@@ -1,6 +1,6 @@
 #include "debug.h"
 
-#include "chunk.h"
+#include "object.h"
 
 #include <format>
 #include <iostream>
@@ -57,10 +57,23 @@ std::size_t jump_instruction(std::string name, Direction direction,
 std::size_t closure_instruction(std::string name, Chunk const &chunk,
                                 std::size_t offset) {
   auto const constant = chunk.code.at(offset + 1);
+  offset += 2;
+
   std::cout << std::format("{:16} {:4} ", name, constant);
   print_value(chunk.constants.at(constant));
   std::cout << "\n";
-  return offset + 2;
+
+  auto const function = as_function(chunk.constants.at(constant));
+  for (std::size_t j = 0; j < function->upvalue_count; ++j) {
+    auto const is_local = chunk.code.at(offset);
+    auto const index = chunk.code.at(offset + 1);
+    std::cout << std::format("{:04}    |                       {} {}", offset,
+                             is_local ? "local" : "upvalue", index)
+              << "\n";
+    offset += 2;
+  }
+
+  return offset;
 }
 
 } // namespace
@@ -107,6 +120,10 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return constant_instruction("OP_DEFINE_GLOBAL", chunk, offset);
   case OpCode::SET_GLOBAL:
     return constant_instruction("OP_SET_GLOBAL", chunk, offset);
+  case OpCode::GET_UPVALUE:
+    return byte_instruction("OP_GET_UPVALUE", chunk, offset);
+  case OpCode::SET_UPVALUE:
+    return byte_instruction("OP_SET_UPVALUE", chunk, offset);
   case OpCode::EQUAL:
     return simple_instruction("OP_EQUAL", offset);
   case OpCode::GREATER:
