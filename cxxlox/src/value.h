@@ -8,8 +8,8 @@
 
 struct Nil {};
 
-using Value =
-    std::variant<Nil, bool, double, std::string, ObjFunction, ObjNative>;
+using Value = std::variant<Nil, bool, double, std::string, ObjFunction,
+                           ObjNative, ObjClosure>;
 
 inline Value bool_value(bool value) { return {value}; }
 
@@ -57,6 +57,14 @@ inline bool is_native(Value const &value) {
 
 inline ObjNative as_native(Value const &value) {
   return std::get<ObjNative>(value);
+}
+
+inline bool is_closure(Value const &value) {
+  return std::holds_alternative<ObjClosure>(value);
+}
+
+inline ObjClosure as_closure(Value const &value) {
+  return std::get<ObjClosure>(value);
 }
 
 using ValueArray = std::vector<Value>;

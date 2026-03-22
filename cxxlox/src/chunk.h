@@ -30,6 +30,7 @@ enum class OpCode : std::uint8_t {
   JUMP_IF_FALSE,
   LOOP,
   CALL,
+  CLOSURE,
   RETURN
 };
 

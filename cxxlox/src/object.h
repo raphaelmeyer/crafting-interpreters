@@ -22,5 +22,10 @@ struct Native {
   NativeFn function;
 };
 
+struct Closure {
+  ObjFunction function;
+};
+
 ObjFunction new_function();
 ObjNative new_native(std::size_t arity, NativeFn function);
+ObjClosure new_closure(ObjFunction function);

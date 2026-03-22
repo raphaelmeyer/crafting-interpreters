@@ -54,6 +54,15 @@ std::size_t jump_instruction(std::string name, Direction direction,
   return offset + 3;
 }
 
+std::size_t closure_instruction(std::string name, Chunk const &chunk,
+                                std::size_t offset) {
+  auto const constant = chunk.code.at(offset + 1);
+  std::cout << std::format("{:16} {:4} ", name, constant);
+  print_value(chunk.constants.at(constant));
+  std::cout << "\n";
+  return offset + 2;
+}
+
 } // namespace
 
 bool Debug::TRACE_EXECUTION = false;
@@ -127,6 +136,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return jump_instruction("OP_LOOP", Direction::Backward, chunk, offset);
   case OpCode::CALL:
     return byte_instruction("OP_CALL", chunk, offset);
+  case OpCode::CLOSURE:
+    return closure_instruction("OP_CLOSURE", chunk, offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:

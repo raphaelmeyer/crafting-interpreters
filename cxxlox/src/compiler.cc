@@ -674,7 +674,7 @@ void LoxCompiler::function(FunctionType type) {
   block();
 
   auto function = end_compiler();
-  emit_bytes(OpCode::CONSTANT, make_constant(function));
+  emit_bytes(OpCode::CLOSURE, make_constant(function));
 }
 
 void LoxCompiler::expression_statement() {

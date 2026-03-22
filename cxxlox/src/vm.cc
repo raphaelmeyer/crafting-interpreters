@@ -38,7 +38,7 @@ private:
   using StackPointer = Stack::iterator;
 
   struct CallFrame {
-    ObjFunction function;
+    ObjClosure closure;
     CodeIterator ip;
     StackPointer slots;
   };
@@ -60,7 +60,7 @@ private:
   Value pop();
   Value const &peek(size_t distance) const;
 
-  bool call(ObjFunction function, std::size_t arg_count);
+  bool call(ObjClosure closure, std::size_t arg_count);
   bool call_value(Value const &callee, std::size_t arg_count);
   bool call_native(ObjNative native, std::size_t arg_count);
 
@@ -73,10 +73,10 @@ private:
 
     for (auto const &frame :
          views::reverse(views::take(vm.frames, vm.frame_count))) {
-      auto const function = frame.function;
+      auto const function = frame.closure->function;
       auto const instruction =
           std::distance(function->chunk.code.cbegin(), frame.ip) - 1;
-      auto const line = frame.function->chunk.lines.at(instruction);
+      auto const line = frame.closure->function->chunk.lines.at(instruction);
       std::cerr << std::format("[line {:d}] in ", line);
       if (function->name.empty()) {
         std::cerr << "script" << "\n";
@@ -162,9 +162,9 @@ Value const &LoxVM::peek(size_t distance) const {
   return *std::prev(vm.stack_top, 1 + distance);
 }
 
-bool LoxVM::call(ObjFunction function, std::size_t arg_count) {
-  if (arg_count != function->arity) {
-    runtime_error("Expected {} arguments but got {}.", function->arity,
+bool LoxVM::call(ObjClosure closure, std::size_t arg_count) {
+  if (arg_count != closure->function->arity) {
+    runtime_error("Expected {} arguments but got {}.", closure->function->arity,
                   arg_count);
     return false;
   }
@@ -175,8 +175,8 @@ bool LoxVM::call(ObjFunction function, std::size_t arg_count) {
   }
 
   auto &frame = vm.frames.at(vm.frame_count++);
-  frame.function = function;
-  frame.ip = function->chunk.code.begin();
+  frame.closure = closure;
+  frame.ip = closure->function->chunk.code.begin();
   frame.slots = vm.stack_top - arg_count - 1;
   return true;
 }
@@ -196,8 +196,8 @@ bool LoxVM::call_native(ObjNative native, std::size_t arg_count) {
 }
 
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
-  if (is_function(callee)) {
-    return call(as_function(callee), arg_count);
+  if (is_closure(callee)) {
+    return call(as_closure(callee), arg_count);
   } else if (is_native(callee)) {
     return call_native(as_native(callee), arg_count);
   }
@@ -226,7 +226,7 @@ std::uint16_t LoxVM::read_short(CallFrame &frame) {
 }
 
 Value LoxVM::read_constant(CallFrame &frame) {
-  return frame.function->chunk.constants[read_byte(frame)];
+  return frame.closure->function->chunk.constants[read_byte(frame)];
 }
 
 OpCode LoxVM::read_opcode(CallFrame &frame) {
@@ -240,6 +240,10 @@ std::string LoxVM::read_string(CallFrame &frame) {
 InterpretResult LoxVM::run() {
   auto frame = vm.frames.begin() + vm.frame_count - 1;
 
+  if (Debug::TRACE_EXECUTION) {
+    std::cout << "== run vm ==" << "\n";
+  }
+
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
       std::cout << "          ";
@@ -251,8 +255,9 @@ InterpretResult LoxVM::run() {
       std::cout << "\n";
 
       disassemble_instruction(
-          frame->function->chunk,
-          std::distance(frame->function->chunk.code.cbegin(), frame->ip));
+          frame->closure->function->chunk,
+          std::distance(frame->closure->function->chunk.code.cbegin(),
+                        frame->ip));
     }
 
     auto const instruction = read_opcode(*frame);
@@ -422,6 +427,13 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::CLOSURE: {
+      auto function = as_function(read_constant(*frame));
+      auto closure = new_closure(function);
+      push(closure);
+      break;
+    }
+
     case OpCode::RETURN: {
       auto const result = pop();
       vm.frame_count--;
@@ -449,7 +461,10 @@ InterpretResult LoxVM::interpret(std::string_view source) {
   }
 
   push(function);
-  call(function, 0);
+  auto closure = new_closure(function);
+  pop();
+  push(closure);
+  call(closure, 0);
 
   return run();
 }

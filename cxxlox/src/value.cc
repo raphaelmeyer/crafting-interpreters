@@ -24,6 +24,10 @@ std::string to_string(ObjFunction function) {
 
 std::string to_string(ObjNative) { return "<native fn>"; }
 
+std::string to_string(ObjClosure closure) {
+  return to_string(closure->function);
+}
+
 } // namespace
 
 void print_value(Value value) {
