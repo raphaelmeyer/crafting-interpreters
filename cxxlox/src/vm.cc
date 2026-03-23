@@ -63,6 +63,7 @@ private:
   bool call(ObjClosure closure, std::size_t arg_count);
   bool call_value(Value const &callee, std::size_t arg_count);
   bool call_native(ObjNative native, std::size_t arg_count);
+  ObjUpvalue capture_upvalue(StackPointer local);
 
   bool is_falsey(Value const &value) const;
   void concatenate();
@@ -101,6 +102,8 @@ private:
   Value read_constant(CallFrame &frame);
   OpCode read_opcode(CallFrame &frame);
   std::string read_string(CallFrame &frame);
+
+  Value &to_value(ObjUpvalue &upvalue);
 
   InterpretResult run();
 
@@ -206,6 +209,12 @@ bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   return false;
 }
 
+ObjUpvalue LoxVM::capture_upvalue(StackPointer local) {
+  auto const slot = std::distance(vm.stack.begin(), local);
+  auto created_upvalue = new_upvalue(slot);
+  return created_upvalue;
+}
+
 bool LoxVM::is_falsey(Value const &value) const {
   return is_nil(value) || (is_bool(value) && not as_bool(value));
 }
@@ -235,6 +244,11 @@ OpCode LoxVM::read_opcode(CallFrame &frame) {
 
 std::string LoxVM::read_string(CallFrame &frame) {
   return as_string(read_constant(frame));
+}
+
+Value &LoxVM::to_value(ObjUpvalue &upvalue) {
+  auto on_stack = std::get<StackSlot>(upvalue->value);
+  return vm.stack.at(on_stack.from_start);
 }
 
 InterpretResult LoxVM::run() {
@@ -319,6 +333,18 @@ InterpretResult LoxVM::run() {
         return InterpretResult::RUNTIME_ERROR;
       }
       vm.globals.at(name) = peek(0);
+      break;
+    }
+
+    case OpCode::GET_UPVALUE: {
+      auto const slot = read_byte(*frame);
+      push(to_value(frame->closure->upvalues.at(slot)));
+      break;
+    }
+
+    case OpCode::SET_UPVALUE: {
+      auto const slot = read_byte(*frame);
+      to_value(frame->closure->upvalues.at(slot)) = peek(0);
       break;
     }
 
@@ -431,6 +457,18 @@ InterpretResult LoxVM::run() {
       auto function = as_function(read_constant(*frame));
       auto closure = new_closure(function);
       push(closure);
+
+      for (std::size_t i = 0; i < closure->upvalues.size(); ++i) {
+        auto const is_local = read_byte(*frame);
+        auto const index = read_byte(*frame);
+        if (is_local) {
+          closure->upvalues.at(i) =
+              capture_upvalue(std::next(frame->slots, index));
+        } else {
+          closure->upvalues.at(i) = frame->closure->upvalues.at(index);
+        }
+      }
+
       break;
     }
 

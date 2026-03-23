@@ -9,7 +9,7 @@
 struct Nil {};
 
 using Value = std::variant<Nil, bool, double, std::string, ObjFunction,
-                           ObjNative, ObjClosure>;
+                           ObjNative, ObjClosure, ObjUpvalue>;
 
 inline Value bool_value(bool value) { return {value}; }
 

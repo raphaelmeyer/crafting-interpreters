@@ -9,5 +9,11 @@ ObjNative new_native(std::size_t arity, NativeFn function) {
 }
 
 ObjClosure new_closure(ObjFunction function) {
-  return std::make_shared<Closure>(function);
+  auto closure = std::make_shared<Closure>(
+      function, std::vector<ObjUpvalue>{function->upvalue_count, nullptr});
+  return closure;
+}
+
+ObjUpvalue new_upvalue(std::size_t stack_slot) {
+  return std::make_shared<UpValue>(StackSlot{stack_slot});
 }

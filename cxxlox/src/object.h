@@ -8,6 +8,7 @@
 #include <functional>
 #include <span>
 #include <string>
+#include <vector>
 
 struct Function {
   std::size_t arity;
@@ -25,8 +26,18 @@ struct Native {
 
 struct Closure {
   ObjFunction function;
+  std::vector<ObjUpvalue> upvalues;
+};
+
+struct StackSlot {
+  std::size_t from_start;
+};
+
+struct UpValue {
+  std::variant<StackSlot> value;
 };
 
 ObjFunction new_function();
 ObjNative new_native(std::size_t arity, NativeFn function);
 ObjClosure new_closure(ObjFunction function);
+ObjUpvalue new_upvalue(std::size_t stack_slot);
