@@ -14,24 +14,55 @@ package body Lox_Object is
       return Func;
    end New_Function;
 
-   procedure Free_Objects (O : in out Objects) is
-      Object : Obj_Function_Access := O.Functions;
-      Next   : Obj_Function_Access := null;
+   function New_Closure
+     (O : in out Objects; Func : Obj_Function_Access) return Obj_Closure_Access
+   is
+      Closure : constant Obj_Closure_Access :=
+        new Obj_Closure'(Func => Func, Next => <>);
    begin
-      while Object /= null loop
-         Next := Object.Next;
-         Free (Object);
-         Object := Next;
-      end loop;
+      Closure.Next := O.Closures;
+      O.Closures := Closure;
+
+      return Closure;
+   end New_Closure;
+
+   procedure Free_Objects (O : in out Objects) is
+      procedure Free_Functions (Func : in out Obj_Function_Access) is
+         Next : Obj_Function_Access := null;
+      begin
+         while Func /= null loop
+            Next := Func.Next;
+            Free (Func);
+            Func := Next;
+         end loop;
+      end Free_Functions;
+
+      procedure Free_Closures (Closure : in out Obj_Closure_Access) is
+         Next : Obj_Closure_Access := null;
+      begin
+         while Closure /= null loop
+            Next := Closure.Next;
+            Free (Closure);
+            Closure := Next;
+         end loop;
+      end Free_Closures;
+   begin
+      Free_Functions (O.Functions);
+      Free_Closures (O.Closures);
    end Free_Objects;
 
-   function To_String (Function_Object : Obj_Function) return String is
+   function To_String (Func : Obj_Function) return String is
       use type Unbounded.Unbounded_String;
    begin
-      if Function_Object.Name = Unbounded.Null_Unbounded_String then
+      if Func.Name = Unbounded.Null_Unbounded_String then
          return "<script>";
       end if;
-      return "<fn " & Unbounded.To_String (Function_Object.Name) & ">";
+      return "<fn " & Unbounded.To_String (Func.Name) & ">";
+   end To_String;
+
+   function To_String (Closure : Obj_Closure) return String is
+   begin
+      return To_String (Closure.Func.all);
    end To_String;
 
 end Lox_Object;

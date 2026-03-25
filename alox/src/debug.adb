@@ -115,6 +115,9 @@ package body Debug is
          when Lox_Chunk.OP_CALL'Enum_Rep          =>
             return Byte_Instruction ("OP_CALL", Chunk, Offset);
 
+         when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
+            return Closure_Instruction ("OP_CLOSURE", Chunk, Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 
@@ -198,5 +201,21 @@ package body Debug is
       Ada.Text_IO.New_Line;
       return Offset + 3;
    end Jump_Instruction;
+
+   function Closure_Instruction
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
+   is
+      New_Offset : Natural := Offset + 1;
+      Const      : constant Byte := Chunk.Code (New_Offset);
+   begin
+      New_Offset := Natural'Succ (New_Offset);
+
+      Ada.Text_IO.Put (Ada.Strings.Fixed.Head (Name, 16) & " ");
+      Ada.Integer_Text_IO.Put (Natural (Const), Width => 4);
+      Ada.Text_IO.Put (" ");
+      Lox_Value.Print_Value (Chunk.Constants (Natural (Const)));
+      Ada.Text_IO.New_Line;
+      return New_Offset;
+   end Closure_Instruction;
 
 end Debug;

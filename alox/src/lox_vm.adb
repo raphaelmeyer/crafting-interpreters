@@ -33,8 +33,10 @@ package body Lox_VM is
    function Interpret
      (Source : Lox_Scanner.Source_Code) return Interpret_Result
    is
-      Unused : Boolean;
-      Func   : Lox_Object.Obj_Function_Access;
+      Unused_Value  : Lox_Value.Value;
+      Unused_Result : Boolean;
+      Closure       : Lox_Object.Obj_Closure_Access;
+      Func          : Lox_Object.Obj_Function_Access;
       use type Lox_Object.Obj_Function_Access;
    begin
       Func := Lox_Compiler.Compile (Source);
@@ -43,7 +45,10 @@ package body Lox_VM is
       end if;
 
       Push (Lox_Value.Make_Function (Func));
-      Unused := Call (Func, 0);
+      Closure := Lox_Object.New_Closure (VM.Objects, Func);
+      Unused_Value := Pop;
+      Push (Lox_Value.Make_Closure (Closure));
+      Unused_Result := Call (Closure, 0);
 
       return Run;
    end Interpret;
@@ -106,11 +111,11 @@ package body Lox_VM is
    end Arity_Error_Message;
 
    function Call
-     (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
+     (Closure : Lox_Object.Obj_Closure_Access; Arg_Count : Natural)
       return Boolean is
    begin
-      if Arg_Count /= Func.Arity then
-         Runtime_Error (Arity_Error_Message (Func.Arity, Arg_Count));
+      if Arg_Count /= Closure.Func.Arity then
+         Runtime_Error (Arity_Error_Message (Closure.Func.Arity, Arg_Count));
          return False;
       end if;
 
@@ -125,8 +130,8 @@ package body Lox_VM is
       begin
          VM.Frame_Count := Natural'Succ (VM.Frame_Count);
 
-         Frame.Func := Func;
-         Frame.IP := Func.all.Chunk.Code.First;
+         Frame.Closure := Closure;
+         Frame.IP := Closure.Func.all.Chunk.Code.First;
          Frame.Slots := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
       end;
       return True;
@@ -152,11 +157,10 @@ package body Lox_VM is
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
-      if Lox_Value.Is_Function (Callee) then
+      if Lox_Value.Is_Closure (Callee) then
          return
            Call
-             (Lox_Object.Obj_Function_Access (Callee.Function_Value),
-              Arg_Count);
+             (Lox_Object.Obj_Closure_Access (Callee.Closure_Value), Arg_Count);
 
       elsif Lox_Value.Is_Native (Callee) then
          return Call_Native (Callee.Native_Value, Arg_Count);
@@ -207,15 +211,15 @@ package body Lox_VM is
             Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "[line ");
             Ada.Integer_Text_IO.Put
               (Ada.Text_IO.Standard_Error,
-               Frame.Func.Chunk.Lines (Instruction),
+               Frame.Closure.Func.Chunk.Lines (Instruction),
                Width => 0);
             Ada.Text_IO.Put (Ada.Text_IO.Standard_Error, "] in ");
-            if Frame.Func.Name = Unbounded.Null_Unbounded_String then
+            if Frame.Closure.Func.Name = Unbounded.Null_Unbounded_String then
                Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, "script");
             else
                Ada.Text_IO.Put_Line
                  (Ada.Text_IO.Standard_Error,
-                  Unbounded.To_String (Frame.Func.Name) & "()");
+                  Unbounded.To_String (Frame.Closure.Func.Name) & "()");
             end if;
          end;
       end loop;
@@ -285,7 +289,7 @@ package body Lox_VM is
    function Read_Constant (Frame : in out Call_Frame) return Lox_Value.Value is
       Index : constant Natural := Natural (Read_Byte (Frame));
    begin
-      return Frame.Func.Chunk.Constants (Index);
+      return Frame.Closure.Func.Chunk.Constants (Index);
    end Read_Constant;
 
    function Read_String
@@ -337,6 +341,10 @@ package body Lox_VM is
       Frame_Index : Call_Frame_Index :=
         Call_Frame_Index (Natural'Pred (VM.Frame_Count));
    begin
+      if Debug.Trace_Execution_Enabled then
+         Ada.Text_IO.Put_Line ("== run vm ==");
+      end if;
+
       loop
          if Debug.Trace_Execution_Enabled then
             Ada.Text_IO.Put ("          ");
@@ -352,7 +360,7 @@ package body Lox_VM is
                Frame  : Call_Frame renames VM.Frames (Frame_Index);
                Unused : Natural :=
                  Debug.Disassemble_Instruction
-                   (Frame.Func.Chunk,
+                   (Frame.Closure.Func.Chunk,
                     Lox_Chunk.Byte_Vectors.To_Index (Frame.IP));
             begin
                null;
@@ -542,7 +550,7 @@ package body Lox_VM is
                      Offset : constant Short := Read_Short (Frame);
                   begin
                      Frame.IP :=
-                       Frame.Func.Chunk.Code.To_Cursor
+                       Frame.Closure.Func.Chunk.Code.To_Cursor
                          (Lox_Chunk.Byte_Vectors.To_Index (Frame.IP)
                           + Natural (Offset));
                   end;
@@ -553,7 +561,7 @@ package body Lox_VM is
                   begin
                      if Is_Falsey (Peek (0)) then
                         Frame.IP :=
-                          Frame.Func.Chunk.Code.To_Cursor
+                          Frame.Closure.Func.Chunk.Code.To_Cursor
                             (Lox_Chunk.Byte_Vectors.To_Index (Frame.IP)
                              + Natural (Offset));
                      end if;
@@ -564,7 +572,7 @@ package body Lox_VM is
                      Offset : constant Short := Read_Short (Frame);
                   begin
                      Frame.IP :=
-                       Frame.Func.Chunk.Code.To_Cursor
+                       Frame.Closure.Func.Chunk.Code.To_Cursor
                          (Lox_Chunk.Byte_Vectors.To_Index (Frame.IP)
                           - Natural (Offset));
                   end;
@@ -580,6 +588,16 @@ package body Lox_VM is
                      end if;
                      Frame_Index :=
                        Call_Frame_Index (Natural'Pred (VM.Frame_Count));
+                  end;
+
+               when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
+                  declare
+                     Func    : constant Lox_Object.Obj_Function_Access :=
+                       Read_Constant (Frame).Function_Value;
+                     Closure : constant Lox_Object.Obj_Closure_Access :=
+                       Lox_Object.New_Closure (VM.Objects, Func);
+                  begin
+                     Push (Lox_Value.Make_Closure (Closure));
                   end;
 
                when Lox_Chunk.OP_RETURN'Enum_Rep        =>

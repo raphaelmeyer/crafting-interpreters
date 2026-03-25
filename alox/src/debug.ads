@@ -29,4 +29,6 @@ private
       Jump_Direction : Direction;
       Chunk          : Lox_Chunk.Chunk;
       Offset         : Natural) return Natural;
+   function Closure_Instruction
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
 end Debug;

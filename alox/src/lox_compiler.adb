@@ -633,7 +633,7 @@ package body Lox_Compiler is
       Func := End_Compiler (C);
       Emit_Bytes
         (C,
-         Lox_Chunk.OP_CONSTANT,
+         Lox_Chunk.OP_CLOSURE,
          Make_Constant (C, Lox_Value.Make_Function (Func)));
    end Function_Definition;
 

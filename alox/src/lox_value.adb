@@ -120,6 +120,17 @@ package body Lox_Value is
       return V.Kind = VAL_STRING;
    end Is_String;
 
+   function Make_Closure (Closure : Lox_Object.Obj_Closure_Access) return Value
+   is
+   begin
+      return (VAL_CLOSURE, Closure);
+   end Make_Closure;
+
+   function Is_Closure (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_CLOSURE;
+   end Is_Closure;
+
    function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value
    is
    begin
@@ -161,6 +172,9 @@ package body Lox_Value is
          when VAL_FUNCTION =>
             Ada.Text_IO.Put (Lox_Object.To_String (V.Function_Value.all));
 
+         when VAL_CLOSURE  =>
+            Ada.Text_IO.Put (Lox_Object.To_String (V.Closure_Value.all));
+
          when VAL_NATIVE   =>
             Ada.Text_IO.Put ("<native fn>");
 
@@ -190,6 +204,9 @@ package body Lox_Value is
 
          when VAL_FUNCTION =>
             return A.Function_Value = B.Function_Value;
+
+         when VAL_CLOSURE  =>
+            return A.Closure_Value = B.Closure_Value;
 
          when VAL_NATIVE   =>
             return A.Native_Value = B.Native_Value;

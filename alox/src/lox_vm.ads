@@ -16,9 +16,9 @@ package Lox_VM is
    type Stack_Array is array (Stack_Index) of Lox_Value.Value;
 
    type Call_Frame is limited record
-      Func  : Lox_Object.Obj_Function_Access;
-      IP    : Lox_Chunk.Byte_Vectors.Cursor;
-      Slots : Stack_Index;
+      Closure : Lox_Object.Obj_Closure_Access;
+      IP      : Lox_Chunk.Byte_Vectors.Cursor;
+      Slots   : Stack_Index;
    end record;
 
    type Call_Frame_Index is range 0 .. 63;
@@ -62,7 +62,7 @@ private
    function Arity_Error_Message
      (Arity : Natural; Arg_Count : Natural) return String;
    function Call
-     (Func : Lox_Object.Obj_Function_Access; Arg_Count : Natural)
+     (Closure : Lox_Object.Obj_Closure_Access; Arg_Count : Natural)
       return Boolean;
    function Call_Native
      (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean;
