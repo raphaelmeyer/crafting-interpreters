@@ -92,7 +92,7 @@ private:
   void define_native(std::string name, std::size_t arity, NativeFn function) {
     push(name);
     push(new_native(arity, function));
-    vm.globals.insert_or_assign(as_string(vm.stack.front()), vm.stack.at(1));
+    vm.globals.insert_or_assign(as_string(peek(1)), peek(0));
     pop();
     pop();
   }
