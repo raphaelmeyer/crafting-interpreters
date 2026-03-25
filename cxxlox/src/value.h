@@ -11,8 +11,6 @@ struct Nil {};
 using Value =
     std::variant<Nil, bool, double, std::string, ObjFunction, ObjNative>;
 
-ObjFunction new_function();
-
 inline Value bool_value(bool value) { return {value}; }
 
 inline Value nil_value() { return Nil{}; }
