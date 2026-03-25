@@ -50,6 +50,8 @@ private:
     Stack stack;
     StackPointer stack_top;
     std::unordered_map<std::string, Value> globals;
+
+    std::vector<ObjUpvalue> open_upvalues;
   };
 
   void init_vm();
@@ -64,6 +66,7 @@ private:
   bool call_value(Value const &callee, std::size_t arg_count);
   bool call_native(ObjNative native, std::size_t arg_count);
   ObjUpvalue capture_upvalue(StackPointer local);
+  void close_upvalues(StackPointer last);
 
   bool is_falsey(Value const &value) const;
   void concatenate();
@@ -149,6 +152,7 @@ void LoxVM::free_vm() {}
 void LoxVM::reset_stack() {
   vm.stack_top = vm.stack.begin();
   vm.frame_count = 0;
+  vm.open_upvalues.clear();
 }
 
 void LoxVM::push(Value value) {
@@ -210,9 +214,37 @@ bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
 }
 
 ObjUpvalue LoxVM::capture_upvalue(StackPointer local) {
-  auto const slot = std::distance(vm.stack.begin(), local);
+  size_t const slot = std::distance(vm.stack.begin(), local);
+
+  auto upvalue = vm.open_upvalues.begin();
+  while (upvalue != vm.open_upvalues.end() &&
+         (std::get<StackSlot>((*upvalue)->value).from_start > slot)) {
+    ++upvalue;
+  }
+
+  if (upvalue != vm.open_upvalues.end() &&
+      std::get<StackSlot>((*upvalue)->value).from_start == slot) {
+    return *upvalue;
+  }
+
   auto created_upvalue = new_upvalue(slot);
+  vm.open_upvalues.insert(upvalue, created_upvalue);
+
   return created_upvalue;
+}
+
+void LoxVM::close_upvalues(StackPointer last) {
+  std::size_t const last_slot = std::distance(vm.stack.begin(), last);
+  auto open_upvalue = vm.open_upvalues.begin();
+  while (open_upvalue != vm.open_upvalues.end()) {
+    auto const slot = std::get<StackSlot>((*open_upvalue)->value).from_start;
+    if (slot < last_slot) {
+      break;
+    }
+
+    (*open_upvalue)->value = Closed{vm.stack.at(slot)};
+    open_upvalue = vm.open_upvalues.erase(open_upvalue);
+  }
 }
 
 bool LoxVM::is_falsey(Value const &value) const {
@@ -247,8 +279,13 @@ std::string LoxVM::read_string(CallFrame &frame) {
 }
 
 Value &LoxVM::to_value(ObjUpvalue &upvalue) {
-  auto on_stack = std::get<StackSlot>(upvalue->value);
-  return vm.stack.at(on_stack.from_start);
+  if (std::holds_alternative<StackSlot>(upvalue->value)) {
+    auto on_stack = std::get<StackSlot>(upvalue->value);
+    return vm.stack.at(on_stack.from_start);
+  } else {
+    auto &closed = std::get<Closed>(upvalue->value);
+    return closed.closed;
+  }
 }
 
 InterpretResult LoxVM::run() {
@@ -472,8 +509,15 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::CLOSE_UPVALUE: {
+      close_upvalues(std::prev(vm.stack_top));
+      pop();
+      break;
+    }
+
     case OpCode::RETURN: {
       auto const result = pop();
+      close_upvalues(frame->slots);
       vm.frame_count--;
       if (vm.frame_count == 0) {
         pop();

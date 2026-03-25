@@ -33,8 +33,12 @@ struct StackSlot {
   std::size_t from_start;
 };
 
+struct Closed {
+  Value closed;
+};
+
 struct UpValue {
-  std::variant<StackSlot> value;
+  std::variant<StackSlot, Closed> value;
 };
 
 ObjFunction new_function();

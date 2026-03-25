@@ -129,6 +129,7 @@ private:
   struct Local {
     Token name;
     std::optional<std::size_t> depth;
+    bool is_captured;
   };
 
   struct Upvalue {
@@ -317,6 +318,7 @@ void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
 
   Local &local = current->locals.at(current->local_count++);
   local.depth = 0;
+  local.is_captured = false;
   local.name.start = "";
   local.name.length = 0;
 }
@@ -348,7 +350,11 @@ void LoxCompiler::end_scope() {
                return std::optional{depth > current->scope_depth};
              })
              .value_or(false)) {
-    emit_byte(OpCode::POP);
+    if (current->locals.at(current->local_count - 1).is_captured) {
+      emit_byte(OpCode::CLOSE_UPVALUE);
+    } else {
+      emit_byte(OpCode::POP);
+    }
     current->local_count--;
   }
 }
@@ -608,6 +614,7 @@ std::optional<std::uint8_t> LoxCompiler::resolve_upvalue(Context &compiler,
 
   auto const maybe_local = resolve_local(*compiler.enclosing, name);
   if (maybe_local.has_value()) {
+    compiler.enclosing->locals.at(maybe_local.value()).is_captured = true;
     return add_upvalue(compiler, maybe_local.value(), true);
   }
 
@@ -629,6 +636,7 @@ void LoxCompiler::add_local(Token const &name) {
   ++current->local_count;
   local->name = name;
   local->depth = std::nullopt;
+  local->is_captured = false;
 }
 
 void LoxCompiler::declare_variable() {

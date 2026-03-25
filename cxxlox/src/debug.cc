@@ -155,6 +155,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return byte_instruction("OP_CALL", chunk, offset);
   case OpCode::CLOSURE:
     return closure_instruction("OP_CLOSURE", chunk, offset);
+  case OpCode::CLOSE_UPVALUE:
+    return simple_instruction("OP_CLOSE_UPVALUE", offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
   default:
