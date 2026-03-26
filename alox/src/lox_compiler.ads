@@ -55,6 +55,16 @@ private
    type Local_Index is range 0 .. 255;
    type Locals_Array is array (Local_Index) of Local_Type;
 
+   type Upvalue_Slot_Index is range 0 .. 255;
+
+   type Upvalue_Type is record
+      Index    : Upvalue_Slot_Index;
+      Is_Local : Boolean;
+   end record;
+
+   type Upvalue_Index is range 0 .. 255;
+   type Upvalue_Array is array (Upvalue_Index) of Upvalue_Type;
+
    type Function_Kind is (TYPE_FUNCTION, TYPE_SCRIPT);
 
    type Compiler_Type is limited record
@@ -64,6 +74,7 @@ private
 
       Locals      : Locals_Array;
       Local_Count : Natural;
+      Upvalues    : Upvalue_Array;
       Scope_Depth : Natural;
    end record;
 
@@ -193,6 +204,16 @@ private
       Name     : Lox_Scanner.Token;
       Index    : out Local_Index) return Boolean;
    procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token);
+   function Resolve_Upvalue
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Name     : Lox_Scanner.Token;
+      Index    : out Upvalue_Index) return Boolean;
+   function Add_Upvalue
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Index    : Upvalue_Slot_Index;
+      Is_Local : Boolean) return Upvalue_Index;
    procedure Declare_Variable (C : in out Compiler_Context);
    function Parse_Variable
      (C : in out Compiler_Context; Error_Message : String) return Byte;

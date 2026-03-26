@@ -2,10 +2,11 @@ package body Lox_Object is
    function New_Function (O : in out Objects) return Obj_Function_Access is
       Func : constant Obj_Function_Access :=
         new Obj_Function'
-          (Arity => 0,
-           Name  => Unbounded.Null_Unbounded_String,
-           Chunk => <>,
-           Next  => <>);
+          (Arity         => 0,
+           Upvalue_Count => 0,
+           Name          => Unbounded.Null_Unbounded_String,
+           Chunk         => <>,
+           Next          => <>);
    begin
       Func.Next := O.Functions;
       O.Functions := Func;

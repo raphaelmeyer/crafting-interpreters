@@ -14,9 +14,10 @@ package Lox_Object is
    type Obj_Closure_Access is access all Obj_Closure;
 
    type Obj_Function is record
-      Arity : Natural;
-      Name  : Unbounded_String;
-      Chunk : Lox_Chunk.Chunk;
+      Arity         : Natural;
+      Upvalue_Count : Natural;
+      Name          : Unbounded_String;
+      Chunk         : Lox_Chunk.Chunk;
 
       Next : Obj_Function_Access;
    end record;

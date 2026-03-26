@@ -1,3 +1,4 @@
+with Lox_Object;
 with Lox_Value;
 with Lox_Types; use Lox_Types;
 
@@ -71,6 +72,12 @@ package body Debug is
 
          when Lox_Chunk.OP_SET_GLOBAL'Enum_Rep    =>
             return Constant_Instruction ("OP_SET_GLOBAL", Chunk, Offset);
+
+         when Lox_Chunk.OP_GET_UPVALUE'Enum_Rep   =>
+            return Byte_Instruction ("OP_GET_UPVALUE", Chunk, Offset);
+
+         when Lox_Chunk.OP_SET_UPVALUE'Enum_Rep   =>
+            return Byte_Instruction ("OP_SET_UPVALUE", Chunk, Offset);
 
          when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
             return Simple_Instruction ("OP_EQUAL", Offset);
@@ -215,7 +222,42 @@ package body Debug is
       Ada.Text_IO.Put (" ");
       Lox_Value.Print_Value (Chunk.Constants (Natural (Const)));
       Ada.Text_IO.New_Line;
+
+      declare
+         Func     : constant Lox_Object.Obj_Function_Access :=
+           Chunk.Constants (Natural (Const)).Function_Value;
+         Is_Local : Byte;
+         Index    : Byte;
+      begin
+         if Func.Upvalue_Count > 0 then
+            for J in Natural'First .. Natural'Pred (Func.Upvalue_Count) loop
+               Is_Local := Chunk.Code (New_Offset);
+               Index := Chunk.Code (New_Offset + 1);
+
+               Put_Natural (New_Offset, 4, '0');
+               Ada.Text_IO.Put ("     |                     ");
+               Ada.Text_IO.Put ((if Is_Local = 1 then "local" else "upvalue"));
+               Ada.Text_IO.Put (" ");
+               Ada.Integer_Text_IO.Put (Integer (Index), Width => 0);
+               Ada.Text_IO.New_Line;
+
+               New_Offset := New_Offset + 2;
+            end loop;
+         end if;
+      end;
       return New_Offset;
    end Closure_Instruction;
+
+   procedure Put_Natural (Item : Natural; Width : Natural; Fill : Character) is
+      Buffer : String (1 .. 32);
+   begin
+      Ada.Integer_Text_IO.Put (To => Buffer, Item => Item);
+      Ada.Text_IO.Put
+        (Ada.Strings.Fixed.Tail
+           (Ada.Strings.Fixed.Trim (Buffer, Ada.Strings.Both),
+            Count => Width,
+            Pad   => Fill)
+         & " ");
+   end Put_Natural;
 
 end Debug;

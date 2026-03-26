@@ -525,15 +525,20 @@ package body Lox_Compiler is
       Name       : Lox_Scanner.Token;
       Can_Assign : Boolean)
    is
-      Resolved : Local_Index;
-      Arg      : Byte;
-      Get_Op   : Lox_Chunk.Op_Code;
-      Set_Op   : Lox_Chunk.Op_Code;
+      Resolved_Local   : Local_Index;
+      Resolved_Upvalue : Upvalue_Index;
+      Arg              : Byte;
+      Get_Op           : Lox_Chunk.Op_Code;
+      Set_Op           : Lox_Chunk.Op_Code;
    begin
-      if Resolve_Local (C, C.Current, Name, Resolved) then
-         Arg := Byte (Resolved);
+      if Resolve_Local (C, C.Current, Name, Resolved_Local) then
+         Arg := Byte (Resolved_Local);
          Get_Op := Lox_Chunk.OP_GET_LOCAL;
          Set_Op := Lox_Chunk.OP_SET_LOCAL;
+      elsif Resolve_Upvalue (C, C.Current, Name, Resolved_Upvalue) then
+         Arg := Byte (Resolved_Upvalue);
+         Get_Op := Lox_Chunk.OP_GET_UPVALUE;
+         Set_Op := Lox_Chunk.OP_SET_UPVALUE;
       else
          Arg := Identifier_Constant (C, Name);
          Get_Op := Lox_Chunk.OP_GET_GLOBAL;
@@ -635,6 +640,17 @@ package body Lox_Compiler is
         (C,
          Lox_Chunk.OP_CLOSURE,
          Make_Constant (C, Lox_Value.Make_Function (Func)));
+
+      if Func.Upvalue_Count > 0 then
+         for Upvalue of
+           Compiler.Instance.Upvalues
+             (Upvalue_Index'First
+              .. Upvalue_Index (Natural'Pred (Func.Upvalue_Count)))
+         loop
+            Emit_Byte (C, (if Upvalue.Is_Local then 1 else 0));
+            Emit_Byte (C, Byte (Upvalue.Index));
+         end loop;
+      end if;
    end Function_Definition;
 
    procedure Variable_Declaration (C : in out Compiler_Context) is
@@ -980,6 +996,69 @@ package body Lox_Compiler is
          Local.Depth := None;
       end;
    end Add_Local;
+
+   function Resolve_Upvalue
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Name     : Lox_Scanner.Token;
+      Index    : out Upvalue_Index) return Boolean
+   is
+      Local   : Local_Index;
+      Upvalue : Upvalue_Index;
+   begin
+      if Compiler.Enclosing = null then
+         return False;
+      end if;
+
+      if Resolve_Local (C, Compiler.Enclosing, Name, Local) then
+         Index := Add_Upvalue (C, Compiler, Upvalue_Slot_Index (Local), True);
+         return True;
+      end if;
+
+      if Resolve_Upvalue (C, Compiler.Enclosing, Name, Upvalue) then
+         Index :=
+           Add_Upvalue (C, Compiler, Upvalue_Slot_Index (Upvalue), False);
+         return True;
+      end if;
+
+      return False;
+   end Resolve_Upvalue;
+
+   function Add_Upvalue
+     (C        : in out Compiler_Context;
+      Compiler : Compiler_Access;
+      Index    : Upvalue_Slot_Index;
+      Is_Local : Boolean) return Upvalue_Index
+   is
+      Upvalue_Count : constant Natural := Compiler.Func.Upvalue_Count;
+   begin
+      if Upvalue_Count > 0 then
+         for I in
+           Upvalue_Index'First .. Upvalue_Index (Natural'Pred (Upvalue_Count))
+         loop
+            declare
+               Upvalue : Upvalue_Type renames Compiler.Upvalues (I);
+            begin
+               if Upvalue.Index = Index and then Upvalue.Is_Local = Is_Local
+               then
+                  return I;
+               end if;
+            end;
+         end loop;
+      end if;
+
+      if Upvalue_Count > Natural (Upvalue_Index'Last) then
+         Error (C, "Too many closure variables in function.");
+         return 0;
+      end if;
+
+      Compiler.Upvalues (Upvalue_Index (Upvalue_Count)).Is_Local := Is_Local;
+      Compiler.Upvalues (Upvalue_Index (Upvalue_Count)).Index := Index;
+      Compiler.Func.Upvalue_Count :=
+        Natural'Succ (Compiler.Func.Upvalue_Count);
+
+      return Upvalue_Index (Upvalue_Count);
+   end Add_Upvalue;
 
    procedure Declare_Variable (C : in out Compiler_Context) is
       procedure Check_Duplicate_In_Same_Scope (Name : Lox_Scanner.Token) is
