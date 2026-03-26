@@ -69,6 +69,9 @@ private
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 
+   function Capture_Upvalue
+     (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access;
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;
    procedure Concatenate;
 
@@ -85,6 +88,9 @@ private
    function Read_Constant (Frame : in out Call_Frame) return Lox_Value.Value;
    function Read_String
      (Frame : in out Call_Frame) return Lox_Value.Unbounded_String;
+
+   function Get_Upvalue (Location : Natural) return Lox_Value.Value;
+   procedure Set_Upvalue (Location : Natural; Value : Lox_Value.Value);
 
    function Run return Interpret_Result;
 

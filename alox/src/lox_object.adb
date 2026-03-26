@@ -19,13 +19,29 @@ package body Lox_Object is
      (O : in out Objects; Func : Obj_Function_Access) return Obj_Closure_Access
    is
       Closure : constant Obj_Closure_Access :=
-        new Obj_Closure'(Func => Func, Next => <>);
+        new Obj_Closure'(Func => Func, Upvalues => <>, Next => <>);
    begin
       Closure.Next := O.Closures;
       O.Closures := Closure;
 
+      for I in 1 .. Func.Upvalue_Count loop
+         Closure.Upvalues.Append (null);
+      end loop;
+
       return Closure;
    end New_Closure;
+
+   function New_Upvalue
+     (O : in out Objects; Slot : Natural) return Obj_Upvalue_Access
+   is
+      Upvalue : constant Obj_Upvalue_Access :=
+        new Obj_Upvalue'(Location => Slot, Next => <>);
+   begin
+      Upvalue.Next := O.Upvalues;
+      O.Upvalues := Upvalue;
+
+      return Upvalue;
+   end New_Upvalue;
 
    procedure Free_Objects (O : in out Objects) is
       procedure Free_Functions (Func : in out Obj_Function_Access) is
@@ -47,9 +63,21 @@ package body Lox_Object is
             Closure := Next;
          end loop;
       end Free_Closures;
+
+      procedure Free_Upvalues (Upvalue : in out Obj_Upvalue_Access) is
+         Next : Obj_Upvalue_Access := null;
+      begin
+         while Upvalue /= null loop
+            Next := Upvalue.Next;
+            Free (Upvalue);
+            Upvalue := Next;
+         end loop;
+      end Free_Upvalues;
+
    begin
       Free_Functions (O.Functions);
       Free_Closures (O.Closures);
+      Free_Upvalues (O.Upvalues);
    end Free_Objects;
 
    function To_String (Func : Obj_Function) return String is

@@ -171,6 +171,15 @@ package body Lox_VM is
       return False;
    end Call_Value;
 
+   function Capture_Upvalue
+     (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access
+   is
+      Created_Upvalue : constant Lox_Object.Obj_Upvalue_Access :=
+        Lox_Object.New_Upvalue (VM.Objects, Natural (Local));
+   begin
+      return Created_Upvalue;
+   end Capture_Upvalue;
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean is
    begin
       return
@@ -337,6 +346,16 @@ package body Lox_VM is
    function Binary_Op_Divide is new
      Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
+   function Get_Upvalue (Location : Natural) return Lox_Value.Value is
+   begin
+      return VM.Stack (Stack_Index (Location));
+   end Get_Upvalue;
+
+   procedure Set_Upvalue (Location : Natural; Value : Lox_Value.Value) is
+   begin
+      VM.Stack (Stack_Index (Location)) := Value;
+   end Set_Upvalue;
+
    function Run return Interpret_Result is
       Frame_Index : Call_Frame_Index :=
         Call_Frame_Index (Natural'Pred (VM.Frame_Count));
@@ -465,6 +484,24 @@ package body Lox_VM is
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
                      VM.Globals.Replace_Element (Item, Peek (0));
+                  end;
+
+               when Lox_Chunk.OP_GET_UPVALUE'Enum_Rep   =>
+                  declare
+                     Slot : constant Byte := Read_Byte (Frame);
+                  begin
+                     Push
+                       (Get_Upvalue
+                          (Frame.Closure.Upvalues (Natural (Slot)).Location));
+                  end;
+
+               when Lox_Chunk.OP_SET_UPVALUE'Enum_Rep   =>
+                  declare
+                     Slot : constant Byte := Read_Byte (Frame);
+                  begin
+                     Set_Upvalue
+                       (Frame.Closure.Upvalues (Natural (Slot)).Location,
+                        Peek (0));
                   end;
 
                when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
@@ -598,6 +635,22 @@ package body Lox_VM is
                        Lox_Object.New_Closure (VM.Objects, Func);
                   begin
                      Push (Lox_Value.Make_Closure (Closure));
+
+                     for Upvalue of Closure.Upvalues loop
+                        declare
+                           Is_Local : constant Byte := Read_Byte (Frame);
+                           Index    : constant Byte := Read_Byte (Frame);
+                        begin
+                           if Is_Local = 1 then
+                              Upvalue :=
+                                Capture_Upvalue
+                                  (Frame.Slots + Stack_Index (Index));
+                           else
+                              Upvalue :=
+                                Frame.Closure.Upvalues (Natural (Index));
+                           end if;
+                        end;
+                     end loop;
                   end;
 
                when Lox_Chunk.OP_RETURN'Enum_Rep        =>
