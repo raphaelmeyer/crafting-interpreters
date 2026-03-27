@@ -125,6 +125,9 @@ package body Debug is
          when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
             return Closure_Instruction ("OP_CLOSURE", Chunk, Offset);
 
+         when Lox_Chunk.OP_CLOSE_UPVALUE'Enum_Rep =>
+            return Simple_Instruction ("OP_CLOSE_UPVALUE", Offset);
+
          when Lox_Chunk.OP_RETURN'Enum_Rep        =>
             return Simple_Instruction ("OP_RETURN", Offset);
 

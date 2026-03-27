@@ -12,6 +12,9 @@ package body Lox_VM is
    package Unbounded renames Ada.Strings.Unbounded;
    use type Lox_Value.Lox_Float;
 
+   --  but why?
+   use type Lox_Object.Obj_Upvalue_Access;
+
    VM         : VM_Context;
    Start_Time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
    Generator  : Ada.Numerics.Float_Random.Generator;
@@ -174,11 +177,59 @@ package body Lox_VM is
    function Capture_Upvalue
      (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access
    is
-      Created_Upvalue : constant Lox_Object.Obj_Upvalue_Access :=
-        Lox_Object.New_Upvalue (VM.Objects, Natural (Local));
+      Previous_Upvalue : Lox_Object.Obj_Upvalue_Access := null;
+      Upvalue          : Lox_Object.Obj_Upvalue_Access := VM.Open_Upvalues;
    begin
-      return Created_Upvalue;
+      while Upvalue /= null
+        and then Stack_Index (Upvalue.Instance.Location) > Local
+      loop
+         Previous_Upvalue := Upvalue;
+         Upvalue := Upvalue.Instance.Next_Open;
+      end loop;
+
+      if Upvalue /= null
+        and then Stack_Index (Upvalue.Instance.Location) = Local
+      then
+         return Upvalue;
+      end if;
+
+      declare
+         Created_Upvalue : constant Lox_Object.Obj_Upvalue_Access :=
+           Lox_Object.New_Upvalue (VM.Objects, Natural (Local));
+      begin
+         Created_Upvalue.Instance.Next_Open := Upvalue;
+
+         if Previous_Upvalue = null then
+            VM.Open_Upvalues := Created_Upvalue;
+         else
+            Previous_Upvalue.Instance.Next_Open := Created_Upvalue;
+         end if;
+
+         return Created_Upvalue;
+      end;
    end Capture_Upvalue;
+
+   procedure Close_Upvalues (Last : Stack_Index) is
+      Upvalue : Lox_Object.Obj_Upvalue_Access := null;
+   begin
+      while VM.Open_Upvalues /= null
+        and then Stack_Index (VM.Open_Upvalues.Instance.Location) >= Last
+      loop
+         declare
+            Closed_Upvalue : constant Lox_Object.Upvalue :=
+              (Closed => True,
+               Value  =>
+                 VM.Stack (Stack_Index (VM.Open_Upvalues.Instance.Location)));
+            Next_Open      : constant Lox_Object.Obj_Upvalue_Access :=
+              VM.Open_Upvalues.Instance.Next_Open;
+         begin
+            Upvalue := VM.Open_Upvalues;
+            Upvalue.Instance := Closed_Upvalue;
+            VM.Open_Upvalues := Next_Open;
+         end;
+      end loop;
+
+   end Close_Upvalues;
 
    function Is_Falsey (Value : Lox_Value.Value) return Boolean is
    begin
@@ -200,6 +251,7 @@ package body Lox_VM is
    begin
       VM.Stack_Top := 0;
       VM.Frame_Count := 0;
+      VM.Open_Upvalues := null;
    end Reset_Stack;
 
    procedure Runtime_Error (Message : String) is
@@ -346,14 +398,24 @@ package body Lox_VM is
    function Binary_Op_Divide is new
      Binary_Op (Lox_Value.Lox_Float, "/", Lox_Value.Make_Number);
 
-   function Get_Upvalue (Location : Natural) return Lox_Value.Value is
+   function Get_Upvalue
+     (Upvalue : in out Lox_Object.Upvalue) return Lox_Value.Value is
    begin
-      return VM.Stack (Stack_Index (Location));
+      if Upvalue.Closed then
+         return Upvalue.Value;
+      else
+         return VM.Stack (Stack_Index (Upvalue.Location));
+      end if;
    end Get_Upvalue;
 
-   procedure Set_Upvalue (Location : Natural; Value : Lox_Value.Value) is
+   procedure Set_Upvalue
+     (Upvalue : in out Lox_Object.Upvalue; Value : Lox_Value.Value) is
    begin
-      VM.Stack (Stack_Index (Location)) := Value;
+      if Upvalue.Closed then
+         Upvalue.Value := Value;
+      else
+         VM.Stack (Stack_Index (Upvalue.Location)) := Value;
+      end if;
    end Set_Upvalue;
 
    function Run return Interpret_Result is
@@ -492,7 +554,7 @@ package body Lox_VM is
                   begin
                      Push
                        (Get_Upvalue
-                          (Frame.Closure.Upvalues (Natural (Slot)).Location));
+                          (Frame.Closure.Upvalues (Natural (Slot)).Instance));
                   end;
 
                when Lox_Chunk.OP_SET_UPVALUE'Enum_Rep   =>
@@ -500,7 +562,7 @@ package body Lox_VM is
                      Slot : constant Byte := Read_Byte (Frame);
                   begin
                      Set_Upvalue
-                       (Frame.Closure.Upvalues (Natural (Slot)).Location,
+                       (Frame.Closure.Upvalues (Natural (Slot)).Instance,
                         Peek (0));
                   end;
 
@@ -653,11 +715,20 @@ package body Lox_VM is
                      end loop;
                   end;
 
+               when Lox_Chunk.OP_CLOSE_UPVALUE'Enum_Rep =>
+                  declare
+                     Unused : Lox_Value.Value;
+                  begin
+                     Close_Upvalues (Stack_Index'Pred (VM.Stack_Top));
+                     Unused := Pop;
+                  end;
+
                when Lox_Chunk.OP_RETURN'Enum_Rep        =>
                   declare
                      Result : constant Lox_Value.Value := Pop;
                      Unused : Lox_Value.Value;
                   begin
+                     Close_Upvalues (Frame.Slots);
                      VM.Frame_Count := Natural'Pred (VM.Frame_Count);
                      if VM.Frame_Count = 0 then
                         Unused := Pop;

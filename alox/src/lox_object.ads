@@ -1,4 +1,5 @@
 with Lox_Chunk;
+with Lox_Value;
 
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded;
@@ -26,8 +27,19 @@ package Lox_Object is
       Next : Obj_Function_Access;
    end record;
 
+   type Upvalue (Closed : Boolean := False) is record
+      case Closed is
+         when True =>
+            Value : Lox_Value.Value;
+
+         when False =>
+            Location  : Natural;
+            Next_Open : Obj_Upvalue_Access;
+      end case;
+   end record;
+
    type Obj_Upvalue is record
-      Location : Natural;
+      Instance : Upvalue;
 
       Next : Obj_Upvalue_Access;
    end record;

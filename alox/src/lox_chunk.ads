@@ -33,6 +33,7 @@ package Lox_Chunk is
       OP_LOOP,
       OP_CALL,
       OP_CLOSURE,
+      OP_CLOSE_UPVALUE,
       OP_RETURN)
    with Size => 8;
 

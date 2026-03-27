@@ -48,8 +48,9 @@ private
    function None return Maybe_Natural;
 
    type Local_Type is record
-      Name  : Lox_Scanner.Token;
-      Depth : Maybe_Natural;
+      Name        : Lox_Scanner.Token;
+      Depth       : Maybe_Natural;
+      Is_Captured : Boolean;
    end record;
 
    type Local_Index is range 0 .. 255;

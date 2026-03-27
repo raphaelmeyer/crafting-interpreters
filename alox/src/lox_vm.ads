@@ -48,9 +48,10 @@ private
       Frames      : Call_Frame_Array;
       Frame_Count : Natural;
 
-      Stack     : Stack_Array;
-      Stack_Top : Stack_Index;
-      Globals   : Hash_Table.Map;
+      Stack         : Stack_Array;
+      Stack_Top     : Stack_Index;
+      Globals       : Hash_Table.Map;
+      Open_Upvalues : Lox_Object.Obj_Upvalue_Access;
 
       Objects : Lox_Object.Objects;
    end record;
@@ -71,6 +72,7 @@ private
 
    function Capture_Upvalue
      (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access;
+   procedure Close_Upvalues (Last : Stack_Index);
 
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;
    procedure Concatenate;
@@ -89,8 +91,10 @@ private
    function Read_String
      (Frame : in out Call_Frame) return Lox_Value.Unbounded_String;
 
-   function Get_Upvalue (Location : Natural) return Lox_Value.Value;
-   procedure Set_Upvalue (Location : Natural; Value : Lox_Value.Value);
+   function Get_Upvalue
+     (Upvalue : in out Lox_Object.Upvalue) return Lox_Value.Value;
+   procedure Set_Upvalue
+     (Upvalue : in out Lox_Object.Upvalue; Value : Lox_Value.Value);
 
    function Run return Interpret_Result;
 

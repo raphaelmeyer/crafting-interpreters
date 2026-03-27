@@ -35,7 +35,9 @@ package body Lox_Object is
      (O : in out Objects; Slot : Natural) return Obj_Upvalue_Access
    is
       Upvalue : constant Obj_Upvalue_Access :=
-        new Obj_Upvalue'(Location => Slot, Next => <>);
+        new Obj_Upvalue'
+          (Instance => (Closed => False, Location => Slot, Next_Open => <>),
+           Next     => <>);
    begin
       Upvalue.Next := O.Upvalues;
       O.Upvalues := Upvalue;

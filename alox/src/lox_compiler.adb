@@ -336,6 +336,7 @@ package body Lox_Compiler is
       begin
          C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
          Local.Depth := Just (0);
+         Local.Is_Captured := False;
          Local.Name.Lexeme := Unbounded.Null_Unbounded_String;
       end;
    end Init_Compiler;
@@ -385,11 +386,22 @@ package body Lox_Compiler is
               C.Current.Locals (Top_Index).Depth.Value > C.Current.Scope_Depth;
          end;
       end Has_Variable_In_Scope;
+
+      function Is_Captured return Boolean is
+         Top_Index : constant Local_Index :=
+           Local_Index (Natural'Pred (C.Current.Local_Count));
+      begin
+         return C.Current.Locals (Top_Index).Is_Captured;
+      end Is_Captured;
    begin
       C.Current.Scope_Depth := Natural'Pred (C.Current.Scope_Depth);
 
       while Has_Variable_In_Scope loop
-         Emit_Byte (C, Lox_Chunk.OP_POP);
+         if Is_Captured then
+            Emit_Byte (C, Lox_Chunk.OP_CLOSE_UPVALUE);
+         else
+            Emit_Byte (C, Lox_Chunk.OP_POP);
+         end if;
          C.Current.Local_Count := Natural'Pred (C.Current.Local_Count);
       end loop;
    end End_Scope;
@@ -994,6 +1006,7 @@ package body Lox_Compiler is
          C.Current.Local_Count := Natural'Succ (C.Current.Local_Count);
          Local.Name := Name;
          Local.Depth := None;
+         Local.Is_Captured := False;
       end;
    end Add_Local;
 
@@ -1011,6 +1024,7 @@ package body Lox_Compiler is
       end if;
 
       if Resolve_Local (C, Compiler.Enclosing, Name, Local) then
+         Compiler.Enclosing.Locals (Local).Is_Captured := True;
          Index := Add_Upvalue (C, Compiler, Upvalue_Slot_Index (Local), True);
          return True;
       end if;
