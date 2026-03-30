@@ -1,5 +1,6 @@
 #include "object.h"
 
+#include "debug.h"
 #include "memory.h"
 #include "vm.h"
 
@@ -18,6 +19,11 @@ static Obj *allocate_object(size_t size, ObjType type) {
 
   object->next = vm->objects;
   vm->objects = object;
+
+  if (DEBUG_LOG_GC) {
+    printf("%p allocate %zu for %d\n", (void *)object, size, type);
+  }
+
   return object;
 }
 

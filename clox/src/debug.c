@@ -6,6 +6,8 @@
 
 bool DEBUG_TRACE_EXECUTION = false;
 bool DEBUG_PRINT_CODE = false;
+bool DEBUG_STRESS_GC = false;
+bool DEBUG_LOG_GC = false;
 
 int32_t constant_instruction(char const *name, Chunk const *chunk,
                              int32_t offset) {

@@ -75,6 +75,10 @@ int main(int argc, const char *argv[]) {
       if (strcmp(argv[i], "--debug") == 0) {
         DEBUG_TRACE_EXECUTION = true;
         DEBUG_PRINT_CODE = true;
+      } else if (strcmp(argv[i], "--gc-stress") == 0) {
+        DEBUG_STRESS_GC = true;
+      } else if (strcmp(argv[i], "--gc-log") == 0) {
+        DEBUG_LOG_GC = true;
       } else {
         usage();
       }
