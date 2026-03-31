@@ -1,9 +1,13 @@
 #include "memory.h"
 
+#include "compiler.h"
 #include "debug.h"
+#include "vm.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
+static VM *vm = NULL;
 
 static void free_item(size_t size, void *pointer) {
   reallocate(pointer, size, 0);
@@ -52,10 +56,30 @@ static void free_object(Obj *object) {
   }
 }
 
+static void mark_roots() {
+  for (Value *slot = vm->stack; slot < vm->stack_top; ++slot) {
+    mark_value(*slot);
+  }
+
+  for (size_t i = 0; i < vm->frame_count; ++i) {
+    mark_object((Obj *)vm->frames[i].closure);
+  }
+
+  for (ObjUpvalue *upvalue = vm->open_upvalues; upvalue != NULL;
+       upvalue = upvalue->next) {
+    mark_object((Obj *)upvalue);
+  }
+
+  mark_table(&vm->globals);
+  mark_compiler_roots();
+}
+
 void collect_garbage() {
   if (DEBUG_LOG_GC) {
     printf("-- gc begin\n");
   }
+
+  mark_roots();
 
   if (DEBUG_LOG_GC) {
     printf("-- gc end\n");
@@ -86,6 +110,26 @@ void *reallocate(void *pointer, size_t old_size, size_t new_size) {
   return result;
 }
 
+void mark_object(Obj *object) {
+  if (object == NULL) {
+    return;
+  }
+
+  if (DEBUG_LOG_GC) {
+    printf("%p mark ", (void *)object);
+    print_value(obj_value(object));
+    printf("\n");
+  }
+
+  object->is_marked = true;
+}
+
+void mark_value(Value value) {
+  if (is_obj(value)) {
+    mark_object(value.as.obj);
+  }
+}
+
 void free_objects(Obj *head) {
   Obj *object = head;
   while (object != NULL) {
@@ -94,3 +138,5 @@ void free_objects(Obj *head) {
     object = next;
   }
 }
+
+void init_garbage_collector(VM *vm_instance) { vm = vm_instance; }

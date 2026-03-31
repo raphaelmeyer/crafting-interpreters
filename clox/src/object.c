@@ -16,6 +16,7 @@ static inline void free_char_array(char *array, int32_t old_count) {
 static Obj *allocate_object(size_t size, ObjType type) {
   Obj *object = reallocate(NULL, 0, size);
   object->type = type;
+  object->is_marked = false;
 
   object->next = vm->objects;
   vm->objects = object;
@@ -140,4 +141,7 @@ void print_object(Value const value) {
   }
 }
 
-void init_object_allocation(VM *vm_instance) { vm = vm_instance; }
+void init_object_allocation(VM *vm_instance) {
+  vm = vm_instance;
+  init_garbage_collector(vm);
+}

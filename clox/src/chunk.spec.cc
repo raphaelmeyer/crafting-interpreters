@@ -1,10 +1,12 @@
 #include <doctest/doctest.h>
 
 #include "chunk.h"
+#include "vm.h"
 
 TEST_SUITE("chunk") {
 
   TEST_CASE("code") {
+    init_vm();
     Chunk chunk;
     init_chunk(&chunk);
 
@@ -45,11 +47,13 @@ TEST_SUITE("chunk") {
     }
 
     free_chunk(&chunk);
+    free_vm();
 
     SUBCASE("is re-initialized after free") { REQUIRE(chunk.count == 0); }
   }
 
   TEST_CASE("line information") {
+    init_vm();
     Chunk chunk;
     init_chunk(&chunk);
 
@@ -64,9 +68,11 @@ TEST_SUITE("chunk") {
     }
 
     free_chunk(&chunk);
+    free_vm();
   }
 
   TEST_CASE("constants") {
+    init_vm();
     Chunk chunk;
     init_chunk(&chunk);
 
@@ -93,5 +99,7 @@ TEST_SUITE("chunk") {
     SUBCASE("clean up constants after free") {
       REQUIRE(chunk.constants.count == 0);
     }
+
+    free_vm();
   }
 }

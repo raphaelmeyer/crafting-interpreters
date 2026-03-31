@@ -9,6 +9,7 @@ extern "C" {
 #endif
 
 ObjFunction *compile(char const *source);
+void mark_compiler_roots();
 
 #ifdef __cplusplus
 } // extern "C"

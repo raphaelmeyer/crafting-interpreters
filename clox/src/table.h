@@ -28,6 +28,8 @@ void table_add_all(Table const *from, Table *to);
 ObjString *table_find_string(Table *table, char const *chars, size_t length,
                              uint32_t hash);
 
+void mark_table(Table *table);
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
