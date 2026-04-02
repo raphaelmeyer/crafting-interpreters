@@ -168,6 +168,10 @@ void init_vm() {
   init_object_allocation(&vm);
   vm.objects = NULL;
 
+  vm.gray_count = 0;
+  vm.gray_capacity = 0;
+  vm.gray_stack = NULL;
+
   init_table(&vm.globals);
   init_table(&vm.strings);
 
