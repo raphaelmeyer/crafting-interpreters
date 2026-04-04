@@ -9,6 +9,8 @@
 
 static VM *vm = NULL;
 
+static const size_t GC_HEAP_GROW_FACTOR = 2;
+
 static void free_item(size_t size, void *pointer) {
   reallocate(pointer, size, 0);
 }
@@ -141,8 +143,10 @@ static void sweep() {
 }
 
 void collect_garbage() {
+  size_t before = 0;
   if (DEBUG_LOG_GC) {
     printf("-- gc begin\n");
+    before = vm->bytes_allocated;
   }
 
   mark_roots();
@@ -150,8 +154,13 @@ void collect_garbage() {
   table_remove_white(&vm->strings);
   sweep();
 
+  vm->next_gc = vm->bytes_allocated * GC_HEAP_GROW_FACTOR;
+
   if (DEBUG_LOG_GC) {
     printf("-- gc end\n");
+    printf("   collected %zu bytes (from %zu to %zu) next at %zu\n",
+           before - vm->bytes_allocated, before, vm->bytes_allocated,
+           vm->next_gc);
   }
 }
 
@@ -160,8 +169,14 @@ void *allocate(size_t item_size, size_t count) {
 }
 
 void *reallocate(void *pointer, size_t old_size, size_t new_size) {
+  vm->bytes_allocated += new_size - old_size;
+
   if (new_size > old_size) {
     if (DEBUG_STRESS_GC) {
+      collect_garbage();
+    }
+
+    if (vm->bytes_allocated > vm->next_gc) {
       collect_garbage();
     }
   }
