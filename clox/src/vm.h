@@ -43,6 +43,9 @@ typedef enum InterpretResult_t {
   INTERPRET_RUNTIME_ERROR
 } InterpretResult;
 
+void push(Value value);
+Value pop();
+
 void init_vm();
 void free_vm();
 InterpretResult interpret(char const *source);

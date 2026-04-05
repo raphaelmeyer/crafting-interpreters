@@ -54,12 +54,12 @@ static void print_stack() {
   printf("\n");
 }
 
-static void push(Value value) {
+void push(Value value) {
   *vm.stack_top = value;
   vm.stack_top++;
 }
 
-static Value pop() {
+Value pop() {
   vm.stack_top--;
   return *vm.stack_top;
 }
@@ -150,8 +150,8 @@ static bool is_falsey(Value value) {
 }
 
 static void concatenate() {
-  ObjString *b = as_string(pop());
-  ObjString *a = as_string(pop());
+  ObjString *b = as_string(peek(0));
+  ObjString *a = as_string(peek(1));
 
   size_t length = a->length + b->length;
   char *chars = allocate(sizeof(char), length + 1);
@@ -160,6 +160,8 @@ static void concatenate() {
   chars[length] = '\0';
 
   ObjString *result = take_string(chars, length);
+  pop();
+  pop();
   push(obj_value(result));
 }
 

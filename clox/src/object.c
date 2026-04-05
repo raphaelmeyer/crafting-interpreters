@@ -35,7 +35,11 @@ static ObjString *allocate_string(char const *chars, size_t length,
   string->length = length;
   string->chars = chars;
   string->hash = hash;
+
+  push(obj_value(string));
   table_set(&vm->strings, string, nil_value());
+  pop();
+
   return string;
 }
 

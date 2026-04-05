@@ -1,6 +1,7 @@
 #include "chunk.h"
 
 #include "memory.h"
+#include "vm.h"
 
 static inline uint8_t *grow_array(uint8_t *array, int32_t old_count,
                                   int32_t new_count) {
@@ -51,6 +52,8 @@ void write_chunk(Chunk *chunk, uint8_t byte, int32_t line) {
 }
 
 int32_t add_constant(Chunk *chunk, Value value) {
+  push(value);
   write_value_array(&chunk->constants, value);
+  pop();
   return chunk->constants.count - 1;
 }
