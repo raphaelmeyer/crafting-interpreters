@@ -1,28 +1,30 @@
 package body Lox_Object is
-   function New_Function (O : in out Objects) return Obj_Function_Access is
-      Func : constant Obj_Function_Access :=
-        new Obj_Function'
-          (Arity         => 0,
+   function New_Function (Objs : in out Object_Access) return Object_Access is
+      Func : constant Object_Access :=
+        new Object'
+          (Kind          => OBJ_KIND_FUNCTION,
+           Next          => Objs,
+           Arity         => 0,
            Upvalue_Count => 0,
            Name          => Unbounded.Null_Unbounded_String,
-           Chunk         => <>,
-           Next          => <>);
+           Chunk         => <>);
    begin
-      Func.Next := O.Functions;
-      O.Functions := Func;
-
       Lox_Chunk.Init (Func.Chunk);
+      Objs := Func;
       return Func;
    end New_Function;
 
    function New_Closure
-     (O : in out Objects; Func : Obj_Function_Access) return Obj_Closure_Access
+     (Objs : in out Object_Access; Func : Object_Access) return Object_Access
    is
-      Closure : constant Obj_Closure_Access :=
-        new Obj_Closure'(Func => Func, Upvalues => <>, Next => <>);
+      Closure : constant Object_Access :=
+        new Object'
+          (Kind     => OBJ_KIND_CLOSURE,
+           Next     => Objs,
+           Func     => Func,
+           Upvalues => <>);
    begin
-      Closure.Next := O.Closures;
-      O.Closures := Closure;
+      Objs := Closure;
 
       for I in 1 .. Func.Upvalue_Count loop
          Closure.Upvalues.Append (null);
@@ -32,68 +34,44 @@ package body Lox_Object is
    end New_Closure;
 
    function New_Upvalue
-     (O : in out Objects; Slot : Natural) return Obj_Upvalue_Access
+     (Objs : in out Object_Access; Slot : Natural) return Object_Access
    is
-      Upvalue : constant Obj_Upvalue_Access :=
-        new Obj_Upvalue'
-          (Instance => (Closed => False, Location => Slot, Next_Open => <>),
-           Next     => <>);
+      Upvalue : constant Object_Access :=
+        new Object'
+          (Kind     => OBJ_KIND_UPVALUE,
+           Next     => Objs,
+           Instance => (Closed => False, Location => Slot, Next_Open => null));
    begin
-      Upvalue.Next := O.Upvalues;
-      O.Upvalues := Upvalue;
-
+      Objs := Upvalue;
       return Upvalue;
    end New_Upvalue;
 
-   procedure Free_Objects (O : in out Objects) is
-      procedure Free_Functions (Func : in out Obj_Function_Access) is
-         Next : Obj_Function_Access := null;
-      begin
-         while Func /= null loop
-            Next := Func.Next;
-            Free (Func);
-            Func := Next;
-         end loop;
-      end Free_Functions;
-
-      procedure Free_Closures (Closure : in out Obj_Closure_Access) is
-         Next : Obj_Closure_Access := null;
-      begin
-         while Closure /= null loop
-            Next := Closure.Next;
-            Free (Closure);
-            Closure := Next;
-         end loop;
-      end Free_Closures;
-
-      procedure Free_Upvalues (Upvalue : in out Obj_Upvalue_Access) is
-         Next : Obj_Upvalue_Access := null;
-      begin
-         while Upvalue /= null loop
-            Next := Upvalue.Next;
-            Free (Upvalue);
-            Upvalue := Next;
-         end loop;
-      end Free_Upvalues;
-
+   procedure Free_Objects (Objs : in out Object_Access) is
+      Next : Object_Access;
    begin
-      Free_Functions (O.Functions);
-      Free_Closures (O.Closures);
-      Free_Upvalues (O.Upvalues);
+      while Objs /= null loop
+         Next := Objs.Next;
+         Free (Objs);
+         Objs := Next;
+      end loop;
    end Free_Objects;
 
-   function To_String (Func : Obj_Function) return String is
+   function To_String (Obj : Object_Access) return String is
       use type Unbounded.Unbounded_String;
    begin
-      if Func.Name = Unbounded.Null_Unbounded_String then
-         return "<script>";
-      end if;
-      return "<fn " & Unbounded.To_String (Func.Name) & ">";
-   end To_String;
+      case Obj.Kind is
+         when OBJ_KIND_FUNCTION =>
+            if Obj.Name = Unbounded.Null_Unbounded_String then
+               return "<script>";
+            end if;
+            return "<fn " & Unbounded.To_String (Obj.Name) & ">";
 
-   function To_String (Closure : Obj_Closure) return String is
-   begin
-      return To_String (Closure.Func.all);
+         when OBJ_KIND_CLOSURE  =>
+            return To_String (Obj.Func);
+
+         when OBJ_KIND_UPVALUE  =>
+            return "<upvalue>";
+      end case;
    end To_String;
 
 end Lox_Object;

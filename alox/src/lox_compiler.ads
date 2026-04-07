@@ -9,7 +9,7 @@ with Ada.Unchecked_Deallocation;
 
 package Lox_Compiler is
    function Compile
-     (Source : Lox_Scanner.Source_Code) return Lox_Object.Obj_Function_Access;
+     (Source : Lox_Scanner.Source_Code) return Lox_Object.Object_Access;
 
 private
    use type Lox_Scanner.TokenType;
@@ -70,7 +70,7 @@ private
 
    type Compiler_Type is limited record
       Enclosing : access Compiler_Type;
-      Func      : Lox_Object.Obj_Function_Access;
+      Func      : Lox_Object.Object_Access;
       Kind      : Function_Kind;
 
       Locals      : Locals_Array;
@@ -111,7 +111,7 @@ private
         Name   => Compiler_Access);
 
    function Current_Func
-     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access;
+     (C : in out Compiler_Context) return Lox_Object.Object_Access;
 
    procedure Error_At
      (C       : in out Compiler_Context;
@@ -156,7 +156,7 @@ private
       Compiler : Compiler_Access;
       Kind     : Function_Kind);
    function End_Compiler
-     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access;
+     (C : in out Compiler_Context) return Lox_Object.Object_Access;
 
    procedure Begin_Scope (C : in out Compiler_Context);
    procedure End_Scope (C : in out Compiler_Context);

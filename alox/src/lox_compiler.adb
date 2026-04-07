@@ -65,11 +65,11 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_EOF           => (null, null, PREC_NONE)];
 
    function Compile
-     (Source : Lox_Scanner.Source_Code) return Lox_Object.Obj_Function_Access
+     (Source : Lox_Scanner.Source_Code) return Lox_Object.Object_Access
    is
       C        : Compiler_Context;
       Compiler : Compiler_Instance;
-      Func     : Lox_Object.Obj_Function_Access := null;
+      Func     : Lox_Object.Object_Access := null;
    begin
       C.Scanner := Lox_Scanner.Init (Source);
       Init_Compiler (C, Compiler.Instance, TYPE_SCRIPT);
@@ -115,7 +115,7 @@ package body Lox_Compiler is
    end Finalize;
 
    function Current_Func
-     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access is
+     (C : in out Compiler_Context) return Lox_Object.Object_Access is
    begin
       return C.Current.Func;
    end Current_Func;
@@ -342,9 +342,9 @@ package body Lox_Compiler is
    end Init_Compiler;
 
    function End_Compiler
-     (C : in out Compiler_Context) return Lox_Object.Obj_Function_Access
+     (C : in out Compiler_Context) return Lox_Object.Object_Access
    is
-      Func : Lox_Object.Obj_Function_Access := null;
+      Func : Lox_Object.Object_Access := null;
       use type Unbounded.Unbounded_String;
    begin
       Emit_Return (C);
@@ -618,7 +618,7 @@ package body Lox_Compiler is
      (C : in out Compiler_Context; Kind : Function_Kind)
    is
       Compiler : Compiler_Instance;
-      Func     : Lox_Object.Obj_Function_Access := null;
+      Func     : Lox_Object.Object_Access := null;
    begin
       Init_Compiler (C, Compiler.Instance, Kind);
       Begin_Scope (C);
@@ -628,7 +628,8 @@ package body Lox_Compiler is
 
       if not Check (C, Lox_Scanner.TOKEN_RIGHT_PAREN) then
          loop
-            C.Current.Func.Arity := Natural'Succ (C.Current.Func.Arity);
+            C.Current.Func.Arity :=
+              Natural'Succ (C.Current.Func.Arity);
             if C.Current.Func.Arity > 255 then
                Error_At_Current (C, "Can't have more than 255 parameters.");
             end if;

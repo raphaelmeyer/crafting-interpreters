@@ -16,7 +16,7 @@ package Lox_VM is
    type Stack_Array is array (Stack_Index) of Lox_Value.Value;
 
    type Call_Frame is limited record
-      Closure : Lox_Object.Obj_Closure_Access;
+      Closure : Lox_Object.Object_Access;
       IP      : Lox_Chunk.Byte_Vectors.Cursor;
       Slots   : Stack_Index;
    end record;
@@ -30,7 +30,7 @@ package Lox_VM is
    function Interpret
      (Source : Lox_Scanner.Source_Code) return Interpret_Result;
 
-   function New_Function return Lox_Object.Obj_Function_Access;
+   function New_Function return Lox_Object.Object_Access;
 
 private
    function Hash_String
@@ -51,9 +51,9 @@ private
       Stack         : Stack_Array;
       Stack_Top     : Stack_Index;
       Globals       : Hash_Table.Map;
-      Open_Upvalues : Lox_Object.Obj_Upvalue_Access;
+      Open_Upvalues : Lox_Object.Object_Access;
 
-      Objects : Lox_Object.Objects;
+      Objects : Lox_Object.Object_Access;
    end record;
 
    procedure Push (Value : Lox_Value.Value);
@@ -63,7 +63,7 @@ private
    function Arity_Error_Message
      (Arity : Natural; Arg_Count : Natural) return String;
    function Call
-     (Closure : Lox_Object.Obj_Closure_Access; Arg_Count : Natural)
+     (Closure : Lox_Object.Object_Access; Arg_Count : Natural)
       return Boolean;
    function Call_Native
      (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean;
@@ -71,7 +71,7 @@ private
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 
    function Capture_Upvalue
-     (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access;
+     (Local : Stack_Index) return Lox_Object.Object_Access;
    procedure Close_Upvalues (Last : Stack_Index);
 
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;

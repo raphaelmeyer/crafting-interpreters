@@ -227,8 +227,8 @@ package body Debug is
       Ada.Text_IO.New_Line;
 
       declare
-         Func     : constant Lox_Object.Obj_Function_Access :=
-           Chunk.Constants (Natural (Const)).Function_Value;
+         Func     : constant Lox_Object.Object_Access :=
+           Chunk.Constants (Natural (Const)).Object_Value;
          Is_Local : Byte;
          Index    : Byte;
       begin

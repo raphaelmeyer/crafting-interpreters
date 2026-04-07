@@ -8,13 +8,7 @@ package Lox_Value is
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
    type Value_Type is
-     (VAL_BOOL,
-      VAL_NIL,
-      VAL_NUMBER,
-      VAL_STRING,
-      VAL_FUNCTION,
-      VAL_CLOSURE,
-      VAL_NATIVE);
+     (VAL_BOOL, VAL_NIL, VAL_NUMBER, VAL_STRING, VAL_OBJECT, VAL_NATIVE);
 
    type Lox_Float (Is_Valid : Boolean := True) is record
       case Is_Valid is
@@ -58,11 +52,8 @@ package Lox_Value is
          when VAL_STRING =>
             String_Value : Unbounded_String;
 
-         when VAL_FUNCTION =>
-            Function_Value : access Lox_Object.Obj_Function;
-
-         when VAL_CLOSURE =>
-            Closure_Value : access Lox_Object.Obj_Closure;
+         when VAL_OBJECT =>
+            Object_Value : access Lox_Object.Object;
 
          when VAL_NATIVE =>
             Native_Value : Native;
@@ -89,11 +80,10 @@ package Lox_Value is
    function Make_String (Str : Unbounded_String) return Value;
    function Is_String (V : Value) return Boolean;
 
-   function Make_Closure
-     (Closure : Lox_Object.Obj_Closure_Access) return Value;
+   function Make_Closure (Closure : Lox_Object.Object_Access) return Value;
    function Is_Closure (V : Value) return Boolean;
 
-   function Make_Function (Func : Lox_Object.Obj_Function_Access) return Value;
+   function Make_Function (Func : Lox_Object.Object_Access) return Value;
    function Is_Function (V : Value) return Boolean;
 
    function Make_Native (Arity : Natural; Func : Native_Fn) return Value;

@@ -12,8 +12,7 @@ package body Lox_VM is
    package Unbounded renames Ada.Strings.Unbounded;
    use type Lox_Value.Lox_Float;
 
-   --  but why?
-   use type Lox_Object.Obj_Upvalue_Access;
+   use type Lox_Object.Object_Access;
 
    VM         : VM_Context;
    Start_Time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
@@ -38,9 +37,8 @@ package body Lox_VM is
    is
       Unused_Value  : Lox_Value.Value;
       Unused_Result : Boolean;
-      Closure       : Lox_Object.Obj_Closure_Access;
-      Func          : Lox_Object.Obj_Function_Access;
-      use type Lox_Object.Obj_Function_Access;
+      Closure       : Lox_Object.Object_Access;
+      Func          : Lox_Object.Object_Access;
    begin
       Func := Lox_Compiler.Compile (Source);
       if Func = null then
@@ -56,7 +54,7 @@ package body Lox_VM is
       return Run;
    end Interpret;
 
-   function New_Function return Lox_Object.Obj_Function_Access is
+   function New_Function return Lox_Object.Object_Access is
    begin
       return Lox_Object.New_Function (VM.Objects);
    end New_Function;
@@ -114,8 +112,8 @@ package body Lox_VM is
    end Arity_Error_Message;
 
    function Call
-     (Closure : Lox_Object.Obj_Closure_Access; Arg_Count : Natural)
-      return Boolean is
+     (Closure : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean
+   is
    begin
       if Arg_Count /= Closure.Func.Arity then
          Runtime_Error (Arity_Error_Message (Closure.Func.Arity, Arg_Count));
@@ -134,7 +132,7 @@ package body Lox_VM is
          VM.Frame_Count := Natural'Succ (VM.Frame_Count);
 
          Frame.Closure := Closure;
-         Frame.IP := Closure.Func.all.Chunk.Code.First;
+         Frame.IP := Closure.Func.Chunk.Code.First;
          Frame.Slots := VM.Stack_Top - Stack_Index (Arg_Count) - 1;
       end;
       return True;
@@ -161,9 +159,7 @@ package body Lox_VM is
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
       if Lox_Value.Is_Closure (Callee) then
-         return
-           Call
-             (Lox_Object.Obj_Closure_Access (Callee.Closure_Value), Arg_Count);
+         return Call (Callee.Object_Value, Arg_Count);
 
       elsif Lox_Value.Is_Native (Callee) then
          return Call_Native (Callee.Native_Value, Arg_Count);
@@ -175,10 +171,10 @@ package body Lox_VM is
    end Call_Value;
 
    function Capture_Upvalue
-     (Local : Stack_Index) return Lox_Object.Obj_Upvalue_Access
+     (Local : Stack_Index) return Lox_Object.Object_Access
    is
-      Previous_Upvalue : Lox_Object.Obj_Upvalue_Access := null;
-      Upvalue          : Lox_Object.Obj_Upvalue_Access := VM.Open_Upvalues;
+      Previous_Upvalue : Lox_Object.Object_Access := null;
+      Upvalue          : Lox_Object.Object_Access := VM.Open_Upvalues;
    begin
       while Upvalue /= null
         and then Stack_Index (Upvalue.Instance.Location) > Local
@@ -194,7 +190,7 @@ package body Lox_VM is
       end if;
 
       declare
-         Created_Upvalue : constant Lox_Object.Obj_Upvalue_Access :=
+         Created_Upvalue : constant Lox_Object.Object_Access :=
            Lox_Object.New_Upvalue (VM.Objects, Natural (Local));
       begin
          Created_Upvalue.Instance.Next_Open := Upvalue;
@@ -210,7 +206,7 @@ package body Lox_VM is
    end Capture_Upvalue;
 
    procedure Close_Upvalues (Last : Stack_Index) is
-      Upvalue : Lox_Object.Obj_Upvalue_Access := null;
+      Upvalue : Lox_Object.Object_Access := null;
    begin
       while VM.Open_Upvalues /= null
         and then Stack_Index (VM.Open_Upvalues.Instance.Location) >= Last
@@ -220,7 +216,7 @@ package body Lox_VM is
               (Closed => True,
                Value  =>
                  VM.Stack (Stack_Index (VM.Open_Upvalues.Instance.Location)));
-            Next_Open      : constant Lox_Object.Obj_Upvalue_Access :=
+            Next_Open      : constant Lox_Object.Object_Access :=
               VM.Open_Upvalues.Instance.Next_Open;
          begin
             Upvalue := VM.Open_Upvalues;
@@ -691,9 +687,9 @@ package body Lox_VM is
 
                when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
                   declare
-                     Func    : constant Lox_Object.Obj_Function_Access :=
-                       Read_Constant (Frame).Function_Value;
-                     Closure : constant Lox_Object.Obj_Closure_Access :=
+                     Func    : constant Lox_Object.Object_Access :=
+                       Read_Constant (Frame).Object_Value;
+                     Closure : constant Lox_Object.Object_Access :=
                        Lox_Object.New_Closure (VM.Objects, Func);
                   begin
                      Push (Lox_Value.Make_Closure (Closure));
