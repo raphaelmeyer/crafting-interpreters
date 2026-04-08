@@ -59,6 +59,45 @@ package body Lox_VM is
       return Lox_Object.New_Function (VM.Objects);
    end New_Function;
 
+   procedure Iterate_Stack (Action : not null Value_Action) is
+   begin
+      for Value of
+        VM.Stack (Stack_Index'First .. Stack_Index'Pred (VM.Stack_Top))
+      loop
+         Action (Value);
+      end loop;
+   end Iterate_Stack;
+
+   procedure Iterate_Globals (Action : not null Value_Action) is
+   begin
+      for Cursor in VM.Globals.Iterate loop
+         Action (Hash_Table.Reference (VM.Globals, Cursor));
+      end loop;
+   end Iterate_Globals;
+
+   procedure Iterate_Closures (Action : not null Object_Action) is
+   begin
+      if VM.Frame_Count = 0 then
+         return;
+      end if;
+
+      for I in
+        Call_Frame_Index'First
+        .. Call_Frame_Index (Natural'Pred (VM.Frame_Count))
+      loop
+         Action (VM.Frames (I).Closure);
+      end loop;
+   end Iterate_Closures;
+
+   procedure Iterate_Open_Upvalues (Action : not null Object_Action) is
+      Upvalue : Lox_Object.Object_Access := VM.Open_Upvalues;
+   begin
+      while Upvalue /= null loop
+         Action (Upvalue);
+         Upvalue := Upvalue.Instance.Next_Open;
+      end loop;
+   end Iterate_Open_Upvalues;
+
    function Hash_String
      (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type
    is

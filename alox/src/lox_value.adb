@@ -120,6 +120,11 @@ package body Lox_Value is
       return V.Kind = VAL_STRING;
    end Is_String;
 
+   function Is_Object (V : Value) return Boolean is
+   begin
+      return V.Kind = VAL_OBJECT;
+   end Is_Object;
+
    function Make_Closure (Closure : Lox_Object.Object_Access) return Value is
    begin
       return (VAL_OBJECT, Object_Value => Closure);

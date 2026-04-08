@@ -32,6 +32,14 @@ package Lox_VM is
 
    function New_Function return Lox_Object.Object_Access;
 
+   type Value_Action is access procedure (Value : in out Lox_Value.Value);
+   procedure Iterate_Stack (Action : not null Value_Action);
+   procedure Iterate_Globals (Action : not null Value_Action);
+
+   type Object_Action is access procedure (Obj : Lox_Object.Object_Access);
+   procedure Iterate_Closures (Action : not null Object_Action);
+   procedure Iterate_Open_Upvalues (Action : not null Object_Action);
+
 private
    function Hash_String
      (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type;
@@ -63,8 +71,7 @@ private
    function Arity_Error_Message
      (Arity : Natural; Arg_Count : Natural) return String;
    function Call
-     (Closure : Lox_Object.Object_Access; Arg_Count : Natural)
-      return Boolean;
+     (Closure : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean;
    function Call_Native
      (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean;
    function Call_Value

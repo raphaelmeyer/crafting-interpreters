@@ -31,6 +31,8 @@ package Lox_Object is
         Element_Type => Object_Access);
 
    type Object (Kind : Object_Kind) is record
+      Is_Marked : Boolean;
+
       Next : Object_Access;
       case Kind is
          when OBJ_KIND_FUNCTION =>
@@ -66,5 +68,8 @@ private
 
    procedure Collect_Garbage;
    procedure Trigger_Garbage_Collection_On_Threshold;
+   procedure Mark_Roots;
+   procedure Mark_Value (Value : in out Lox_Value.Value);
+   procedure Mark_Object (Obj : Object_Access);
 
 end Lox_Object;

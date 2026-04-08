@@ -80,6 +80,8 @@ package Lox_Value is
    function Make_String (Str : Unbounded_String) return Value;
    function Is_String (V : Value) return Boolean;
 
+   function Is_Object (V : Value) return Boolean;
+
    function Make_Closure (Closure : Lox_Object.Object_Access) return Value;
    function Is_Closure (V : Value) return Boolean;
 

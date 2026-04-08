@@ -10,6 +10,8 @@ package body Lox_Compiler is
 
    package Unbounded renames Ada.Strings.Unbounded;
 
+   Current_Compiler : Compiler_Access := null;
+
    type Rules_Type is array (Lox_Scanner.TokenType) of Parse_Rule;
    Rules : constant Rules_Type :=
      [Lox_Scanner.TOKEN_LEFT_PAREN    =>
@@ -313,6 +315,15 @@ package body Lox_Compiler is
         Byte (Jump mod 256);
    end Patch_Jump;
 
+   procedure Iterate_Current_Functions (Action : not null Object_Action) is
+      Compiler : Compiler_Access := Current_Compiler;
+   begin
+      while Compiler /= null loop
+         Action (Compiler.Func);
+         Compiler := Compiler_Access (Compiler.Enclosing);
+      end loop;
+   end Iterate_Current_Functions;
+
    procedure Init_Compiler
      (C        : in out Compiler_Context;
       Compiler : Compiler_Access;
@@ -325,6 +336,7 @@ package body Lox_Compiler is
       Compiler.Scope_Depth := 0;
       Compiler.Func := Lox_VM.New_Function;
       C.Current := Compiler;
+      Current_Compiler := Compiler;
 
       if Kind /= TYPE_SCRIPT then
          C.Current.Func.Name := C.Parser.Previous.Lexeme;
@@ -364,6 +376,7 @@ package body Lox_Compiler is
       end if;
 
       C.Current := Compiler_Access (C.Current.Enclosing);
+      Current_Compiler := C.Current;
       return Func;
    end End_Compiler;
 
@@ -628,8 +641,7 @@ package body Lox_Compiler is
 
       if not Check (C, Lox_Scanner.TOKEN_RIGHT_PAREN) then
          loop
-            C.Current.Func.Arity :=
-              Natural'Succ (C.Current.Func.Arity);
+            C.Current.Func.Arity := Natural'Succ (C.Current.Func.Arity);
             if C.Current.Func.Arity > 255 then
                Error_At_Current (C, "Can't have more than 255 parameters.");
             end if;

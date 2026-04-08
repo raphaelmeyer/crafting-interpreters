@@ -1,4 +1,7 @@
 with Debug;
+with Lox_Compiler;
+with Lox_VM;
+
 with Ada.Text_IO;
 with System.Address_Image;
 
@@ -11,6 +14,7 @@ package body Lox_Object is
          Func :=
            new Object'
              (Kind          => OBJ_KIND_FUNCTION,
+              Is_Marked     => <>,
               Next          => <>,
               Arity         => 0,
               Upvalue_Count => 0,
@@ -32,10 +36,11 @@ package body Lox_Object is
       return Closure : Object_Access do
          Closure :=
            new Object'
-             (Kind     => OBJ_KIND_CLOSURE,
-              Next     => <>,
-              Func     => Func,
-              Upvalues => <>);
+             (Kind      => OBJ_KIND_CLOSURE,
+              Is_Marked => <>,
+              Next      => <>,
+              Func      => Func,
+              Upvalues  => <>);
          Manage_Object (Objs, Closure);
 
          for I in 1 .. Func.Upvalue_Count loop
@@ -53,9 +58,10 @@ package body Lox_Object is
       return Upvalue : Object_Access do
          Upvalue :=
            new Object'
-             (Kind     => OBJ_KIND_UPVALUE,
-              Next     => <>,
-              Instance =>
+             (Kind      => OBJ_KIND_UPVALUE,
+              Is_Marked => <>,
+              Next      => <>,
+              Instance  =>
                 (Closed => False, Location => Slot, Next_Open => null));
          Manage_Object (Objs, Upvalue);
 
@@ -93,6 +99,8 @@ package body Lox_Object is
    procedure Manage_Object (Objs : in out Object_Access; Obj : Object_Access)
    is
    begin
+      Obj.Is_Marked := False;
+
       Obj.Next := Objs;
       Objs := Obj;
 
@@ -118,6 +126,8 @@ package body Lox_Object is
          Ada.Text_IO.Put_Line ("-- gc begin");
       end if;
 
+      Mark_Roots;
+
       if Debug.Log_GC_Enabled then
          Ada.Text_IO.Put_Line ("-- gc end");
       end if;
@@ -129,5 +139,35 @@ package body Lox_Object is
          Collect_Garbage;
       end if;
    end Trigger_Garbage_Collection_On_Threshold;
+
+   procedure Mark_Roots is
+   begin
+      Lox_VM.Iterate_Stack (Mark_Value'Access);
+      Lox_VM.Iterate_Closures (Mark_Object'Access);
+      Lox_VM.Iterate_Open_Upvalues (Mark_Object'Access);
+      Lox_VM.Iterate_Globals (Mark_Value'Access);
+      Lox_Compiler.Iterate_Current_Functions (Mark_Object'Access);
+   end Mark_Roots;
+
+   procedure Mark_Value (Value : in out Lox_Value.Value) is
+   begin
+      if Lox_Value.Is_Object (Value) then
+         Mark_Object (Value.Object_Value);
+      end if;
+   end Mark_Value;
+
+   procedure Mark_Object (Obj : Object_Access) is
+   begin
+      if Obj = null then
+         return;
+      end if;
+
+      if Debug.Log_GC_Enabled then
+         Ada.Text_IO.Put (System.Address_Image (Obj.all'Address));
+         Ada.Text_IO.Put_Line (" mark " & To_String (Obj));
+      end if;
+
+      Obj.Is_Marked := True;
+   end Mark_Object;
 
 end Lox_Object;

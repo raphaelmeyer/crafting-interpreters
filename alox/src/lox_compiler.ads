@@ -11,6 +11,9 @@ package Lox_Compiler is
    function Compile
      (Source : Lox_Scanner.Source_Code) return Lox_Object.Object_Access;
 
+   type Object_Action is access procedure (Obj : Lox_Object.Object_Access);
+   procedure Iterate_Current_Functions (Action : not null Object_Action);
+
 private
    use type Lox_Scanner.TokenType;
 
