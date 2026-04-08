@@ -61,4 +61,10 @@ package Lox_Object is
 private
    procedure Free is new Ada.Unchecked_Deallocation (Object, Object_Access);
 
+   procedure Manage_Object (Objs : in out Object_Access; Obj : Object_Access);
+   procedure Release_Object (Obj : in out Object_Access);
+
+   procedure Collect_Garbage;
+   procedure Trigger_Garbage_Collection_On_Threshold;
+
 end Lox_Object;

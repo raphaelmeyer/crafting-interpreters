@@ -8,13 +8,19 @@ package Debug is
 
    procedure Enable_Trace_Execution;
    procedure Enable_Print_Code;
+   procedure Enable_Stress_GC;
+   procedure Enable_Log_GC;
 
    function Trace_Execution_Enabled return Boolean;
    function Print_Code_Enabled return Boolean;
+   function Stress_GC_Enabled return Boolean;
+   function Log_GC_Enabled return Boolean;
 
 private
    Print_Code      : Boolean := False;
    Trace_Execution : Boolean := False;
+   Stress_GC       : Boolean := False;
+   Log_GC          : Boolean := False;
 
    type Direction is (Forward, Backward);
 

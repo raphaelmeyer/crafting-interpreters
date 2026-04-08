@@ -20,6 +20,10 @@ package body Main is
          if Ada.Command_Line.Argument (I) = "--debug" then
             Debug.Enable_Print_Code;
             Debug.Enable_Trace_Execution;
+         elsif Ada.Command_Line.Argument (I) = "--gc-stress" then
+            Debug.Enable_Stress_GC;
+         elsif Ada.Command_Line.Argument (I) = "--gc-log" then
+            Debug.Enable_Log_GC;
          elsif Unbounded.Length (File_Name) = 0 then
             File_Name :=
               Unbounded.To_Unbounded_String (Ada.Command_Line.Argument (I));

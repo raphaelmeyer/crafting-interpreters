@@ -1,49 +1,65 @@
+with Debug;
+with Ada.Text_IO;
+with System.Address_Image;
+
 package body Lox_Object is
    function New_Function (Objs : in out Object_Access) return Object_Access is
-      Func : constant Object_Access :=
-        new Object'
-          (Kind          => OBJ_KIND_FUNCTION,
-           Next          => Objs,
-           Arity         => 0,
-           Upvalue_Count => 0,
-           Name          => Unbounded.Null_Unbounded_String,
-           Chunk         => <>);
    begin
-      Lox_Chunk.Init (Func.Chunk);
-      Objs := Func;
-      return Func;
+      Trigger_Garbage_Collection_On_Threshold;
+
+      return Func : Object_Access do
+         Func :=
+           new Object'
+             (Kind          => OBJ_KIND_FUNCTION,
+              Next          => <>,
+              Arity         => 0,
+              Upvalue_Count => 0,
+              Name          => Unbounded.Null_Unbounded_String,
+              Chunk         => <>);
+         Manage_Object (Objs, Func);
+
+         Lox_Chunk.Init (Func.Chunk);
+
+      end return;
    end New_Function;
 
    function New_Closure
      (Objs : in out Object_Access; Func : Object_Access) return Object_Access
    is
-      Closure : constant Object_Access :=
-        new Object'
-          (Kind     => OBJ_KIND_CLOSURE,
-           Next     => Objs,
-           Func     => Func,
-           Upvalues => <>);
    begin
-      Objs := Closure;
+      Trigger_Garbage_Collection_On_Threshold;
 
-      for I in 1 .. Func.Upvalue_Count loop
-         Closure.Upvalues.Append (null);
-      end loop;
+      return Closure : Object_Access do
+         Closure :=
+           new Object'
+             (Kind     => OBJ_KIND_CLOSURE,
+              Next     => <>,
+              Func     => Func,
+              Upvalues => <>);
+         Manage_Object (Objs, Closure);
 
-      return Closure;
+         for I in 1 .. Func.Upvalue_Count loop
+            Closure.Upvalues.Append (null);
+         end loop;
+
+      end return;
    end New_Closure;
 
    function New_Upvalue
-     (Objs : in out Object_Access; Slot : Natural) return Object_Access
-   is
-      Upvalue : constant Object_Access :=
-        new Object'
-          (Kind     => OBJ_KIND_UPVALUE,
-           Next     => Objs,
-           Instance => (Closed => False, Location => Slot, Next_Open => null));
+     (Objs : in out Object_Access; Slot : Natural) return Object_Access is
    begin
-      Objs := Upvalue;
-      return Upvalue;
+      Trigger_Garbage_Collection_On_Threshold;
+
+      return Upvalue : Object_Access do
+         Upvalue :=
+           new Object'
+             (Kind     => OBJ_KIND_UPVALUE,
+              Next     => <>,
+              Instance =>
+                (Closed => False, Location => Slot, Next_Open => null));
+         Manage_Object (Objs, Upvalue);
+
+      end return;
    end New_Upvalue;
 
    procedure Free_Objects (Objs : in out Object_Access) is
@@ -51,7 +67,7 @@ package body Lox_Object is
    begin
       while Objs /= null loop
          Next := Objs.Next;
-         Free (Objs);
+         Release_Object (Objs);
          Objs := Next;
       end loop;
    end Free_Objects;
@@ -73,5 +89,45 @@ package body Lox_Object is
             return "<upvalue>";
       end case;
    end To_String;
+
+   procedure Manage_Object (Objs : in out Object_Access; Obj : Object_Access)
+   is
+   begin
+      Obj.Next := Objs;
+      Objs := Obj;
+
+      if Debug.Log_GC_Enabled then
+         Ada.Text_IO.Put (System.Address_Image (Obj.all'Address));
+         Ada.Text_IO.Put_Line (" allocate " & Obj.Kind'Image);
+      end if;
+   end Manage_Object;
+
+   procedure Release_Object (Obj : in out Object_Access) is
+   begin
+      if Debug.Log_GC_Enabled then
+         Ada.Text_IO.Put (System.Address_Image (Obj.all'Address));
+         Ada.Text_IO.Put_Line (" free " & Obj.Kind'Image);
+      end if;
+
+      Free (Obj);
+   end Release_Object;
+
+   procedure Collect_Garbage is
+   begin
+      if Debug.Log_GC_Enabled then
+         Ada.Text_IO.Put_Line ("-- gc begin");
+      end if;
+
+      if Debug.Log_GC_Enabled then
+         Ada.Text_IO.Put_Line ("-- gc end");
+      end if;
+   end Collect_Garbage;
+
+   procedure Trigger_Garbage_Collection_On_Threshold is
+   begin
+      if Debug.Stress_GC_Enabled then
+         Collect_Garbage;
+      end if;
+   end Trigger_Garbage_Collection_On_Threshold;
 
 end Lox_Object;

@@ -149,6 +149,16 @@ package body Debug is
       Print_Code := True;
    end Enable_Print_Code;
 
+   procedure Enable_Stress_GC is
+   begin
+      Stress_GC := True;
+   end Enable_Stress_GC;
+
+   procedure Enable_Log_GC is
+   begin
+      Log_GC := True;
+   end Enable_Log_GC;
+
    function Trace_Execution_Enabled return Boolean is
    begin
       return Trace_Execution;
@@ -158,6 +168,16 @@ package body Debug is
    begin
       return Print_Code;
    end Print_Code_Enabled;
+
+   function Stress_GC_Enabled return Boolean is
+   begin
+      return Stress_GC;
+   end Stress_GC_Enabled;
+
+   function Log_GC_Enabled return Boolean is
+   begin
+      return Log_GC;
+   end Log_GC_Enabled;
 
    function Constant_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural
