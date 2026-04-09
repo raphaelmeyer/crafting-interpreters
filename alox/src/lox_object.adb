@@ -158,7 +158,7 @@ package body Lox_Object is
 
    procedure Mark_Object (Obj : Object_Access) is
    begin
-      if Obj = null then
+      if Obj = null or else Obj.Is_Marked then
          return;
       end if;
 
@@ -168,6 +168,29 @@ package body Lox_Object is
       end if;
 
       Obj.Is_Marked := True;
+      Trace_References (Obj);
    end Mark_Object;
+
+   procedure Trace_References (Obj : Object_Access) is
+   begin
+      case Obj.Kind is
+         when OBJ_KIND_UPVALUE =>
+            if Obj.Instance.Closed then
+               Mark_Value (Obj.Instance.Value);
+            end if;
+
+         when OBJ_KIND_FUNCTION =>
+            for Value of Obj.Chunk.Constants loop
+               Mark_Value (Value);
+            end loop;
+
+         when OBJ_KIND_CLOSURE =>
+            Mark_Object (Obj.Func);
+            for Upvalue of Obj.Upvalues loop
+               Mark_Object (Upvalue);
+            end loop;
+
+      end case;
+   end Trace_References;
 
 end Lox_Object;

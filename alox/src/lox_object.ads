@@ -71,5 +71,6 @@ private
    procedure Mark_Roots;
    procedure Mark_Value (Value : in out Lox_Value.Value);
    procedure Mark_Object (Obj : Object_Access);
+   procedure Trace_References (Obj : Object_Access);
 
 end Lox_Object;
