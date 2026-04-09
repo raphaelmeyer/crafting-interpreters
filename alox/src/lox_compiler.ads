@@ -95,8 +95,7 @@ private
       Current : Compiler_Access;
    end record;
 
-   type Parse_Fn is
-     access procedure (C : in out Compiler_Context; Can_Assign : Boolean);
+   type Parse_Fn is access procedure (Can_Assign : Boolean);
 
    type Parse_Rule is record
       Prefix     : Parse_Fn;
@@ -113,118 +112,84 @@ private
        (Object => Compiler_Type,
         Name   => Compiler_Access);
 
-   function Current_Func
-     (C : in out Compiler_Context) return Lox_Object.Object_Access;
+   function Current_Func return Lox_Object.Object_Access;
 
-   procedure Error_At
-     (C       : in out Compiler_Context;
-      Token   : Lox_Scanner.Token;
-      Message : String);
-   procedure Error (C : in out Compiler_Context; Message : String);
-   procedure Error_At_Current (C : in out Compiler_Context; Message : String);
+   procedure Error_At (Token : Lox_Scanner.Token; Message : String);
+   procedure Error (Message : String);
+   procedure Error_At_Current (Message : String);
 
-   procedure Advance (C : in out Compiler_Context);
-   procedure Consume
-     (C       : in out Compiler_Context;
-      Kind    : Lox_Scanner.TokenType;
-      Message : String);
-   function Check
-     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType)
-      return Boolean;
-   function Match
-     (C : in out Compiler_Context; Kind : Lox_Scanner.TokenType)
-      return Boolean;
+   procedure Advance;
+   procedure Consume (Kind : Lox_Scanner.TokenType; Message : String);
+   function Check (Kind : Lox_Scanner.TokenType) return Boolean;
+   function Match (Kind : Lox_Scanner.TokenType) return Boolean;
 
-   procedure Emit_Byte (C : in out Compiler_Context; Value : Byte);
-   procedure Emit_Byte
-     (C : in out Compiler_Context; Op_Code : Lox_Chunk.Op_Code);
+   procedure Emit_Byte (Value : Byte);
+   procedure Emit_Byte (Op_Code : Lox_Chunk.Op_Code);
+   procedure Emit_Bytes (Byte_1 : Lox_Chunk.Op_Code; Byte_2 : Byte);
    procedure Emit_Bytes
-     (C : in out Compiler_Context; Byte_1 : Lox_Chunk.Op_Code; Byte_2 : Byte);
-   procedure Emit_Bytes
-     (C      : in out Compiler_Context;
-      Byte_1 : Lox_Chunk.Op_Code;
-      Byte_2 : Lox_Chunk.Op_Code);
-   procedure Emit_Loop (C : in out Compiler_Context; Loop_Start : Natural);
-   function Emit_Jump
-     (C : in out Compiler_Context; Instruction : Lox_Chunk.Op_Code)
-      return Natural;
-   procedure Emit_Return (C : in out Compiler_Context);
-   function Make_Constant
-     (C : in out Compiler_Context; Value : Lox_Value.Value) return Byte;
-   procedure Emit_Constant
-     (C : in out Compiler_Context; Value : Lox_Value.Value);
+     (Byte_1 : Lox_Chunk.Op_Code; Byte_2 : Lox_Chunk.Op_Code);
+   procedure Emit_Loop (Loop_Start : Natural);
+   function Emit_Jump (Instruction : Lox_Chunk.Op_Code) return Natural;
+   procedure Emit_Return;
+   function Make_Constant (Value : Lox_Value.Value) return Byte;
+   procedure Emit_Constant (Value : Lox_Value.Value);
 
-   procedure Init_Compiler
-     (C        : in out Compiler_Context;
-      Compiler : Compiler_Access;
-      Kind     : Function_Kind);
-   function End_Compiler
-     (C : in out Compiler_Context) return Lox_Object.Object_Access;
+   procedure Init_Compiler (Compiler : Compiler_Access; Kind : Function_Kind);
+   function End_Compiler return Lox_Object.Object_Access;
 
-   procedure Begin_Scope (C : in out Compiler_Context);
-   procedure End_Scope (C : in out Compiler_Context);
+   procedure Begin_Scope;
+   procedure End_Scope;
 
-   procedure Binary (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Call (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Literal (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Grouping (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Number (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure String_Literal
-     (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Logical_And (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Logical_Or (C : in out Compiler_Context; Can_Assign : Boolean);
+   procedure Binary (Can_Assign : Boolean);
+   procedure Call (Can_Assign : Boolean);
+   procedure Literal (Can_Assign : Boolean);
+   procedure Grouping (Can_Assign : Boolean);
+   procedure Number (Can_Assign : Boolean);
+   procedure String_Literal (Can_Assign : Boolean);
+   procedure Logical_And (Can_Assign : Boolean);
+   procedure Logical_Or (Can_Assign : Boolean);
 
-   procedure Named_Variable
-     (C          : in out Compiler_Context;
-      Name       : Lox_Scanner.Token;
-      Can_Assign : Boolean);
-   procedure Variable (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Unary (C : in out Compiler_Context; Can_Assign : Boolean);
-   procedure Expression (C : in out Compiler_Context);
-   procedure Block (C : in out Compiler_Context);
-   procedure Function_Declaration (C : in out Compiler_Context);
-   procedure Function_Definition
-     (C : in out Compiler_Context; Kind : Function_Kind);
-   procedure Variable_Declaration (C : in out Compiler_Context);
-   procedure Expression_Statement (C : in out Compiler_Context);
-   procedure For_Statement (C : in out Compiler_Context);
-   procedure If_Statement (C : in out Compiler_Context);
-   procedure Print_Statement (C : in out Compiler_Context);
-   procedure Return_Statement (C : in out Compiler_Context);
-   procedure While_Statement (C : in out Compiler_Context);
-   procedure Switch_Statement (C : in out Compiler_Context);
-   procedure Declaration (C : in out Compiler_Context);
-   procedure Statement (C : in out Compiler_Context);
+   procedure Named_Variable (Name : Lox_Scanner.Token; Can_Assign : Boolean);
+   procedure Variable (Can_Assign : Boolean);
+   procedure Unary (Can_Assign : Boolean);
+   procedure Expression;
+   procedure Block;
+   procedure Function_Declaration;
+   procedure Function_Definition (Kind : Function_Kind);
+   procedure Variable_Declaration;
+   procedure Expression_Statement;
+   procedure For_Statement;
+   procedure If_Statement;
+   procedure Print_Statement;
+   procedure Return_Statement;
+   procedure While_Statement;
+   procedure Switch_Statement;
+   procedure Declaration;
+   procedure Statement;
 
-   procedure Parse_Precedence
-     (C : in out Compiler_Context; Precedence : Precedence_Type);
-   function Identifier_Constant
-     (C : in out Compiler_Context; Token : Lox_Scanner.Token) return Byte;
+   procedure Parse_Precedence (Precedence : Precedence_Type);
+   function Identifier_Constant (Token : Lox_Scanner.Token) return Byte;
    function Identifiers_Equal
      (A : Lox_Scanner.Token; B : Lox_Scanner.Token) return Boolean;
    function Resolve_Local
-     (C        : in out Compiler_Context;
-      Compiler : Compiler_Access;
+     (Compiler : Compiler_Access;
       Name     : Lox_Scanner.Token;
       Index    : out Local_Index) return Boolean;
-   procedure Add_Local (C : in out Compiler_Context; Name : Lox_Scanner.Token);
+   procedure Add_Local (Name : Lox_Scanner.Token);
    function Resolve_Upvalue
-     (C        : in out Compiler_Context;
-      Compiler : Compiler_Access;
+     (Compiler : Compiler_Access;
       Name     : Lox_Scanner.Token;
       Index    : out Upvalue_Index) return Boolean;
    function Add_Upvalue
-     (C        : in out Compiler_Context;
-      Compiler : Compiler_Access;
+     (Compiler : Compiler_Access;
       Index    : Upvalue_Slot_Index;
       Is_Local : Boolean) return Upvalue_Index;
-   procedure Declare_Variable (C : in out Compiler_Context);
-   function Parse_Variable
-     (C : in out Compiler_Context; Error_Message : String) return Byte;
-   procedure Mark_Initialized (C : in out Compiler_Context);
-   procedure Define_Variable (C : in out Compiler_Context; Global : Byte);
-   function Argument_List (C : in out Compiler_Context) return Byte;
+   procedure Declare_Variable;
+   function Parse_Variable (Error_Message : String) return Byte;
+   procedure Mark_Initialized;
+   procedure Define_Variable (Global : Byte);
+   function Argument_List return Byte;
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 
-   procedure Synchronize (C : in out Compiler_Context);
+   procedure Synchronize;
 end Lox_Compiler;
