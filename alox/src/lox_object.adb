@@ -2,10 +2,16 @@ with Debug;
 with Lox_Compiler;
 with Lox_VM;
 
+with Ada.Integer_Text_IO;
 with Ada.Text_IO;
 with System.Address_Image;
 
 package body Lox_Object is
+
+   Objects_Allocated     : Natural := 0;
+   Next_GC_Run_Threshold : Natural := 10;
+   GC_Grow_Factor        : constant Natural := 2;
+
    function New_Function (Objs : in out Object_Access) return Object_Access is
    begin
       Trigger_Garbage_Collection_On_Threshold (Objs);
@@ -117,10 +123,12 @@ package body Lox_Object is
          Ada.Text_IO.Put_Line (" free " & Obj.Kind'Image);
       end if;
 
+      Objects_Allocated := Natural'Pred (Objects_Allocated);
       Free (Obj);
    end Release_Object;
 
    procedure Collect_Garbage (Objs : in out Object_Access) is
+      Objects_Allocated_Before : constant Natural := Objects_Allocated;
    begin
       if Debug.Log_GC_Enabled then
          Ada.Text_IO.Put_Line ("-- gc begin");
@@ -129,17 +137,36 @@ package body Lox_Object is
       Mark_Roots;
       Sweep (Objs);
 
+      Next_GC_Run_Threshold := Objects_Allocated * GC_Grow_Factor;
+
       if Debug.Log_GC_Enabled then
          Ada.Text_IO.Put_Line ("-- gc end");
+         Ada.Text_IO.Put ("   collected ");
+         Ada.Integer_Text_IO.Put
+           (Objects_Allocated_Before - Objects_Allocated, Width => 0);
+         Ada.Text_IO.Put (" objects (from ");
+         Ada.Integer_Text_IO.Put (Objects_Allocated_Before, Width => 0);
+         Ada.Text_IO.Put (" to ");
+         Ada.Integer_Text_IO.Put (Objects_Allocated, Width => 0);
+         Ada.Text_IO.Put (") next at ");
+         Ada.Integer_Text_IO.Put (Next_GC_Run_Threshold, Width => 0);
+         Ada.Text_IO.New_Line;
       end if;
    end Collect_Garbage;
 
    procedure Trigger_Garbage_Collection_On_Threshold
      (Objs : in out Object_Access) is
    begin
+      Objects_Allocated := Natural'Succ (Objects_Allocated);
+
       if Debug.Stress_GC_Enabled then
          Collect_Garbage (Objs);
       end if;
+
+      if Objects_Allocated > Next_GC_Run_Threshold then
+         Collect_Garbage (Objs);
+      end if;
+
    end Trigger_Garbage_Collection_On_Threshold;
 
    procedure Mark_Roots is
