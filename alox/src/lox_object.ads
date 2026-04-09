@@ -66,11 +66,13 @@ private
    procedure Manage_Object (Objs : in out Object_Access; Obj : Object_Access);
    procedure Release_Object (Obj : in out Object_Access);
 
-   procedure Collect_Garbage;
-   procedure Trigger_Garbage_Collection_On_Threshold;
+   procedure Collect_Garbage (Objs : in out Object_Access);
+   procedure Trigger_Garbage_Collection_On_Threshold
+     (Objs : in out Object_Access);
    procedure Mark_Roots;
    procedure Mark_Value (Value : in out Lox_Value.Value);
    procedure Mark_Object (Obj : Object_Access);
    procedure Trace_References (Obj : Object_Access);
+   procedure Sweep (Objs : in out Object_Access);
 
 end Lox_Object;

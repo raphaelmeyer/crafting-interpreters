@@ -8,7 +8,7 @@ with System.Address_Image;
 package body Lox_Object is
    function New_Function (Objs : in out Object_Access) return Object_Access is
    begin
-      Trigger_Garbage_Collection_On_Threshold;
+      Trigger_Garbage_Collection_On_Threshold (Objs);
 
       return Func : Object_Access do
          Func :=
@@ -31,7 +31,7 @@ package body Lox_Object is
      (Objs : in out Object_Access; Func : Object_Access) return Object_Access
    is
    begin
-      Trigger_Garbage_Collection_On_Threshold;
+      Trigger_Garbage_Collection_On_Threshold (Objs);
 
       return Closure : Object_Access do
          Closure :=
@@ -53,7 +53,7 @@ package body Lox_Object is
    function New_Upvalue
      (Objs : in out Object_Access; Slot : Natural) return Object_Access is
    begin
-      Trigger_Garbage_Collection_On_Threshold;
+      Trigger_Garbage_Collection_On_Threshold (Objs);
 
       return Upvalue : Object_Access do
          Upvalue :=
@@ -120,23 +120,25 @@ package body Lox_Object is
       Free (Obj);
    end Release_Object;
 
-   procedure Collect_Garbage is
+   procedure Collect_Garbage (Objs : in out Object_Access) is
    begin
       if Debug.Log_GC_Enabled then
          Ada.Text_IO.Put_Line ("-- gc begin");
       end if;
 
       Mark_Roots;
+      Sweep (Objs);
 
       if Debug.Log_GC_Enabled then
          Ada.Text_IO.Put_Line ("-- gc end");
       end if;
    end Collect_Garbage;
 
-   procedure Trigger_Garbage_Collection_On_Threshold is
+   procedure Trigger_Garbage_Collection_On_Threshold
+     (Objs : in out Object_Access) is
    begin
       if Debug.Stress_GC_Enabled then
-         Collect_Garbage;
+         Collect_Garbage (Objs);
       end if;
    end Trigger_Garbage_Collection_On_Threshold;
 
@@ -174,7 +176,7 @@ package body Lox_Object is
    procedure Trace_References (Obj : Object_Access) is
    begin
       case Obj.Kind is
-         when OBJ_KIND_UPVALUE =>
+         when OBJ_KIND_UPVALUE  =>
             if Obj.Instance.Closed then
                Mark_Value (Obj.Instance.Value);
             end if;
@@ -184,7 +186,7 @@ package body Lox_Object is
                Mark_Value (Value);
             end loop;
 
-         when OBJ_KIND_CLOSURE =>
+         when OBJ_KIND_CLOSURE  =>
             Mark_Object (Obj.Func);
             for Upvalue of Obj.Upvalues loop
                Mark_Object (Upvalue);
@@ -192,5 +194,30 @@ package body Lox_Object is
 
       end case;
    end Trace_References;
+
+   procedure Sweep (Objs : in out Object_Access) is
+      Previous : Object_Access := null;
+      Current  : Object_Access := Objs;
+   begin
+      while Current /= null loop
+         if Current.Is_Marked then
+            Current.Is_Marked := False;
+            Previous := Current;
+            Current := Current.Next;
+         else
+            declare
+               Unreached : Object_Access := Current;
+            begin
+               Current := Current.Next;
+               if Previous /= null then
+                  Previous.Next := Current;
+               else
+                  Objs := Current;
+               end if;
+               Release_Object (Unreached);
+            end;
+         end if;
+      end loop;
+   end Sweep;
 
 end Lox_Object;
