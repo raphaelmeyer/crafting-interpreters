@@ -52,6 +52,12 @@ static uint32_t hash_string(char const *key, size_t length) {
   return hash;
 }
 
+ObjClass *new_class(ObjString *name) {
+  ObjClass *klass = (ObjClass *)allocate_object(sizeof(ObjClass), OBJ_CLASS);
+  klass->name = name;
+  return klass;
+}
+
 ObjClosure *new_closure(ObjFunction *function) {
   ObjUpvalue **upvalues =
       allocate(sizeof(ObjUpvalue *), function->upvalue_count);
@@ -127,6 +133,9 @@ static void print_function(ObjFunction *function) {
 
 void print_object(Value const value) {
   switch (obj_type(value)) {
+  case OBJ_CLASS:
+    printf("%s", as_class(value)->name->chars);
+    break;
   case OBJ_CLOSURE:
     print_function(as_closure(value)->function);
     break;
