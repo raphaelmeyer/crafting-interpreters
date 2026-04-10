@@ -12,6 +12,7 @@ extern "C" {
 typedef struct VM_t VM;
 
 typedef enum ObjType_t {
+  OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
   OBJ_NATIVE,
@@ -25,7 +26,7 @@ typedef struct Obj_t {
   Obj *next;
 } Obj;
 
-typedef struct Objfunction_t {
+typedef struct ObjFunction_t {
   Obj obj;
   int arity;
   size_t upvalue_count;
@@ -61,6 +62,12 @@ typedef struct ObjClosure_t {
   size_t upvalue_count;
 } ObjClosure;
 
+typedef struct ObjClass_t {
+  Obj obj;
+  ObjString *name;
+} ObjClass;
+
+ObjClass *new_class(ObjString *name);
 ObjClosure *new_closure(ObjFunction *function);
 ObjFunction *new_function();
 ObjNative *new_native(NativeFn function);
@@ -74,6 +81,10 @@ static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
 
 static inline bool is_obj_type(Value const value, ObjType type) {
   return is_obj(value) && value.as.obj->type == type;
+}
+
+static inline bool is_class(Value const value) {
+  return is_obj_type(value, OBJ_CLASS);
 }
 
 static inline bool is_closure(Value const value) {
@@ -90,6 +101,10 @@ static inline bool is_native(Value const value) {
 
 static inline bool is_string(Value const value) {
   return is_obj_type(value, OBJ_STRING);
+}
+
+static inline ObjClass *as_class(Value const value) {
+  return (ObjClass *)value.as.obj;
 }
 
 static inline ObjClosure *as_closure(Value const value) {
