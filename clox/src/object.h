@@ -1,6 +1,7 @@
 #pragma once
 
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 #include <stddef.h>
@@ -15,6 +16,7 @@ typedef enum ObjType_t {
   OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
+  OBJ_INSTANCE,
   OBJ_NATIVE,
   OBJ_STRING,
   OBJ_UPVALUE,
@@ -67,9 +69,16 @@ typedef struct ObjClass_t {
   ObjString *name;
 } ObjClass;
 
+typedef struct ObjInstance_t {
+  Obj obj;
+  ObjClass *klass;
+  Table fields;
+} ObjInstance;
+
 ObjClass *new_class(ObjString *name);
 ObjClosure *new_closure(ObjFunction *function);
 ObjFunction *new_function();
+ObjInstance *new_instance(ObjClass *klass);
 ObjNative *new_native(NativeFn function);
 ObjString *take_string(char *chars, size_t length);
 ObjString *copy_string(char const *chars, size_t length);
@@ -95,6 +104,10 @@ static inline bool is_function(Value const value) {
   return is_obj_type(value, OBJ_FUNCTION);
 }
 
+static inline bool is_instance(Value const value) {
+  return is_obj_type(value, OBJ_INSTANCE);
+}
+
 static inline bool is_native(Value const value) {
   return is_obj_type(value, OBJ_NATIVE);
 }
@@ -113,6 +126,10 @@ static inline ObjClosure *as_closure(Value const value) {
 
 static inline ObjFunction *as_function(Value const value) {
   return (ObjFunction *)value.as.obj;
+}
+
+static inline ObjInstance *as_instance(Value const value) {
+  return (ObjInstance *)value.as.obj;
 }
 
 static inline NativeFn as_native(Value const value) {

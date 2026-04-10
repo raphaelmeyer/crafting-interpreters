@@ -46,6 +46,12 @@ static void free_object(Obj *object) {
     free_item(sizeof(ObjFunction), object);
     break;
   }
+  case OBJ_INSTANCE: {
+    ObjInstance *instance = (ObjInstance *)object;
+    free_table(&instance->fields);
+    free_item(sizeof(ObjInstance), object);
+    break;
+  }
   case OBJ_NATIVE: {
     free_item(sizeof(ObjNative), object);
     break;
@@ -92,6 +98,12 @@ static void blacken_object(Obj *object) {
     ObjFunction *function = (ObjFunction *)object;
     mark_object((Obj *)function->name);
     mark_array(&function->chunk.constants);
+    break;
+  }
+  case OBJ_INSTANCE: {
+    ObjInstance *instance = (ObjInstance *)object;
+    mark_object((Obj *)instance->klass);
+    mark_table(&instance->fields);
     break;
   }
   case OBJ_UPVALUE:
