@@ -38,6 +38,7 @@ typedef enum OpCode_t {
   OP_CLOSURE,
   OP_CLOSE_UPVALUE,
   OP_RETURN,
+  OP_CLASS,
 } OpCode;
 
 typedef struct Chunk_t {
