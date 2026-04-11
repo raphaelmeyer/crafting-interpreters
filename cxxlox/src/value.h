@@ -9,7 +9,7 @@
 struct Nil {};
 
 using Value = std::variant<Nil, bool, double, std::string, ObjFunction,
-                           ObjNative, ObjClosure, ObjUpvalue>;
+                           ObjNative, ObjClosure, ObjUpvalue, ObjClass>;
 
 inline Value bool_value(bool value) { return {value}; }
 
@@ -65,6 +65,14 @@ inline bool is_closure(Value const &value) {
 
 inline ObjClosure as_closure(Value const &value) {
   return std::get<ObjClosure>(value);
+}
+
+inline bool is_class(Value const &value) {
+  return std::holds_alternative<ObjClass>(value);
+}
+
+inline ObjClass as_class(Value const &value) {
+  return std::get<ObjClass>(value);
 }
 
 using ValueArray = std::vector<Value>;

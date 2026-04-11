@@ -28,6 +28,8 @@ std::string to_string(ObjClosure closure) {
   return to_string(closure->function);
 }
 
+std::string to_string(ObjClass klass) { return klass->name; }
+
 std::string to_string(ObjUpvalue) { return "upvalue"; }
 
 } // namespace

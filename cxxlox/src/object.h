@@ -29,6 +29,10 @@ struct Closure {
   std::vector<ObjUpvalue> upvalues;
 };
 
+struct Class {
+  std::string name;
+};
+
 struct StackSlot {
   std::size_t from_start;
 };
@@ -44,4 +48,5 @@ struct UpValue {
 ObjFunction new_function();
 ObjNative new_native(std::size_t arity, NativeFn function);
 ObjClosure new_closure(ObjFunction function);
+ObjClass new_class(std::string const &name);
 ObjUpvalue new_upvalue(std::size_t stack_slot);
