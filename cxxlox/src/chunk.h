@@ -34,7 +34,8 @@ enum class OpCode : std::uint8_t {
   CALL,
   CLOSURE,
   CLOSE_UPVALUE,
-  RETURN
+  RETURN,
+  CLASS,
 };
 
 struct Chunk {

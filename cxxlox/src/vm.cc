@@ -530,6 +530,10 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::CLASS:
+      push(new_class(read_string(*frame)));
+      break;
+
     default:
       return InterpretResult::RUNTIME_ERROR;
     }

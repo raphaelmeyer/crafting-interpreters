@@ -159,6 +159,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_CLOSE_UPVALUE", offset);
   case OpCode::RETURN:
     return simple_instruction("OP_RETURN", offset);
+  case OpCode::CLASS:
+    return constant_instruction("OP_CLASS", chunk, offset);
   default:
     std::cout << std::format("Unknown opcode {:d}\n",
                              static_cast<uint8_t>(instruction));
