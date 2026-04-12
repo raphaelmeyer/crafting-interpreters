@@ -70,6 +70,8 @@ static void define_native(const char *name, NativeFn function) {
   push(obj_value(copy_string(name, strlen(name))));
   push(obj_value(new_native(function)));
   table_set(&vm.globals, as_string(vm.stack[0]), vm.stack[1]);
+  pop();
+  pop();
 }
 
 static bool call(ObjClosure *closure, int arg_count) {
