@@ -22,3 +22,8 @@ ObjClass new_class(std::string const &name) {
 ObjUpvalue new_upvalue(std::size_t stack_slot) {
   return std::make_shared<UpValue>(StackSlot{stack_slot});
 }
+
+ObjInstance new_instance(ObjClass klass) {
+  auto instance = std::make_shared<Instance>(klass);
+  return instance;
+}

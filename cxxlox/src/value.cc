@@ -30,6 +30,10 @@ std::string to_string(ObjClosure closure) {
 
 std::string to_string(ObjClass klass) { return klass->name; }
 
+std::string to_string(ObjInstance instance) {
+  return std::format("{} instance", instance->klass->name);
+}
+
 std::string to_string(ObjUpvalue) { return "upvalue"; }
 
 } // namespace

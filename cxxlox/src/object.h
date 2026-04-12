@@ -8,6 +8,7 @@
 #include <functional>
 #include <span>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct Function {
@@ -33,6 +34,11 @@ struct Class {
   std::string name;
 };
 
+struct Instance {
+  ObjClass klass;
+  std::unordered_map<std::string, Value> fields;
+};
+
 struct StackSlot {
   std::size_t from_start;
 };
@@ -49,4 +55,5 @@ ObjFunction new_function();
 ObjNative new_native(std::size_t arity, NativeFn function);
 ObjClosure new_closure(ObjFunction function);
 ObjClass new_class(std::string const &name);
+ObjInstance new_instance(ObjClass klass);
 ObjUpvalue new_upvalue(std::size_t stack_slot);

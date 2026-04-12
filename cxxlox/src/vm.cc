@@ -203,7 +203,12 @@ bool LoxVM::call_native(ObjNative native, std::size_t arg_count) {
 }
 
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
-  if (is_closure(callee)) {
+  if (is_class(callee)) {
+    auto const klass = as_class(callee);
+    auto slot = std::prev(vm.stack_top, arg_count + 1);
+    *slot = new_instance(klass);
+    return true;
+  } else if (is_closure(callee)) {
     return call(as_closure(callee), arg_count);
   } else if (is_native(callee)) {
     return call_native(as_native(callee), arg_count);
