@@ -390,6 +390,40 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::GET_PROPERTY: {
+      if (not is_instance(peek(0))) {
+        runtime_error("Only instances have properties.");
+        return InterpretResult::RUNTIME_ERROR;
+      }
+
+      auto const instance = as_instance(peek(0));
+      auto const name = read_string(*frame);
+
+      if (not instance->fields.contains(name)) {
+        runtime_error("Undefined property '{}'.", name);
+        return InterpretResult::RUNTIME_ERROR;
+      }
+
+      auto const value = instance->fields.at(name);
+      pop();
+      push(value);
+      break;
+    }
+
+    case OpCode::SET_PROPERTY: {
+      if (not is_instance(peek(1))) {
+        runtime_error("Only instances have fields.");
+        return InterpretResult::RUNTIME_ERROR;
+      }
+
+      auto const instance = as_instance(peek(1));
+      instance->fields.insert_or_assign(read_string(*frame), peek(0));
+      auto const value = pop();
+      pop();
+      push(value);
+      break;
+    }
+
     case OpCode::EQUAL: {
       auto const b = pop();
       auto const a = pop();

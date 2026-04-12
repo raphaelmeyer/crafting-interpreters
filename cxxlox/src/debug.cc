@@ -124,6 +124,10 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return byte_instruction("OP_GET_UPVALUE", chunk, offset);
   case OpCode::SET_UPVALUE:
     return byte_instruction("OP_SET_UPVALUE", chunk, offset);
+  case OpCode::GET_PROPERTY:
+    return constant_instruction("OP_GET_PROPERTY", chunk, offset);
+  case OpCode::SET_PROPERTY:
+    return constant_instruction("OP_SET_PROPERTY", chunk, offset);
   case OpCode::EQUAL:
     return simple_instruction("OP_EQUAL", offset);
   case OpCode::GREATER:

@@ -41,6 +41,7 @@ public:
 
   void binary(bool can_assign);
   void call(bool can_assign);
+  void dot(bool can_assign);
   void literal(bool can_assign);
   void grouping(bool can_assign);
   void number(bool can_assign);
@@ -428,6 +429,18 @@ void LoxCompiler::literal(bool) {
   }
 }
 
+void LoxCompiler::dot(bool can_assign) {
+  consume(TokenType::IDENTIFIER, "Expect property name after '.'.");
+  auto const name = identifier_constant(parser.previous);
+
+  if (can_assign && match(TokenType::EQUAL)) {
+    expression();
+    emit_bytes(OpCode::SET_PROPERTY, name);
+  } else {
+    emit_bytes(OpCode::GET_PROPERTY, name);
+  }
+}
+
 void LoxCompiler::grouping(bool) {
   expression();
   consume(TokenType::RIGHT_PAREN, "Expect ')' after expression.");
@@ -497,7 +510,7 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::LEFT_BRACE,    {nullptr,      nullptr,          Precedence::NONE}}, 
   {TokenType::RIGHT_BRACE,   {nullptr,      nullptr,          Precedence::NONE}},
   {TokenType::COMMA,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::DOT,           {nullptr,      nullptr,          Precedence::NONE}},
+  {TokenType::DOT,           {nullptr,      &L::dot,          Precedence::CALL}},
   {TokenType::MINUS,         {&L::unary,    &L::binary,       Precedence::TERM}},
   {TokenType::PLUS,          {nullptr,      &L::binary,       Precedence::TERM}},
   {TokenType::SEMICOLON,     {nullptr,      nullptr,          Precedence::NONE}},
