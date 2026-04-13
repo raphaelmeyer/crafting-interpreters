@@ -164,6 +164,19 @@ package body Lox_Value is
         and then V.Object_Value.Kind = Lox_Object.OBJ_KIND_FUNCTION;
    end Is_Function;
 
+   function Make_Instance (Instance : Lox_Object.Object_Access) return Value is
+   begin
+      return (VAL_OBJECT, Object_Value => Instance);
+   end Make_Instance;
+
+   function Is_Instance (V : Value) return Boolean is
+      use type Lox_Object.Object_Kind;
+   begin
+      return
+        V.Kind = VAL_OBJECT
+        and then V.Object_Value.Kind = Lox_Object.OBJ_KIND_INSTANCE;
+   end Is_Instance;
+
    function Make_Native (Arity : Natural; Func : Native_Fn) return Value is
    begin
       return (VAL_NATIVE, Native_Value => (Func => Func, Arity => Arity));

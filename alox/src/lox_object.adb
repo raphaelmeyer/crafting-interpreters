@@ -50,6 +50,25 @@ package body Lox_Object is
       end return;
    end New_Function;
 
+   function New_Instance
+     (Objs : in out Object_Access; Class : Object_Access) return Object_Access
+   is
+   begin
+      Trigger_Garbage_Collection_On_Threshold (Objs);
+
+      return Instance : Object_Access do
+         Instance :=
+           new Object'
+             (Kind      => OBJ_KIND_INSTANCE,
+              Is_Marked => <>,
+              Next      => <>,
+              Class     => Class,
+              Fields    => <>);
+         Manage_Object (Objs, Instance);
+
+      end return;
+   end New_Instance;
+
    function New_Closure
      (Objs : in out Object_Access; Func : Object_Access) return Object_Access
    is
@@ -107,6 +126,9 @@ package body Lox_Object is
       case Obj.Kind is
          when OBJ_KIND_CLASS    =>
             return Unbounded.To_String (Obj.Class_Name);
+
+         when OBJ_KIND_INSTANCE =>
+            return Unbounded.To_String (Obj.Class.Class_Name) & " instance";
 
          when OBJ_KIND_FUNCTION =>
             if Obj.Name = Unbounded.Null_Unbounded_String then
@@ -205,6 +227,13 @@ package body Lox_Object is
       end if;
    end Mark_Value;
 
+   procedure Mark_Table (Table : in out Lox_Table.Table) is
+   begin
+      for Position in Table.Iterate loop
+         Mark_Value (Lox_Table.Maps.Reference (Table, Position));
+      end loop;
+   end Mark_Table;
+
    procedure Mark_Object (Obj : Object_Access) is
    begin
       if Obj = null or else Obj.Is_Marked then
@@ -225,6 +254,10 @@ package body Lox_Object is
       case Obj.Kind is
          when OBJ_KIND_CLASS    =>
             null;
+
+         when OBJ_KIND_INSTANCE =>
+            Mark_Object (Obj.Class);
+            Mark_Table (Obj.Fields);
 
          when OBJ_KIND_UPVALUE  =>
             if Obj.Instance.Closed then

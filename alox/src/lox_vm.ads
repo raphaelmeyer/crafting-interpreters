@@ -62,6 +62,8 @@ private
      (Closure : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean;
    function Call_Native
      (Native : Lox_Value.Native; Arg_Count : Natural) return Boolean;
+   function Call_Constructor
+     (Class : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean;
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 

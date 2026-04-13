@@ -179,10 +179,24 @@ package body Lox_VM is
       return True;
    end Call_Native;
 
+   function Call_Constructor
+     (Class : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean
+   is
+      Slot : constant Stack_Index :=
+        VM.Stack_Top - Stack_Index (Arg_Count) - 1;
+   begin
+      VM.Stack (Slot) :=
+        Lox_Value.Make_Instance (Lox_Object.New_Instance (VM.Objects, Class));
+      return True;
+   end Call_Constructor;
+
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
-      if Lox_Value.Is_Closure (Callee) then
+      if Lox_Value.Is_Class (Callee) then
+         return Call_Constructor (Callee.Object_Value, Arg_Count);
+
+      elsif Lox_Value.Is_Closure (Callee) then
          return Call (Callee.Object_Value, Arg_Count);
 
       elsif Lox_Value.Is_Native (Callee) then

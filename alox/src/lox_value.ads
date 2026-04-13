@@ -91,6 +91,9 @@ package Lox_Value is
    function Make_Function (Func : Lox_Object.Object_Access) return Value;
    function Is_Function (V : Value) return Boolean;
 
+   function Make_Instance (Instance : Lox_Object.Object_Access) return Value;
+   function Is_Instance (V : Value) return Boolean;
+
    function Make_Native (Arity : Natural; Func : Native_Fn) return Value;
    function Is_Native (V : Value) return Boolean;
 

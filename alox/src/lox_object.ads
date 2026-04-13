@@ -1,4 +1,5 @@
 with Lox_Chunk;
+with Lox_Table;
 with Lox_Value;
 
 with Ada.Containers.Vectors;
@@ -10,7 +11,11 @@ package Lox_Object is
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
    type Object_Kind is
-     (OBJ_KIND_CLASS, OBJ_KIND_FUNCTION, OBJ_KIND_CLOSURE, OBJ_KIND_UPVALUE);
+     (OBJ_KIND_CLASS,
+      OBJ_KIND_FUNCTION,
+      OBJ_KIND_CLOSURE,
+      OBJ_KIND_INSTANCE,
+      OBJ_KIND_UPVALUE);
 
    type Object (Kind : Object_Kind);
    type Object_Access is access all Object;
@@ -39,6 +44,10 @@ package Lox_Object is
          when OBJ_KIND_CLASS =>
             Class_Name : Unbounded_String;
 
+         when OBJ_KIND_INSTANCE =>
+            Class  : Object_Access;
+            Fields : Lox_Table.Table;
+
          when OBJ_KIND_FUNCTION =>
             Arity         : Natural;
             Upvalue_Count : Natural;
@@ -57,6 +66,8 @@ package Lox_Object is
    function New_Class
      (Objs : in out Object_Access; Name : String) return Object_Access;
    function New_Function (Objs : in out Object_Access) return Object_Access;
+   function New_Instance
+     (Objs : in out Object_Access; Class : Object_Access) return Object_Access;
    function New_Closure
      (Objs : in out Object_Access; Func : Object_Access) return Object_Access;
    function New_Upvalue
@@ -77,6 +88,7 @@ private
      (Objs : in out Object_Access);
    procedure Mark_Roots;
    procedure Mark_Value (Value : in out Lox_Value.Value);
+   procedure Mark_Table (Table : in out Lox_Table.Table);
    procedure Mark_Object (Obj : Object_Access);
    procedure Trace_References (Obj : Object_Access);
    procedure Sweep (Objs : in out Object_Access);
