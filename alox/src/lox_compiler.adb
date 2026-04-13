@@ -600,7 +600,8 @@ package body Lox_Compiler is
                Error_At_Current ("Can't have more than 255 parameters.");
             end if;
             declare
-               Arg : constant Byte := Parse_Variable ("");
+               Arg : constant Byte :=
+                 Parse_Variable ("Expect parameter name.");
             begin
                Define_Variable (Arg);
             end;
@@ -628,6 +629,20 @@ package body Lox_Compiler is
          end loop;
       end if;
    end Function_Definition;
+
+   procedure Class_Declaration is
+      Name_Constant : Byte;
+   begin
+      Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect class name.");
+      Name_Constant := Identifier_Constant (Context.Parser.Previous);
+      Declare_Variable;
+
+      Emit_Bytes (Lox_Chunk.OP_CLASS, Name_Constant);
+      Define_Variable (Name_Constant);
+
+      Consume (Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+      Consume (Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+   end Class_Declaration;
 
    procedure Variable_Declaration is
       Global : constant Byte := Parse_Variable ("Expect variable name.");
@@ -840,7 +855,9 @@ package body Lox_Compiler is
 
    procedure Declaration is
    begin
-      if Match (Lox_Scanner.TOKEN_FUN) then
+      if Match (Lox_Scanner.TOKEN_CLASS) then
+         Class_Declaration;
+      elsif Match (Lox_Scanner.TOKEN_FUN) then
          Function_Declaration;
       elsif Match (Lox_Scanner.TOKEN_VAR) then
          Variable_Declaration;

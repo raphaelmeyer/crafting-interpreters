@@ -709,6 +709,16 @@ package body Lox_VM is
                        Call_Frame_Index (Natural'Pred (VM.Frame_Count));
                   end;
 
+               when Lox_Chunk.OP_CLASS'Enum_Rep         =>
+                  declare
+                     Name  : constant String :=
+                       Unbounded.To_String (Read_String (Frame));
+                     Klass : constant Lox_Object.Object_Access :=
+                       Lox_Object.New_Class (VM.Objects, Name);
+                  begin
+                     Push (Lox_Value.Make_Class (Klass));
+                  end;
+
                when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
                   declare
                      Func    : constant Lox_Object.Object_Access :=
