@@ -71,7 +71,7 @@ package body Lox_VM is
    procedure Iterate_Globals (Action : not null Value_Action) is
    begin
       for Cursor in VM.Globals.Iterate loop
-         Action (Hash_Table.Reference (VM.Globals, Cursor));
+         Action (Lox_Table.Maps.Reference (VM.Globals, Cursor));
       end loop;
    end Iterate_Globals;
 
@@ -97,21 +97,6 @@ package body Lox_VM is
          Upvalue := Upvalue.Instance.Next_Open;
       end loop;
    end Iterate_Open_Upvalues;
-
-   function Hash_String
-     (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type
-   is
-      use type Ada.Containers.Hash_Type;
-      Hash : Ada.Containers.Hash_Type := 2166136261;
-      Char : Character;
-   begin
-      for Index in 1 .. Lox_Value.Unbounded.Length (Key) loop
-         Char := Lox_Value.Unbounded.Element (Key, Index);
-         Hash := Hash xor Ada.Containers.Hash_Type (Character'Pos (Char));
-         Hash := Hash * 16777619;
-      end loop;
-      return Hash;
-   end Hash_String;
 
    procedure Push (Value : Lox_Value.Value) is
    begin
@@ -537,18 +522,18 @@ package body Lox_VM is
                   declare
                      Name  : constant Lox_Value.Unbounded_String :=
                        Read_String (Frame);
-                     Value : constant Hash_Table.Cursor :=
+                     Value : constant Lox_Table.Cursor :=
                        VM.Globals.Find (Name);
-                     use type Hash_Table.Cursor;
+                     use type Lox_Table.Cursor;
                   begin
-                     if Value = Hash_Table.No_Element then
+                     if Value = Lox_Table.No_Element then
                         Runtime_Error
                           ("Undefined variable '"
                            & Lox_Value.Unbounded.To_String (Name)
                            & "'.");
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
-                     Push (Hash_Table.Element (Value));
+                     Push (Lox_Table.Element (Value));
                   end;
 
                when Lox_Chunk.OP_DEFINE_GLOBAL'Enum_Rep =>
@@ -569,11 +554,11 @@ package body Lox_VM is
                   declare
                      Name : constant Lox_Value.Unbounded_String :=
                        Read_String (Frame);
-                     Item : constant Hash_Table.Cursor :=
+                     Item : constant Lox_Table.Cursor :=
                        VM.Globals.Find (Name);
-                     use type Hash_Table.Cursor;
+                     use type Lox_Table.Cursor;
                   begin
-                     if Item = Hash_Table.No_Element then
+                     if Item = Lox_Table.No_Element then
                         Runtime_Error
                           ("Undefined variable '"
                            & Lox_Value.Unbounded.To_String (Name)

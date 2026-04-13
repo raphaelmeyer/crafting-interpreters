@@ -1,10 +1,9 @@
 with Lox_Chunk;
 with Lox_Object;
 with Lox_Scanner;
+with Lox_Table;
 with Lox_Value;
 with Lox_Types; use Lox_Types;
-
-with Ada.Containers.Hashed_Maps;
 
 package Lox_VM is
    type VM_Context is limited private;
@@ -41,24 +40,13 @@ package Lox_VM is
    procedure Iterate_Open_Upvalues (Action : not null Object_Action);
 
 private
-   function Hash_String
-     (Key : Lox_Value.Unbounded_String) return Ada.Containers.Hash_Type;
-
-   package Hash_Table is new
-     Ada.Containers.Hashed_Maps
-       (Key_Type        => Lox_Value.Unbounded_String,
-        Element_Type    => Lox_Value.Value,
-        Hash            => Hash_String,
-        Equivalent_Keys => Lox_Value.Unbounded."=",
-        "="             => Lox_Value.Values_Equal);
-
    type VM_Context is limited record
       Frames      : Call_Frame_Array;
       Frame_Count : Natural;
 
       Stack         : Stack_Array;
       Stack_Top     : Stack_Index;
-      Globals       : Hash_Table.Map;
+      Globals       : Lox_Table.Table;
       Open_Upvalues : Lox_Object.Object_Access;
 
       Objects : Lox_Object.Object_Access;
