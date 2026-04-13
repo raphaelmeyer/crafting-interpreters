@@ -82,6 +82,9 @@ package Lox_Value is
 
    function Is_Object (V : Value) return Boolean;
 
+   function Make_Class (Klass : Lox_Object.Object_Access) return Value;
+   function Is_Class (V : Value) return Boolean;
+
    function Make_Closure (Closure : Lox_Object.Object_Access) return Value;
    function Is_Closure (V : Value) return Boolean;
 

@@ -125,6 +125,19 @@ package body Lox_Value is
       return V.Kind = VAL_OBJECT;
    end Is_Object;
 
+   function Make_Class (Klass : Lox_Object.Object_Access) return Value is
+   begin
+      return (VAL_OBJECT, Object_Value => Klass);
+   end Make_Class;
+
+   function Is_Class (V : Value) return Boolean is
+      use type Lox_Object.Object_Kind;
+   begin
+      return
+        V.Kind = VAL_OBJECT
+        and then V.Object_Value.Kind = Lox_Object.OBJ_KIND_CLASS;
+   end Is_Class;
+
    function Make_Closure (Closure : Lox_Object.Object_Access) return Value is
    begin
       return (VAL_OBJECT, Object_Value => Closure);

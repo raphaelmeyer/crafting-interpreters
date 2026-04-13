@@ -9,7 +9,8 @@ package Lox_Object is
    package Unbounded renames Ada.Strings.Unbounded;
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
-   type Object_Kind is (OBJ_KIND_FUNCTION, OBJ_KIND_CLOSURE, OBJ_KIND_UPVALUE);
+   type Object_Kind is
+     (OBJ_KIND_CLASS, OBJ_KIND_FUNCTION, OBJ_KIND_CLOSURE, OBJ_KIND_UPVALUE);
 
    type Object (Kind : Object_Kind);
    type Object_Access is access all Object;
@@ -35,6 +36,9 @@ package Lox_Object is
 
       Next : Object_Access;
       case Kind is
+         when OBJ_KIND_CLASS =>
+            Class_Name : Unbounded_String;
+
          when OBJ_KIND_FUNCTION =>
             Arity         : Natural;
             Upvalue_Count : Natural;
@@ -50,6 +54,8 @@ package Lox_Object is
       end case;
    end record;
 
+   function New_Class
+     (Objs : in out Object_Access; Name : String) return Object_Access;
    function New_Function (Objs : in out Object_Access) return Object_Access;
    function New_Closure
      (Objs : in out Object_Access; Func : Object_Access) return Object_Access;

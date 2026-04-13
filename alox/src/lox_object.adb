@@ -12,6 +12,23 @@ package body Lox_Object is
    Next_GC_Run_Threshold : Natural := 10;
    GC_Grow_Factor        : constant Natural := 2;
 
+   function New_Class
+     (Objs : in out Object_Access; Name : String) return Object_Access is
+   begin
+      Trigger_Garbage_Collection_On_Threshold (Objs);
+
+      return Klass : Object_Access do
+         Klass :=
+           new Object'
+             (Kind       => OBJ_KIND_CLASS,
+              Is_Marked  => <>,
+              Next       => <>,
+              Class_Name => Unbounded.To_Unbounded_String (Name));
+         Manage_Object (Objs, Klass);
+
+      end return;
+   end New_Class;
+
    function New_Function (Objs : in out Object_Access) return Object_Access is
    begin
       Trigger_Garbage_Collection_On_Threshold (Objs);
@@ -88,6 +105,9 @@ package body Lox_Object is
       use type Unbounded.Unbounded_String;
    begin
       case Obj.Kind is
+         when OBJ_KIND_CLASS    =>
+            return Unbounded.To_String (Obj.Class_Name);
+
          when OBJ_KIND_FUNCTION =>
             if Obj.Name = Unbounded.Null_Unbounded_String then
                return "<script>";
@@ -203,6 +223,9 @@ package body Lox_Object is
    procedure Trace_References (Obj : Object_Access) is
    begin
       case Obj.Kind is
+         when OBJ_KIND_CLASS    =>
+            null;
+
          when OBJ_KIND_UPVALUE  =>
             if Obj.Instance.Closed then
                Mark_Value (Obj.Instance.Value);
