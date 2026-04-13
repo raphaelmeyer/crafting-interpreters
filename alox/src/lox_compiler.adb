@@ -20,7 +20,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_LEFT_BRACE    => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RIGHT_BRACE   => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_COMMA         => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_DOT           => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_DOT           => (null, Dot'Access, PREC_CALL),
       Lox_Scanner.TOKEN_MINUS         =>
         (Unary'Access, Binary'Access, PREC_TERM),
       Lox_Scanner.TOKEN_PLUS          => (null, Binary'Access, PREC_TERM),
@@ -460,6 +460,21 @@ package body Lox_Compiler is
             return;
       end case;
    end Literal;
+
+   procedure Dot (Can_Assign : Boolean) is
+      Name : Byte;
+   begin
+      Consume
+        (Lox_Scanner.TOKEN_IDENTIFIER, "Expect property name after '.'.");
+      Name := Identifier_Constant (Context.Parser.Previous);
+
+      if Can_Assign and then Match (Lox_Scanner.TOKEN_EQUAL) then
+         Expression;
+         Emit_Bytes (Lox_Chunk.OP_SET_PROPERTY, Name);
+      else
+         Emit_Bytes (Lox_Chunk.OP_GET_PROPERTY, Name);
+      end if;
+   end Dot;
 
    procedure Grouping (Can_Assign : Boolean with Unreferenced) is
    begin

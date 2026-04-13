@@ -142,6 +142,7 @@ private
 
    procedure Binary (Can_Assign : Boolean);
    procedure Call (Can_Assign : Boolean);
+   procedure Dot (Can_Assign : Boolean);
    procedure Literal (Can_Assign : Boolean);
    procedure Grouping (Can_Assign : Boolean);
    procedure Number (Can_Assign : Boolean);

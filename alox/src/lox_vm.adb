@@ -600,6 +600,62 @@ package body Lox_VM is
                         Peek (0));
                   end;
 
+               when Lox_Chunk.OP_GET_PROPERTY'Enum_Rep  =>
+                  if not Lox_Value.Is_Instance (Peek (0)) then
+                     Runtime_Error ("Only instances have properties.");
+                     return INTERPRET_RUNTIME_ERROR;
+                  end if;
+
+                  declare
+                     Instance : constant Lox_Object.Object_Access :=
+                       Peek (0).Object_Value;
+                     Name     : constant Unbounded.Unbounded_String :=
+                       Read_String (Frame);
+                     Value    : constant Lox_Table.Cursor :=
+                       Instance.Fields.Find (Name);
+                     Unused   : Lox_Value.Value;
+                     use type Lox_Table.Cursor;
+                  begin
+                     if Value = Lox_Table.No_Element then
+                        Runtime_Error
+                          ("Undefined property '"
+                           & Unbounded.To_String (Name)
+                           & "'.");
+                        return INTERPRET_RUNTIME_ERROR;
+                     else
+                        Unused := Pop;
+                        Push (Lox_Table.Element (Value));
+                     end if;
+                  end;
+
+               when Lox_Chunk.OP_SET_PROPERTY'Enum_Rep  =>
+                  if not Lox_Value.Is_Instance (Peek (1)) then
+                     Runtime_Error ("Only instances have fields.");
+                     return INTERPRET_RUNTIME_ERROR;
+                  end if;
+
+                  declare
+                     Instance : constant Lox_Object.Object_Access :=
+                       Peek (1).Object_Value;
+                     Name     : constant Unbounded.Unbounded_String :=
+                       Read_String (Frame);
+                     Field    : constant Lox_Table.Cursor :=
+                       Instance.Fields.Find (Name);
+                     use type Lox_Table.Cursor;
+                  begin
+                     if Field = Lox_Table.No_Element then
+                        Instance.Fields.Insert (Name, Peek (0));
+                     else
+                        Instance.Fields.Replace_Element (Field, Peek (0));
+                     end if;
+                     declare
+                        Value  : constant Lox_Value.Value := Pop;
+                        Unused : constant Lox_Value.Value := Pop;
+                     begin
+                        Push (Value);
+                     end;
+                  end;
+
                when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
                   declare
                      B : constant Lox_Value.Value := Pop;
