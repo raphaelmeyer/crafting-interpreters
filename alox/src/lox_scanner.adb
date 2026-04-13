@@ -145,7 +145,7 @@ package body Lox_Scanner is
 
    function Peek (S : in out Scanner) return Character is
    begin
-      if S.Current > S.Source'Last then
+      if Is_At_End (S) then
          return Ada.Characters.Latin_1.NUL;
       end if;
       return S.Source (S.Current);
@@ -153,7 +153,7 @@ package body Lox_Scanner is
 
    function Peek_Next (S : in out Scanner) return Character is
    begin
-      if Is_At_End (S) then
+      if S.Current >= S.Source'Last then
          return Ada.Characters.Latin_1.NUL;
       end if;
       return S.Source (Positive'Succ (S.Current));
@@ -176,13 +176,6 @@ package body Lox_Scanner is
    function Make_Token (S : in out Scanner; Kind : TokenType) return Token is
       To : constant Natural := Natural'Pred (S.Current);
    begin
-      if S.Source'Last < To then
-         return
-           (Kind,
-            Lexeme => Unbounded.To_Unbounded_String (""),
-            Line   => S.Line);
-      end if;
-
       return
         (Kind,
          Lexeme => Unbounded.To_Unbounded_String (S.Source (S.Start .. To)),
