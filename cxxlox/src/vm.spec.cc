@@ -88,6 +88,49 @@ TEST_SUITE("vm") {
     REQUIRE(out == "1\n");
   }
 
+  TEST_CASE("print statement") {
+    auto const [result, out, err] = run("print \"hello\";");
+    REQUIRE(result == InterpretResult::OK);
+    REQUIRE(out == "hello\n");
+  }
+
+  TEST_CASE("closure captures upvalue") {
+    auto const [result, out, err] = run(R"(
+      fun make_counter() {
+        var i = 0;
+        fun increment() { i = i + 1; return i; }
+        return increment;
+      }
+      var c = make_counter();
+      print c();
+      print c();
+    )");
+    REQUIRE(result == InterpretResult::OK);
+    REQUIRE(out == "1\n2\n");
+  }
+
+  TEST_CASE("block shadowing") {
+    auto const [result, out, err] = run(R"(
+      var x = "outer";
+      { var x = "inner"; print x; }
+      print x;
+    )");
+    REQUIRE(result == InterpretResult::OK);
+    REQUIRE(out == "inner\nouter\n");
+  }
+
+  TEST_CASE("runtime error - nil operand") {
+    auto const [result, out, err] = run("nil + 1;");
+    REQUIRE(result == InterpretResult::RUNTIME_ERROR);
+    REQUIRE_FALSE(err.empty());
+  }
+
+  TEST_CASE("runtime error - arity mismatch") {
+    auto const [result, out, err] = run("fun f(a) { return a; } f(1, 2);");
+    REQUIRE(result == InterpretResult::RUNTIME_ERROR);
+    REQUIRE_FALSE(err.empty());
+  }
+
   TEST_CASE("compile error") {
     auto const [result, out, err] = run("var;");
     REQUIRE(result == InterpretResult::COMPILE_ERROR);
