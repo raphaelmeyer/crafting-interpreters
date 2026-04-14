@@ -26,6 +26,15 @@
       "configurePreset": "cxxlox"
     }
   ],
+  "testPresets": [
+    {
+      "name": "cxxlox",
+      "configurePreset": "cxxlox",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ],
   "workflowPresets": [
     {
       "name": "cxxlox",
@@ -37,6 +46,10 @@
         {
           "name": "cxxlox",
           "type": "build"
+        },
+        {
+          "name": "cxxlox",
+          "type": "test"
         }
       ]
     }
