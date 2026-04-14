@@ -2,6 +2,7 @@
 
 #include "object_fwd.h"
 
+#include <iostream>
 #include <string>
 #include <variant>
 #include <vector>
@@ -86,6 +87,6 @@ inline ObjInstance as_instance(Value const &value) {
 
 using ValueArray = std::vector<Value>;
 
-void print_value(Value value);
+void print_value(std::ostream &out, Value value);
 
 bool values_equal(Value const &a, Value const &b);

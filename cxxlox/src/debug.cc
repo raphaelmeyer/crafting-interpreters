@@ -26,7 +26,7 @@ std::size_t constant_instruction(std::string name, Chunk const &chunk,
   auto const constant = chunk.code.at(offset + 1);
   std::cout << std::format("{:16} {:4} '", name, constant);
   if (constant < chunk.constants.size()) {
-    print_value(chunk.constants.at(constant));
+    print_value(std::cout, chunk.constants.at(constant));
   }
   std::cout << "'\n";
 
@@ -60,7 +60,7 @@ std::size_t closure_instruction(std::string name, Chunk const &chunk,
   offset += 2;
 
   std::cout << std::format("{:16} {:4} ", name, constant);
-  print_value(chunk.constants.at(constant));
+  print_value(std::cout, chunk.constants.at(constant));
   std::cout << "\n";
 
   auto const function = as_function(chunk.constants.at(constant));

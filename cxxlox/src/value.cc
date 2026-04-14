@@ -3,7 +3,6 @@
 #include "object.h"
 
 #include <format>
-#include <iostream>
 
 namespace {
 
@@ -38,8 +37,8 @@ std::string to_string(ObjUpvalue) { return "upvalue"; }
 
 } // namespace
 
-void print_value(Value value) {
-  std::cout << std::visit([](auto &&v) { return to_string(v); }, value);
+void print_value(std::ostream &out, Value value) {
+  out << std::visit([](auto &&v) { return to_string(v); }, value);
 }
 
 bool values_equal(Value const &a, Value const &b) {

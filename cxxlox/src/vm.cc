@@ -19,8 +19,9 @@ namespace {
 
 class LoxVM final : public VM {
 public:
-  LoxVM(std::unique_ptr<Compiler> &&compiler_)
-      : compiler{std::move(compiler_)} {
+  LoxVM(std::unique_ptr<Compiler> &&compiler_, std::ostream &out_,
+        std::ostream &err_)
+      : compiler{std::move(compiler_)}, out{out_}, err{err_} {
     init_vm();
   }
   ~LoxVM() { free_vm(); }
@@ -73,7 +74,7 @@ private:
 
   template <typename... Args>
   void runtime_error(std::format_string<Args...> format, Args &&...args) {
-    std::cerr << std::format(format, args...) << "\n";
+    err << std::format(format, args...) << "\n";
 
     for (auto const &frame :
          views::reverse(views::take(vm.frames, vm.frame_count))) {
@@ -81,11 +82,11 @@ private:
       auto const instruction =
           std::distance(function->chunk.code.cbegin(), frame.ip) - 1;
       auto const line = frame.closure->function->chunk.lines.at(instruction);
-      std::cerr << std::format("[line {:d}] in ", line);
+      err << std::format("[line {:d}] in ", line);
       if (function->name.empty()) {
-        std::cerr << "script" << "\n";
+        err << "script" << "\n";
       } else {
-        std::cerr << std::format("{}()\n", function->name);
+        err << std::format("{}()\n", function->name);
       }
     }
 
@@ -126,7 +127,9 @@ private:
   std::mt19937 rng{random_device()};
 
   Context vm{};
-  std::unique_ptr<Compiler> compiler{Compiler::create()};
+  std::unique_ptr<Compiler> compiler{};
+  std::ostream &out;
+  std::ostream &err;
 };
 
 void LoxVM::init_vm() {
@@ -297,18 +300,18 @@ InterpretResult LoxVM::run() {
   auto frame = vm.frames.begin() + vm.frame_count - 1;
 
   if (Debug::TRACE_EXECUTION) {
-    std::cout << "== run vm ==" << "\n";
+    out << "== run vm ==" << "\n";
   }
 
   for (;;) {
     if (Debug::TRACE_EXECUTION) {
-      std::cout << "          ";
+      out << "          ";
       for (auto slot = vm.stack.begin(); slot < vm.stack_top; ++slot) {
-        std::cout << "[ ";
-        print_value(*slot);
-        std::cout << " ]";
+        out << "[ ";
+        print_value(out, *slot);
+        out << " ]";
       }
-      std::cout << "\n";
+      out << "\n";
 
       disassemble_instruction(
           frame->closure->function->chunk,
@@ -495,8 +498,8 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::PRINT: {
-      print_value(pop());
-      std::cout << "\n";
+      print_value(out, pop());
+      out << "\n";
       break;
     }
 
@@ -596,6 +599,6 @@ InterpretResult LoxVM::interpret(std::string_view source) {
 
 } // namespace
 
-std::unique_ptr<VM> VM::create() {
-  return std::make_unique<LoxVM>(Compiler::create());
+std::unique_ptr<VM> VM::create(std::ostream &out, std::ostream &err) {
+  return std::make_unique<LoxVM>(Compiler::create(err), out, err);
 }

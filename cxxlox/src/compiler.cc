@@ -34,8 +34,8 @@ enum class Precedence {
 
 class LoxCompiler final : public Compiler {
 public:
-  LoxCompiler(std::unique_ptr<Scanner> &&scanner_)
-      : scanner{std::move(scanner_)} {}
+  LoxCompiler(std::unique_ptr<Scanner> &&scanner_, std::ostream &err_)
+      : scanner{std::move(scanner_)}, err{err_} {}
 
   ObjFunction compile(std::string_view source) override;
 
@@ -162,6 +162,7 @@ private:
   Context *current{nullptr};
 
   std::unique_ptr<Scanner> scanner{};
+  std::ostream &err;
 };
 
 using ParseFn = void (LoxCompiler::*)(bool);
@@ -180,19 +181,19 @@ void LoxCompiler::error_at(Token const &token, std::string_view message) {
   }
   parser.panic_mode = true;
 
-  std::cerr << std::format("[line {:d}] Error", token.line);
+  err << std::format("[line {:d}] Error", token.line);
 
   if (token.type == TokenType::END) {
-    std::cerr << " at end";
+    err << " at end";
   } else if (token.type == TokenType::ERROR) {
     // Nothing
   } else {
-    std::cerr << std::format(
+    err << std::format(
         " at '{:s}'",
         std::string_view{token.start, token.start + token.length});
   }
 
-  std::cerr << ": " << message << "\n";
+  err << ": " << message << "\n";
   parser.had_error = true;
 }
 
@@ -1008,6 +1009,6 @@ ObjFunction LoxCompiler::compile(std::string_view source) {
 
 } // namespace
 
-std::unique_ptr<Compiler> Compiler::create() {
-  return std::make_unique<LoxCompiler>(Scanner::create());
+std::unique_ptr<Compiler> Compiler::create(std::ostream &err) {
+  return std::make_unique<LoxCompiler>(Scanner::create(), err);
 }

@@ -2,6 +2,7 @@
 
 #include "object.h"
 
+#include <iostream>
 #include <memory>
 #include <string_view>
 
@@ -13,5 +14,5 @@ public:
 
   virtual ObjFunction compile(std::string_view source) = 0;
 
-  static std::unique_ptr<Compiler> create();
+  static std::unique_ptr<Compiler> create(std::ostream &err = std::cerr);
 };
