@@ -34,10 +34,11 @@ enum class Precedence {
 
 class LoxCompiler final : public Compiler {
 public:
-  LoxCompiler(std::unique_ptr<Scanner> &&scanner_, std::ostream &err_)
-      : scanner{std::move(scanner_)}, err{err_} {}
+  LoxCompiler(ObjList &objects_, std::unique_ptr<Scanner> &&scanner_,
+              std::ostream &err_)
+      : objects{objects_}, scanner{std::move(scanner_)}, err{err_} {}
 
-  ObjFunction compile(std::string_view source) override;
+  ObjHandle compile(std::string_view source) override;
 
   void binary(bool can_assign);
   void call(bool can_assign);
@@ -53,6 +54,7 @@ public:
 
 private:
   Chunk &current_chunk();
+  Function &current_function();
 
   void error_at(Token const &token, std::string_view message);
   void error(std::string_view message);
@@ -78,7 +80,7 @@ private:
   enum class FunctionType;
 
   void init_compiler(Context *compiler, FunctionType type);
-  ObjFunction end_compiler();
+  ObjHandle end_compiler();
 
   void begin_scope();
   void end_scope();
@@ -149,7 +151,7 @@ private:
 
   struct Context {
     Context *enclosing;
-    ObjFunction function;
+    ObjHandle function;
     FunctionType type;
 
     std::array<Local, UINT8_COUNT> locals;
@@ -161,6 +163,7 @@ private:
   Parser parser{};
   Context *current{nullptr};
 
+  ObjList &objects;
   std::unique_ptr<Scanner> scanner{};
   std::ostream &err;
 };
@@ -173,7 +176,11 @@ struct ParseRule {
   Precedence precedence;
 };
 
-Chunk &LoxCompiler::current_chunk() { return current->function->chunk; }
+Chunk &LoxCompiler::current_chunk() { return current_function().chunk; }
+
+Function &LoxCompiler::current_function() {
+  return std::get<Function>(current->function.lock()->data);
+}
 
 void LoxCompiler::error_at(Token const &token, std::string_view message) {
   if (parser.panic_mode) {
@@ -307,15 +314,14 @@ void LoxCompiler::patch_jump(std::size_t offset) {
 
 void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
   compiler->enclosing = current;
-  compiler->function = nullptr;
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
-  compiler->function = new_function();
+  compiler->function = new_function(objects);
   current = compiler;
 
   if (type != FunctionType::SCRIPT) {
-    current->function->name =
+    current_function().name =
         std::string{parser.previous.start, parser.previous.length};
   }
 
@@ -326,14 +332,14 @@ void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
   local.name.length = 0;
 }
 
-ObjFunction LoxCompiler::end_compiler() {
+ObjHandle LoxCompiler::end_compiler() {
   emit_return();
-  ObjFunction function = current->function;
+  ObjHandle function = current->function;
 
   if (Debug::PRINT_CODE) {
     if (not parser.had_error) {
-      disassemble_chunk(current_chunk(),
-                        function->name.empty() ? "<script>" : function->name);
+      auto const &name = current_function().name;
+      disassemble_chunk(current_chunk(), name.empty() ? "<script>" : name);
     }
   }
 
@@ -602,7 +608,8 @@ std::optional<std::uint8_t> LoxCompiler::resolve_local(Context const &compiler,
 
 std::uint8_t LoxCompiler::add_upvalue(Context &compiler, std::uint8_t index,
                                       bool is_local) {
-  auto const upvalue_count = compiler.function->upvalue_count;
+  auto &function = std::get<Function>(compiler.function.lock()->data);
+  auto const upvalue_count = function.upvalue_count;
 
   for (std::size_t i = 0; i < upvalue_count; ++i) {
     auto const &upvalue = compiler.upvalues.at(i);
@@ -618,7 +625,7 @@ std::uint8_t LoxCompiler::add_upvalue(Context &compiler, std::uint8_t index,
 
   compiler.upvalues.at(upvalue_count).is_local = is_local;
   compiler.upvalues.at(upvalue_count).index = index;
-  return compiler.function->upvalue_count++;
+  return function.upvalue_count++;
 }
 
 std::optional<std::uint8_t> LoxCompiler::resolve_upvalue(Context &compiler,
@@ -737,8 +744,8 @@ void LoxCompiler::function(FunctionType type) {
   consume(TokenType::LEFT_PAREN, "Expect '(' after function name.");
   if (not check(TokenType::RIGHT_PAREN)) {
     do {
-      current->function->arity++;
-      if (current->function->arity > 255) {
+      current_function().arity++;
+      if (current_function().arity > 255) {
         error_at_current("Can't have more than 255 parameters.");
       }
       auto const constant = parse_variable("Expect parameter name.");
@@ -750,10 +757,11 @@ void LoxCompiler::function(FunctionType type) {
   block();
 
   auto function = end_compiler();
-  emit_bytes(OpCode::CLOSURE, make_constant(function));
+  emit_bytes(OpCode::CLOSURE, make_constant(obj_value(function)));
 
-  for (auto const &upvalue :
-       views::take(compiler.upvalues, function->upvalue_count)) {
+  auto const upvalue_count =
+      std::get<Function>(function.lock()->data).upvalue_count;
+  for (auto const &upvalue : views::take(compiler.upvalues, upvalue_count)) {
     emit_byte(upvalue.is_local ? 1 : 0);
     emit_byte(upvalue.index);
   }
@@ -989,7 +997,7 @@ void LoxCompiler::synchronize() {
   }
 }
 
-ObjFunction LoxCompiler::compile(std::string_view source) {
+ObjHandle LoxCompiler::compile(std::string_view source) {
   scanner->init_scanner(source);
   Context compiler{};
   init_compiler(&compiler, FunctionType::SCRIPT);
@@ -1004,11 +1012,12 @@ ObjFunction LoxCompiler::compile(std::string_view source) {
   }
 
   auto function = end_compiler();
-  return parser.had_error ? nullptr : function;
+  return parser.had_error ? ObjHandle{} : function;
 }
 
 } // namespace
 
-std::unique_ptr<Compiler> Compiler::create(std::ostream &err) {
-  return std::make_unique<LoxCompiler>(Scanner::create(), err);
+std::unique_ptr<Compiler> Compiler::create(ObjList &objects,
+                                           std::ostream &err) {
+  return std::make_unique<LoxCompiler>(objects, Scanner::create(), err);
 }

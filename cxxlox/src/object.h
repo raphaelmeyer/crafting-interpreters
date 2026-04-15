@@ -9,7 +9,7 @@
 #include <span>
 #include <string>
 #include <unordered_map>
-#include <vector>
+#include <variant>
 
 struct Function {
   std::size_t arity;
@@ -26,8 +26,8 @@ struct Native {
 };
 
 struct Closure {
-  ObjFunction function;
-  std::vector<ObjUpvalue> upvalues;
+  ObjHandle function;
+  std::vector<ObjHandle> upvalues;
 };
 
 struct Class {
@@ -35,7 +35,7 @@ struct Class {
 };
 
 struct Instance {
-  ObjClass klass;
+  ObjHandle klass;
   std::unordered_map<std::string, Value> fields;
 };
 
@@ -51,9 +51,14 @@ struct UpValue {
   std::variant<StackSlot, Closed> value;
 };
 
-ObjFunction new_function();
-ObjNative new_native(std::size_t arity, NativeFn function);
-ObjClosure new_closure(ObjFunction function);
-ObjClass new_class(std::string const &name);
-ObjInstance new_instance(ObjClass klass);
-ObjUpvalue new_upvalue(std::size_t stack_slot);
+struct Obj {
+  bool marked = false;
+  std::variant<Function, Native, Closure, Class, Instance, UpValue> data;
+};
+
+ObjHandle new_class(ObjList &objects, std::string const &name);
+ObjHandle new_closure(ObjList &objects, ObjHandle function);
+ObjHandle new_function(ObjList &objects);
+ObjHandle new_instance(ObjList &objects, ObjHandle klass);
+ObjHandle new_native(ObjList &objects, std::size_t arity, NativeFn function);
+ObjHandle new_upvalue(ObjList &objects, std::size_t stack_slot);

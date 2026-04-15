@@ -3,6 +3,7 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
+#include "object.h"
 
 #include <chrono>
 #include <format>
@@ -19,9 +20,7 @@ namespace {
 
 class LoxVM final : public VM {
 public:
-  LoxVM(std::unique_ptr<Compiler> &&compiler_, std::ostream &out_,
-        std::ostream &err_)
-      : compiler{std::move(compiler_)}, out{out_}, err{err_} {
+  LoxVM(std::ostream &out_, std::ostream &err_) : out{out_}, err{err_} {
     init_vm();
   }
   ~LoxVM() { free_vm(); }
@@ -39,7 +38,7 @@ private:
   using StackPointer = Stack::iterator;
 
   struct CallFrame {
-    ObjClosure closure;
+    ObjHandle closure;
     CodeIterator ip;
     StackPointer slots;
   };
@@ -51,8 +50,9 @@ private:
     Stack stack;
     StackPointer stack_top;
     std::unordered_map<std::string, Value> globals;
+    std::vector<ObjHandle> open_upvalues;
 
-    std::vector<ObjUpvalue> open_upvalues;
+    ObjList objects;
   };
 
   void init_vm();
@@ -63,10 +63,13 @@ private:
   Value pop();
   Value const &peek(size_t distance) const;
 
-  bool call(ObjClosure closure, std::size_t arg_count);
+  static Closure &frame_closure(CallFrame const &frame);
+  static Function &frame_function(CallFrame const &frame);
+
+  bool call(ObjHandle closure, std::size_t arg_count);
   bool call_value(Value const &callee, std::size_t arg_count);
-  bool call_native(ObjNative native, std::size_t arg_count);
-  ObjUpvalue capture_upvalue(StackPointer local);
+  bool call_native(Native const &native, std::size_t arg_count);
+  ObjHandle capture_upvalue(StackPointer local);
   void close_upvalues(StackPointer last);
 
   bool is_falsey(Value const &value) const;
@@ -78,15 +81,15 @@ private:
 
     for (auto const &frame :
          views::reverse(views::take(vm.frames, vm.frame_count))) {
-      auto const function = frame.closure->function;
+      auto const &function = frame_function(frame);
       auto const instruction =
-          std::distance(function->chunk.code.cbegin(), frame.ip) - 1;
-      auto const line = frame.closure->function->chunk.lines.at(instruction);
+          std::distance(function.chunk.code.cbegin(), frame.ip) - 1;
+      auto const line = function.chunk.lines.at(instruction);
       err << std::format("[line {:d}] in ", line);
-      if (function->name.empty()) {
-        err << "script" << "\n";
+      if (function.name.empty()) {
+        err << "script\n";
       } else {
-        err << std::format("{}()\n", function->name);
+        err << std::format("{}()\n", function.name);
       }
     }
 
@@ -94,8 +97,8 @@ private:
   }
 
   void define_native(std::string name, std::size_t arity, NativeFn function) {
-    push(name);
-    push(new_native(arity, function));
+    push(string_value(name));
+    push(new_native(vm.objects, arity, function));
     vm.globals.insert_or_assign(as_string(peek(1)), peek(0));
     pop();
     pop();
@@ -107,7 +110,7 @@ private:
   OpCode read_opcode(CallFrame &frame);
   std::string read_string(CallFrame &frame);
 
-  Value &to_value(ObjUpvalue &upvalue);
+  Value &to_value(ObjHandle upvalue);
 
   InterpretResult run();
 
@@ -132,7 +135,16 @@ private:
   std::ostream &err;
 };
 
+Closure &LoxVM::frame_closure(CallFrame const &frame) {
+  return std::get<Closure>(frame.closure.lock()->data);
+}
+
+Function &LoxVM::frame_function(CallFrame const &frame) {
+  return std::get<Function>(frame_closure(frame).function.lock()->data);
+}
+
 void LoxVM::init_vm() {
+  compiler = Compiler::create(vm.objects, err);
   reset_stack();
 
   define_native("clock", 0, [](auto, auto) {
@@ -172,9 +184,12 @@ Value const &LoxVM::peek(size_t distance) const {
   return *std::prev(vm.stack_top, 1 + distance);
 }
 
-bool LoxVM::call(ObjClosure closure, std::size_t arg_count) {
-  if (arg_count != closure->function->arity) {
-    runtime_error("Expected {} arguments but got {}.", closure->function->arity,
+bool LoxVM::call(ObjHandle closure_handle, std::size_t arg_count) {
+  auto &closure = std::get<Closure>(closure_handle.lock()->data);
+  auto &function = std::get<Function>(closure.function.lock()->data);
+
+  if (arg_count != function.arity) {
+    runtime_error("Expected {} arguments but got {}.", function.arity,
                   arg_count);
     return false;
   }
@@ -185,21 +200,20 @@ bool LoxVM::call(ObjClosure closure, std::size_t arg_count) {
   }
 
   auto &frame = vm.frames.at(vm.frame_count++);
-  frame.closure = closure;
-  frame.ip = closure->function->chunk.code.begin();
+  frame.closure = closure_handle;
+  frame.ip = function.chunk.code.begin();
   frame.slots = vm.stack_top - arg_count - 1;
   return true;
 }
 
-bool LoxVM::call_native(ObjNative native, std::size_t arg_count) {
-  if (arg_count != native->arity) {
-    runtime_error("Expected {} arguments but got {}.", native->arity,
-                  arg_count);
+bool LoxVM::call_native(Native const &native, std::size_t arg_count) {
+  if (arg_count != native.arity) {
+    runtime_error("Expected {} arguments but got {}.", native.arity, arg_count);
     return false;
   }
 
   std::span<Value> args{std::prev(vm.stack_top, arg_count), arg_count};
-  auto const result = native->function(arg_count, args);
+  auto const result = native.function(arg_count, args);
   std::advance(vm.stack_top, -(arg_count + 1));
   push(result);
   return true;
@@ -207,12 +221,11 @@ bool LoxVM::call_native(ObjNative native, std::size_t arg_count) {
 
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   if (is_class(callee)) {
-    auto const klass = as_class(callee);
     auto slot = std::prev(vm.stack_top, arg_count + 1);
-    *slot = new_instance(klass);
+    *slot = new_instance(vm.objects, as_obj(callee));
     return true;
   } else if (is_closure(callee)) {
-    return call(as_closure(callee), arg_count);
+    return call(as_obj(callee), arg_count);
   } else if (is_native(callee)) {
     return call_native(as_native(callee), arg_count);
   }
@@ -221,21 +234,23 @@ bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   return false;
 }
 
-ObjUpvalue LoxVM::capture_upvalue(StackPointer local) {
+ObjHandle LoxVM::capture_upvalue(StackPointer local) {
   size_t const slot = std::distance(vm.stack.begin(), local);
 
   auto upvalue = vm.open_upvalues.begin();
   while (upvalue != vm.open_upvalues.end() &&
-         (std::get<StackSlot>((*upvalue)->value).from_start > slot)) {
+         std::get<StackSlot>(std::get<UpValue>(upvalue->lock()->data).value)
+                 .from_start > slot) {
     ++upvalue;
   }
 
   if (upvalue != vm.open_upvalues.end() &&
-      std::get<StackSlot>((*upvalue)->value).from_start == slot) {
+      std::get<StackSlot>(std::get<UpValue>(upvalue->lock()->data).value)
+              .from_start == slot) {
     return *upvalue;
   }
 
-  auto created_upvalue = new_upvalue(slot);
+  auto created_upvalue = new_upvalue(vm.objects, slot);
   vm.open_upvalues.insert(upvalue, created_upvalue);
 
   return created_upvalue;
@@ -245,12 +260,13 @@ void LoxVM::close_upvalues(StackPointer last) {
   std::size_t const last_slot = std::distance(vm.stack.begin(), last);
   auto open_upvalue = vm.open_upvalues.begin();
   while (open_upvalue != vm.open_upvalues.end()) {
-    auto const slot = std::get<StackSlot>((*open_upvalue)->value).from_start;
+    auto &upvalue = std::get<UpValue>(open_upvalue->lock()->data);
+    auto const slot = std::get<StackSlot>(upvalue.value).from_start;
     if (slot < last_slot) {
       break;
     }
 
-    (*open_upvalue)->value = Closed{vm.stack.at(slot)};
+    upvalue.value = Closed{vm.stack.at(slot)};
     open_upvalue = vm.open_upvalues.erase(open_upvalue);
   }
 }
@@ -275,7 +291,7 @@ std::uint16_t LoxVM::read_short(CallFrame &frame) {
 }
 
 Value LoxVM::read_constant(CallFrame &frame) {
-  return frame.closure->function->chunk.constants[read_byte(frame)];
+  return frame_function(frame).chunk.constants[read_byte(frame)];
 }
 
 OpCode LoxVM::read_opcode(CallFrame &frame) {
@@ -286,13 +302,13 @@ std::string LoxVM::read_string(CallFrame &frame) {
   return as_string(read_constant(frame));
 }
 
-Value &LoxVM::to_value(ObjUpvalue &upvalue) {
-  if (std::holds_alternative<StackSlot>(upvalue->value)) {
-    auto on_stack = std::get<StackSlot>(upvalue->value);
+Value &LoxVM::to_value(ObjHandle upvalue_handle) {
+  auto &upvalue = std::get<UpValue>(upvalue_handle.lock()->data);
+  if (std::holds_alternative<StackSlot>(upvalue.value)) {
+    auto on_stack = std::get<StackSlot>(upvalue.value);
     return vm.stack.at(on_stack.from_start);
   } else {
-    auto &closed = std::get<Closed>(upvalue->value);
-    return closed.closed;
+    return std::get<Closed>(upvalue.value).closed;
   }
 }
 
@@ -313,10 +329,10 @@ InterpretResult LoxVM::run() {
       }
       out << "\n";
 
+      auto const &function = frame_function(*frame);
       disassemble_instruction(
-          frame->closure->function->chunk,
-          std::distance(frame->closure->function->chunk.code.cbegin(),
-                        frame->ip));
+          function.chunk,
+          std::distance(function.chunk.code.cbegin(), frame->ip));
     }
 
     auto const instruction = read_opcode(*frame);
@@ -383,13 +399,13 @@ InterpretResult LoxVM::run() {
 
     case OpCode::GET_UPVALUE: {
       auto const slot = read_byte(*frame);
-      push(to_value(frame->closure->upvalues.at(slot)));
+      push(to_value(frame_closure(*frame).upvalues.at(slot)));
       break;
     }
 
     case OpCode::SET_UPVALUE: {
       auto const slot = read_byte(*frame);
-      to_value(frame->closure->upvalues.at(slot)) = peek(0);
+      to_value(frame_closure(*frame).upvalues.at(slot)) = peek(0);
       break;
     }
 
@@ -399,15 +415,15 @@ InterpretResult LoxVM::run() {
         return InterpretResult::RUNTIME_ERROR;
       }
 
-      auto const instance = as_instance(peek(0));
+      auto const &instance = as_instance(peek(0));
       auto const name = read_string(*frame);
 
-      if (not instance->fields.contains(name)) {
+      if (not instance.fields.contains(name)) {
         runtime_error("Undefined property '{}'.", name);
         return InterpretResult::RUNTIME_ERROR;
       }
 
-      auto const value = instance->fields.at(name);
+      auto const value = instance.fields.at(name);
       pop();
       push(value);
       break;
@@ -419,8 +435,8 @@ InterpretResult LoxVM::run() {
         return InterpretResult::RUNTIME_ERROR;
       }
 
-      auto const instance = as_instance(peek(1));
-      instance->fields.insert_or_assign(read_string(*frame), peek(0));
+      auto &instance = as_instance(peek(1));
+      instance.fields.insert_or_assign(read_string(*frame), peek(0));
       auto const value = pop();
       pop();
       push(value);
@@ -533,18 +549,19 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::CLOSURE: {
-      auto function = as_function(read_constant(*frame));
-      auto closure = new_closure(function);
-      push(closure);
+      auto const function_handle = as_obj(read_constant(*frame));
+      auto closure = new_closure(vm.objects, function_handle);
+      push(obj_value(closure));
 
-      for (std::size_t i = 0; i < closure->upvalues.size(); ++i) {
+      auto &closure_obj = std::get<Closure>(closure.lock()->data);
+      for (std::size_t i = 0; i < closure_obj.upvalues.size(); ++i) {
         auto const is_local = read_byte(*frame);
         auto const index = read_byte(*frame);
         if (is_local) {
-          closure->upvalues.at(i) =
+          closure_obj.upvalues.at(i) =
               capture_upvalue(std::next(frame->slots, index));
         } else {
-          closure->upvalues.at(i) = frame->closure->upvalues.at(index);
+          closure_obj.upvalues.at(i) = frame_closure(*frame).upvalues.at(index);
         }
       }
 
@@ -573,7 +590,7 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::CLASS:
-      push(new_class(read_string(*frame)));
+      push(new_class(vm.objects, read_string(*frame)));
       break;
 
     default:
@@ -583,15 +600,15 @@ InterpretResult LoxVM::run() {
 }
 
 InterpretResult LoxVM::interpret(std::string_view source) {
-  ObjFunction function = compiler->compile(source);
-  if (function == nullptr) {
+  ObjHandle function = compiler->compile(source);
+  if (function.expired()) {
     return InterpretResult::COMPILE_ERROR;
   }
 
-  push(function);
-  auto closure = new_closure(function);
+  push(obj_value(function));
+  auto closure = new_closure(vm.objects, function);
   pop();
-  push(closure);
+  push(obj_value(closure));
   call(closure, 0);
 
   return run();
@@ -600,5 +617,5 @@ InterpretResult LoxVM::interpret(std::string_view source) {
 } // namespace
 
 std::unique_ptr<VM> VM::create(std::ostream &out, std::ostream &err) {
-  return std::make_unique<LoxVM>(Compiler::create(err), out, err);
+  return std::make_unique<LoxVM>(out, err);
 }

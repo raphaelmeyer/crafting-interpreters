@@ -1,17 +1,16 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 struct Function;
 struct Native;
 struct Closure;
 struct Class;
 struct Instance;
-struct UpValue;
 
-using ObjFunction = std::shared_ptr<Function>;
-using ObjNative = std::shared_ptr<Native>;
-using ObjClosure = std::shared_ptr<Closure>;
-using ObjClass = std::shared_ptr<Class>;
-using ObjInstance = std::shared_ptr<Instance>;
-using ObjUpvalue = std::shared_ptr<UpValue>;
+struct Obj;
+
+using ObjRef = std::shared_ptr<Obj>;
+using ObjHandle = std::weak_ptr<Obj>;
+using ObjList = std::vector<ObjRef>;

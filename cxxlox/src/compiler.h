@@ -1,6 +1,6 @@
 #pragma once
 
-#include "object.h"
+#include "object_fwd.h"
 
 #include <iostream>
 #include <memory>
@@ -12,7 +12,8 @@ class Compiler {
 public:
   virtual ~Compiler() = default;
 
-  virtual ObjFunction compile(std::string_view source) = 0;
+  virtual ObjHandle compile(std::string_view source) = 0;
 
-  static std::unique_ptr<Compiler> create(std::ostream &err = std::cerr);
+  static std::unique_ptr<Compiler> create(ObjList &objects,
+                                          std::ostream &err = std::cerr);
 };

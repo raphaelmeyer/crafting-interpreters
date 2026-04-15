@@ -63,8 +63,8 @@ std::size_t closure_instruction(std::string name, Chunk const &chunk,
   print_value(std::cout, chunk.constants.at(constant));
   std::cout << "\n";
 
-  auto const function = as_function(chunk.constants.at(constant));
-  for (std::size_t j = 0; j < function->upvalue_count; ++j) {
+  auto const &function = as_function(chunk.constants.at(constant));
+  for (std::size_t j = 0; j < function.upvalue_count; ++j) {
     auto const is_local = chunk.code.at(offset);
     auto const index = chunk.code.at(offset + 1);
     std::cout << std::format("{:04}    |                       {} {}", offset,
