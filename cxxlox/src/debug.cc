@@ -80,6 +80,8 @@ std::size_t closure_instruction(std::string name, Chunk const &chunk,
 
 bool Debug::TRACE_EXECUTION = false;
 bool Debug::PRINT_CODE = false;
+bool Debug::GC_LOG = false;
+bool Debug::GC_STRESS = false;
 
 void disassemble_chunk(Chunk const &chunk, std::string name) {
   std::cout << std::format("== {} ==\n", name);

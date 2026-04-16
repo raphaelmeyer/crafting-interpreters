@@ -7,6 +7,7 @@
 #include <string_view>
 
 struct Chunk;
+class GarbageCollector;
 
 class Compiler {
 public:
@@ -14,6 +15,6 @@ public:
 
   virtual ObjHandle compile(std::string_view source) = 0;
 
-  static std::unique_ptr<Compiler> create(ObjList &objects,
+  static std::unique_ptr<Compiler> create(GarbageCollector &gc,
                                           std::ostream &err = std::cerr);
 };

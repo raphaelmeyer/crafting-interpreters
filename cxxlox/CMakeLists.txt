@@ -17,6 +17,7 @@ target_sources(cxxlox-sources INTERFACE
   src/chunk.cc
   src/compiler.cc
   src/debug.cc
+  src/garbage_collector.cc
   src/object.cc
   src/scanner.cc
   src/value.cc

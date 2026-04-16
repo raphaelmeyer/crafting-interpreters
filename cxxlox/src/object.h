@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <variant>
 
+class GarbageCollector;
+
 struct Function {
   std::size_t arity;
   std::size_t upvalue_count;
@@ -52,13 +54,18 @@ struct UpValue {
 };
 
 struct Obj {
+  ~Obj();
+
   bool marked = false;
   std::variant<Function, Native, Closure, Class, Instance, UpValue> data;
 };
 
-ObjHandle new_class(ObjList &objects, std::string const &name);
-ObjHandle new_closure(ObjList &objects, ObjHandle function);
-ObjHandle new_function(ObjList &objects);
-ObjHandle new_instance(ObjList &objects, ObjHandle klass);
-ObjHandle new_native(ObjList &objects, std::size_t arity, NativeFn function);
-ObjHandle new_upvalue(ObjList &objects, std::size_t stack_slot);
+std::string_view obj_type_string(Obj const &obj);
+
+ObjHandle new_class(GarbageCollector &gc, std::string const &name);
+ObjHandle new_closure(GarbageCollector &gc, ObjHandle function);
+ObjHandle new_function(GarbageCollector &gc);
+ObjHandle new_instance(GarbageCollector &gc, ObjHandle klass);
+ObjHandle new_native(GarbageCollector &gc, std::size_t arity,
+                     NativeFn function);
+ObjHandle new_upvalue(GarbageCollector &gc, std::size_t stack_slot);

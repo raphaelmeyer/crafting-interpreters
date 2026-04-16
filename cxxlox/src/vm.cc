@@ -3,6 +3,7 @@
 #include "chunk.h"
 #include "compiler.h"
 #include "debug.h"
+#include "garbage_collector.h"
 #include "object.h"
 
 #include <chrono>
@@ -51,8 +52,6 @@ private:
     StackPointer stack_top;
     std::unordered_map<std::string, Value> globals;
     std::vector<ObjHandle> open_upvalues;
-
-    ObjList objects;
   };
 
   void init_vm();
@@ -98,7 +97,7 @@ private:
 
   void define_native(std::string name, std::size_t arity, NativeFn function) {
     push(string_value(name));
-    push(new_native(vm.objects, arity, function));
+    push(new_native(gc, arity, function));
     vm.globals.insert_or_assign(as_string(peek(1)), peek(0));
     pop();
     pop();
@@ -130,6 +129,7 @@ private:
   std::mt19937 rng{random_device()};
 
   Context vm{};
+  GarbageCollector gc{};
   std::unique_ptr<Compiler> compiler{};
   std::ostream &out;
   std::ostream &err;
@@ -144,7 +144,7 @@ Function &LoxVM::frame_function(CallFrame const &frame) {
 }
 
 void LoxVM::init_vm() {
-  compiler = Compiler::create(vm.objects, err);
+  compiler = Compiler::create(gc, err);
   reset_stack();
 
   define_native("clock", 0, [](auto, auto) {
@@ -222,7 +222,7 @@ bool LoxVM::call_native(Native const &native, std::size_t arg_count) {
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   if (is_class(callee)) {
     auto slot = std::prev(vm.stack_top, arg_count + 1);
-    *slot = new_instance(vm.objects, as_obj(callee));
+    *slot = new_instance(gc, as_obj(callee));
     return true;
   } else if (is_closure(callee)) {
     return call(as_obj(callee), arg_count);
@@ -250,7 +250,7 @@ ObjHandle LoxVM::capture_upvalue(StackPointer local) {
     return *upvalue;
   }
 
-  auto created_upvalue = new_upvalue(vm.objects, slot);
+  auto created_upvalue = new_upvalue(gc, slot);
   vm.open_upvalues.insert(upvalue, created_upvalue);
 
   return created_upvalue;
@@ -550,7 +550,7 @@ InterpretResult LoxVM::run() {
 
     case OpCode::CLOSURE: {
       auto const function_handle = as_obj(read_constant(*frame));
-      auto closure = new_closure(vm.objects, function_handle);
+      auto closure = new_closure(gc, function_handle);
       push(obj_value(closure));
 
       auto &closure_obj = std::get<Closure>(closure.lock()->data);
@@ -590,7 +590,7 @@ InterpretResult LoxVM::run() {
     }
 
     case OpCode::CLASS:
-      push(new_class(vm.objects, read_string(*frame)));
+      push(new_class(gc, read_string(*frame)));
       break;
 
     default:
@@ -606,7 +606,7 @@ InterpretResult LoxVM::interpret(std::string_view source) {
   }
 
   push(obj_value(function));
-  auto closure = new_closure(vm.objects, function);
+  auto closure = new_closure(gc, function);
   pop();
   push(obj_value(closure));
   call(closure, 0);

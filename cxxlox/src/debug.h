@@ -5,6 +5,8 @@
 struct Debug {
   static bool TRACE_EXECUTION;
   static bool PRINT_CODE;
+  static bool GC_LOG;
+  static bool GC_STRESS;
 };
 
 struct Chunk;

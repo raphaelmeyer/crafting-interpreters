@@ -70,6 +70,10 @@ int main(int argc, char *argv[]) {
       if (arg == "--debug"sv) {
         Debug::TRACE_EXECUTION = true;
         Debug::PRINT_CODE = true;
+      } else if (arg == "--gc-log"sv) {
+        Debug::GC_LOG = true;
+      } else if (arg == "--gc-stress"sv) {
+        Debug::GC_STRESS = true;
       } else {
         usage();
       }

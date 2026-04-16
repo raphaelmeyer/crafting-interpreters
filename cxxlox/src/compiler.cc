@@ -2,6 +2,7 @@
 
 #include "chunk.h"
 #include "debug.h"
+#include "garbage_collector.h"
 #include "object.h"
 #include "scanner.h"
 
@@ -34,9 +35,9 @@ enum class Precedence {
 
 class LoxCompiler final : public Compiler {
 public:
-  LoxCompiler(ObjList &objects_, std::unique_ptr<Scanner> &&scanner_,
+  LoxCompiler(GarbageCollector &gc_, std::unique_ptr<Scanner> &&scanner_,
               std::ostream &err_)
-      : objects{objects_}, scanner{std::move(scanner_)}, err{err_} {}
+      : gc{gc_}, scanner{std::move(scanner_)}, err{err_} {}
 
   ObjHandle compile(std::string_view source) override;
 
@@ -163,7 +164,7 @@ private:
   Parser parser{};
   Context *current{nullptr};
 
-  ObjList &objects;
+  GarbageCollector &gc;
   std::unique_ptr<Scanner> scanner{};
   std::ostream &err;
 };
@@ -317,7 +318,7 @@ void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
   compiler->type = type;
   compiler->local_count = 0;
   compiler->scope_depth = 0;
-  compiler->function = new_function(objects);
+  compiler->function = new_function(gc);
   current = compiler;
 
   if (type != FunctionType::SCRIPT) {
@@ -1017,7 +1018,7 @@ ObjHandle LoxCompiler::compile(std::string_view source) {
 
 } // namespace
 
-std::unique_ptr<Compiler> Compiler::create(ObjList &objects,
+std::unique_ptr<Compiler> Compiler::create(GarbageCollector &gc,
                                            std::ostream &err) {
-  return std::make_unique<LoxCompiler>(objects, Scanner::create(), err);
+  return std::make_unique<LoxCompiler>(gc, Scanner::create(), err);
 }
