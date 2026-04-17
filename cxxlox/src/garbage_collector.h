@@ -45,7 +45,10 @@ private:
   void trace_references();
   void sweep();
 
+  static constexpr std::size_t GC_HEAP_GROW_FACTOR = 2;
+
   std::function<void()> on_mark_roots;
   ObjList objects{};
   std::vector<ObjRef> gray_stack{};
+  std::size_t next_gc_threshold{16};
 };

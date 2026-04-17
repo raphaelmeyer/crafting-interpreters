@@ -10,14 +10,18 @@ void GarbageCollector::trigger() {
   if (Debug::GC_STRESS) {
     collect_garbage();
   }
+  if (objects.size() >= next_gc_threshold) {
+    collect_garbage();
+  }
 }
 
 void GarbageCollector::manage(ObjRef const &obj) {
   objects.push_back(obj);
 
   if (Debug::GC_LOG) {
-    std::cout << std::format("{} allocate {}\n", static_cast<void *>(obj.get()),
-                             obj_type_string(*obj));
+    std::cout << std::format("{} allocate {}", static_cast<void *>(obj.get()),
+                             obj_type_string(*obj))
+              << "\n";
   }
 }
 
@@ -96,14 +100,23 @@ void GarbageCollector::sweep() {
 
 void GarbageCollector::collect_garbage() {
   if (Debug::GC_LOG) {
-    std::cout << "-- gc begin\n";
+    std::cout << "-- gc begin" << "\n";
   }
+
+  std::size_t const before = objects.size();
 
   mark_roots();
   trace_references();
   sweep();
 
+  next_gc_threshold = objects.size() * GC_HEAP_GROW_FACTOR;
+
   if (Debug::GC_LOG) {
-    std::cout << "-- gc end\n";
+    std::cout << "-- gc end" << "\n";
+    std::cout << std::format(
+                     "   collected {} objects (from {} to {}) next at {}",
+                     before - objects.size(), before, objects.size(),
+                     next_gc_threshold)
+              << "\n";
   }
 }
