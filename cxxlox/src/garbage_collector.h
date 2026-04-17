@@ -43,6 +43,7 @@ private:
   void mark_roots();
   void blacken_object(ObjRef const &obj);
   void trace_references();
+  void sweep();
 
   std::function<void()> on_mark_roots;
   ObjList objects{};

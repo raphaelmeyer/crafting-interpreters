@@ -84,6 +84,16 @@ void GarbageCollector::trace_references() {
   }
 }
 
+void GarbageCollector::sweep() {
+  std::erase_if(objects, [](ObjRef const &obj) {
+    if (obj->is_marked) {
+      obj->is_marked = false;
+      return false;
+    }
+    return true;
+  });
+}
+
 void GarbageCollector::collect_garbage() {
   if (Debug::GC_LOG) {
     std::cout << "-- gc begin\n";
@@ -91,6 +101,7 @@ void GarbageCollector::collect_garbage() {
 
   mark_roots();
   trace_references();
+  sweep();
 
   if (Debug::GC_LOG) {
     std::cout << "-- gc end\n";
