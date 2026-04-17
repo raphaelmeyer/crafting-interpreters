@@ -5,6 +5,7 @@
 
 #include <functional>
 #include <ranges>
+#include <vector>
 
 template <typename R>
 concept ValueRange = std::ranges::input_range<R> &&
@@ -40,7 +41,10 @@ public:
 private:
   void collect_garbage();
   void mark_roots();
+  void blacken_object(ObjRef const &obj);
+  void trace_references();
 
   std::function<void()> on_mark_roots;
   ObjList objects{};
+  std::vector<ObjRef> gray_stack{};
 };
