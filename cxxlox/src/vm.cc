@@ -21,7 +21,8 @@ namespace {
 
 class LoxVM final : public VM {
 public:
-  LoxVM(std::ostream &out_, std::ostream &err_) : out{out_}, err{err_} {
+  LoxVM(std::ostream &out_, std::ostream &err_)
+      : gc{[this] { mark_roots(); }}, out{out_}, err{err_} {
     init_vm();
   }
   ~LoxVM() { free_vm(); }
@@ -56,6 +57,7 @@ private:
 
   void init_vm();
   void free_vm();
+  void mark_roots();
 
   void reset_stack();
   void push(Value value);
@@ -129,7 +131,7 @@ private:
   std::mt19937 rng{random_device()};
 
   Context vm{};
-  GarbageCollector gc{};
+  GarbageCollector gc;
   std::unique_ptr<Compiler> compiler{};
   std::ostream &out;
   std::ostream &err;
@@ -143,10 +145,26 @@ Function &LoxVM::frame_function(CallFrame const &frame) {
   return std::get<Function>(frame_closure(frame).function.lock()->data);
 }
 
+void LoxVM::mark_roots() {
+  gc.mark_values(std::ranges::subrange(vm.stack.begin(), vm.stack_top));
+
+  gc.mark_objects(
+      std::ranges::subrange(vm.frames.begin(),
+                            vm.frames.begin() + vm.frame_count) |
+      views::transform([](CallFrame const &f) { return f.closure; }));
+
+  gc.mark_objects(vm.open_upvalues);
+
+  gc.mark_values(vm.globals | views::values);
+
+  if (compiler) {
+    compiler->mark_roots(gc);
+  }
+}
+
 void LoxVM::init_vm() {
   compiler = Compiler::create(gc, err);
   reset_stack();
-
   define_native("clock", 0, [](auto, auto) {
     std::chrono::duration<double> now =
         std::chrono::steady_clock::now().time_since_epoch();

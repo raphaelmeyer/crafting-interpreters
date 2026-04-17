@@ -36,7 +36,7 @@ Obj::~Obj() {
 
 ObjHandle new_class(GarbageCollector &gc, std::string const &name) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(Obj{.data = Class{name}});
+  auto obj = std::make_shared<Obj>(Class{name});
   gc.manage(obj);
   return obj;
 }
@@ -46,22 +46,21 @@ ObjHandle new_closure(GarbageCollector &gc, ObjHandle function) {
   auto const upvalue_count =
       std::get<Function>(function.lock()->data).upvalue_count;
   auto obj = std::make_shared<Obj>(
-      Obj{.data = Closure{function, std::vector<ObjHandle>(upvalue_count)}});
+      Closure{function, std::vector<ObjHandle>(upvalue_count)});
   gc.manage(obj);
   return obj;
 }
 
 ObjHandle new_function(GarbageCollector &gc) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(Obj{.data = Function{}});
+  auto obj = std::make_shared<Obj>(Function{});
   gc.manage(obj);
   return obj;
 }
 
 ObjHandle new_instance(GarbageCollector &gc, ObjHandle klass) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(
-      Obj{.data = Instance{.klass = klass, .fields = {}}});
+  auto obj = std::make_shared<Obj>(Instance{.klass = klass, .fields = {}});
   gc.manage(obj);
   return obj;
 }
@@ -69,14 +68,14 @@ ObjHandle new_instance(GarbageCollector &gc, ObjHandle klass) {
 ObjHandle new_native(GarbageCollector &gc, std::size_t arity,
                      NativeFn function) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(Obj{.data = Native{arity, function}});
+  auto obj = std::make_shared<Obj>(Native{arity, function});
   gc.manage(obj);
   return obj;
 }
 
 ObjHandle new_upvalue(GarbageCollector &gc, std::size_t stack_slot) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(Obj{.data = UpValue{StackSlot{stack_slot}}});
+  auto obj = std::make_shared<Obj>(UpValue{StackSlot{stack_slot}});
   gc.manage(obj);
   return obj;
 }

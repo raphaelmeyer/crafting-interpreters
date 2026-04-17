@@ -54,10 +54,18 @@ struct UpValue {
 };
 
 struct Obj {
+  using Data =
+      std::variant<Function, Native, Closure, Class, Instance, UpValue>;
+
+  explicit Obj(Data &&data_) : is_marked{}, data{std::move(data_)} {}
+
+  Obj(Obj const &) = delete;
+  Obj &operator=(Obj const &) = delete;
+
   ~Obj();
 
-  bool marked = false;
-  std::variant<Function, Native, Closure, Class, Instance, UpValue> data;
+  bool is_marked = false;
+  Data data;
 };
 
 std::string_view obj_type_string(Obj const &obj);

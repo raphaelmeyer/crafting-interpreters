@@ -40,6 +40,7 @@ public:
       : gc{gc_}, scanner{std::move(scanner_)}, err{err_} {}
 
   ObjHandle compile(std::string_view source) override;
+  void mark_roots(GarbageCollector &gc) override;
 
   void binary(bool can_assign);
   void call(bool can_assign);
@@ -995,6 +996,12 @@ void LoxCompiler::synchronize() {
     }
 
     advance();
+  }
+}
+
+void LoxCompiler::mark_roots(GarbageCollector &gc) {
+  for (Context *ctx = current; ctx != nullptr; ctx = ctx->enclosing) {
+    gc.mark_object(ctx->function.lock());
   }
 }
 
