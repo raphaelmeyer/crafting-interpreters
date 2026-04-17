@@ -29,6 +29,7 @@ target_link_libraries(cxxlox-test PRIVATE cxxlox-sources doctest::doctest)
 target_sources(cxxlox-test PRIVATE
   src/main.spec.cc
   src/vm.spec.cc
+  src/gc.spec.cc
 )
 target_compile_options(cxxlox-test PRIVATE "-fsanitize=address" "-fno-omit-frame-pointer")
 target_link_options(cxxlox-test PRIVATE "-fsanitize=address")
