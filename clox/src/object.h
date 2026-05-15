@@ -67,6 +67,7 @@ typedef struct ObjClosure_t {
 typedef struct ObjClass_t {
   Obj obj;
   ObjString *name;
+  Table methods;
 } ObjClass;
 
 typedef struct ObjInstance_t {
