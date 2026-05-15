@@ -13,6 +13,7 @@ extern "C" {
 typedef struct VM_t VM;
 
 typedef enum ObjType_t {
+  OBJ_BOUND_METHOD,
   OBJ_CLASS,
   OBJ_CLOSURE,
   OBJ_FUNCTION,
@@ -76,6 +77,13 @@ typedef struct ObjInstance_t {
   Table fields;
 } ObjInstance;
 
+typedef struct ObjBoundMethod_t {
+  Obj obj;
+  Value receiver;
+  ObjClosure *method;
+} ObjBoundMethod;
+
+ObjBoundMethod *new_bound_method(Value receiver, ObjClosure *method);
 ObjClass *new_class(ObjString *name);
 ObjClosure *new_closure(ObjFunction *function);
 ObjFunction *new_function();
@@ -91,6 +99,10 @@ static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
 
 static inline bool is_obj_type(Value const value, ObjType type) {
   return is_obj(value) && value.as.obj->type == type;
+}
+
+static inline bool is_bound_method(Value const value) {
+  return is_obj_type(value, OBJ_BOUND_METHOD);
 }
 
 static inline bool is_class(Value const value) {
@@ -115,6 +127,10 @@ static inline bool is_native(Value const value) {
 
 static inline bool is_string(Value const value) {
   return is_obj_type(value, OBJ_STRING);
+}
+
+static inline ObjBoundMethod *as_bound_method(Value const value) {
+  return (ObjBoundMethod *)value.as.obj;
 }
 
 static inline ObjClass *as_class(Value const value) {
