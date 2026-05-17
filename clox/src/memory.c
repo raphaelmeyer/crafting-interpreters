@@ -146,6 +146,7 @@ static void mark_roots() {
 
   mark_table(&vm->globals);
   mark_compiler_roots();
+  mark_object((Obj *)vm->init_string);
 }
 
 static void trace_references() {

@@ -53,6 +53,7 @@ typedef struct Upvalue_t {
 
 typedef enum FunctionType_t {
   TYPE_FUNCTION,
+  TYPE_INITIALIZER,
   TYPE_METHOD,
   TYPE_SCRIPT,
 } FunctionType;
@@ -164,7 +165,12 @@ static int32_t emit_jump(uint8_t instruction) {
 }
 
 static void emit_return() {
-  emit_byte(OP_NIL);
+  if (current->type == TYPE_INITIALIZER) {
+    emit_bytes(OP_GET_LOCAL, 0);
+  } else {
+    emit_byte(OP_NIL);
+  }
+
   emit_byte(OP_RETURN);
 }
 
@@ -211,7 +217,7 @@ static void init_compiler(Compiler *compiler, FunctionType type) {
   Local *local = &current->locals[current->local_count++];
   local->depth = 0;
   local->is_captured = false;
-  if (type == TYPE_METHOD) {
+  if (type == TYPE_METHOD || type == TYPE_INITIALIZER) {
     local->name.start = "this";
     local->name.length = 4;
   } else {
@@ -677,6 +683,10 @@ static void method() {
   uint8_t constant = identifier_constant(&parser.previous);
 
   FunctionType type = TYPE_METHOD;
+  if (parser.previous.length == 4 &&
+      memcmp(parser.previous.start, "init", 4) == 0) {
+    type = TYPE_INITIALIZER;
+  }
   function(type);
   emit_bytes(OP_METHOD, constant);
 }
@@ -810,6 +820,10 @@ static void return_statement() {
   if (match(TOKEN_SEMICOLON)) {
     emit_return();
   } else {
+    if (current->type == TYPE_INITIALIZER) {
+      error("Can't return a value from an initializer.");
+    }
+
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
     emit_byte(OP_RETURN);
