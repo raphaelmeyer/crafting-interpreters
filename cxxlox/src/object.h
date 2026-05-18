@@ -34,6 +34,7 @@ struct Closure {
 
 struct Class {
   std::string name;
+  std::unordered_map<std::string, Value> methods;
 };
 
 struct Instance {

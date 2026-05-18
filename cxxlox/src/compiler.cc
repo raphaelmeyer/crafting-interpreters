@@ -108,6 +108,7 @@ private:
   void expression();
   void block();
   void function(FunctionType type);
+  void method();
   void class_declaration();
   void declaration();
   void fun_declaration();
@@ -875,16 +876,31 @@ void LoxCompiler::while_statement() {
   emit_byte(OpCode::POP);
 }
 
+void LoxCompiler::method() {
+  consume(TokenType::IDENTIFIER, "Expect method name.");
+  auto const constant = identifier_constant(parser.previous);
+
+  auto const type = FunctionType::FUNCTION;
+  function(type);
+  emit_bytes(OpCode::METHOD, constant);
+}
+
 void LoxCompiler::class_declaration() {
   consume(TokenType::IDENTIFIER, "Expect class name.");
-  std::uint8_t name_constant = identifier_constant(parser.previous);
+  auto const &class_name = parser.previous;
+  auto const name_constant = identifier_constant(parser.previous);
   declare_variable();
 
   emit_bytes(OpCode::CLASS, name_constant);
   define_variable(name_constant);
 
+  named_variable(class_name, false);
   consume(TokenType::LEFT_BRACE, "Expect '{' before class body.");
+  while (not check(TokenType::RIGHT_BRACE) && not check(TokenType::END)) {
+    method();
+  }
   consume(TokenType::RIGHT_BRACE, "Expect '}' after class body.");
+  emit_byte(OpCode::POP);
 }
 
 void LoxCompiler::declaration() {

@@ -36,7 +36,7 @@ Obj::~Obj() {
 
 ObjHandle new_class(GarbageCollector &gc, std::string const &name) {
   gc.trigger();
-  auto obj = std::make_shared<Obj>(Class{name});
+  auto obj = std::make_shared<Obj>(Class{name, {}});
   gc.manage(obj);
   return obj;
 }

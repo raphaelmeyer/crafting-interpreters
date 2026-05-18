@@ -72,6 +72,7 @@ private:
   bool call_native(Native const &native, std::size_t arg_count);
   ObjHandle capture_upvalue(StackPointer local);
   void close_upvalues(StackPointer last);
+  void define_method(std::string name);
 
   bool is_falsey(Value const &value) const;
   void concatenate();
@@ -287,6 +288,13 @@ void LoxVM::close_upvalues(StackPointer last) {
     upvalue.value = Closed{vm.stack.at(slot)};
     open_upvalue = vm.open_upvalues.erase(open_upvalue);
   }
+}
+
+void LoxVM::define_method(std::string name) {
+  auto const &method = peek(0);
+  auto &klass = as_class(peek(1));
+  klass.methods.insert_or_assign(name, method);
+  pop();
 }
 
 bool LoxVM::is_falsey(Value const &value) const {
@@ -609,6 +617,10 @@ InterpretResult LoxVM::run() {
 
     case OpCode::CLASS:
       push(new_class(gc, read_string(*frame)));
+      break;
+
+    case OpCode::METHOD:
+      define_method(read_string(*frame));
       break;
 
     default:
