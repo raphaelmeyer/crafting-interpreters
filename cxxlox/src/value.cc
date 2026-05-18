@@ -4,6 +4,13 @@
 
 #include <format>
 
+bool is_bound_method(Value const &value) {
+  if (not is_obj(value)) {
+    return false;
+  }
+  return std::holds_alternative<BoundMethod>(as_obj(value)->data);
+}
+
 bool is_class(Value const &value) {
   if (not is_obj(value)) {
     return false;
@@ -39,6 +46,10 @@ bool is_native(Value const &value) {
   return std::holds_alternative<Native>(as_obj(value)->data);
 }
 
+BoundMethod &as_bound_method(Value const &value) {
+  return std::get<BoundMethod>(as_obj(value)->data);
+}
+
 Class &as_class(Value const &value) {
   return std::get<Class>(as_obj(value)->data);
 }
@@ -66,6 +77,8 @@ std::string to_string(Nil) { return "nil"; }
 std::string to_string(double value) { return std::format("{:g}", value); }
 std::string to_string(std::string value) { return value; }
 
+std::string to_string(ObjHandle handle);
+
 std::string to_string(Function const &v) {
   if (not v.name.empty()) {
     return std::format("<fn {}>", v.name);
@@ -76,7 +89,7 @@ std::string to_string(Function const &v) {
 std::string to_string(Native const &) { return "<native fn>"; }
 
 std::string to_string(Closure const &closure) {
-  return to_string(std::get<Function>(closure.function.lock()->data));
+  return to_string(closure.function);
 }
 
 std::string to_string(Class const &klass) { return klass.name; }
@@ -84,6 +97,10 @@ std::string to_string(Class const &klass) { return klass.name; }
 std::string to_string(Instance const &instance) {
   auto const name = std::get<Class>(instance.klass.lock()->data).name;
   return std::format("{} instance", name);
+}
+
+std::string to_string(BoundMethod const &bound) {
+  return to_string(bound.method);
 }
 
 std::string to_string(UpValue const &) { return "upvalue"; }

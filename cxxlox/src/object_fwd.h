@@ -8,6 +8,7 @@ struct Native;
 struct Closure;
 struct Class;
 struct Instance;
+struct BoundMethod;
 
 struct Obj;
 

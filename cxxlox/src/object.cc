@@ -34,6 +34,14 @@ Obj::~Obj() {
   }
 }
 
+ObjHandle new_bound_method(GarbageCollector &gc, Value const &receiver,
+                           ObjHandle method) {
+  gc.trigger();
+  auto obj = std::make_shared<Obj>(BoundMethod{receiver, method});
+  gc.manage(obj);
+  return obj;
+}
+
 ObjHandle new_class(GarbageCollector &gc, std::string const &name) {
   gc.trigger();
   auto obj = std::make_shared<Obj>(Class{name, {}});

@@ -62,7 +62,10 @@ void GarbageCollector::blacken_object(ObjRef const &obj) {
   std::visit(
       [this](auto const &data) {
         using T = std::decay_t<decltype(data)>;
-        if constexpr (std::is_same_v<T, Class>) {
+        if constexpr (std::is_same_v<T, BoundMethod>) {
+          mark_value(data.receiver);
+          mark_object(data.method.lock());
+        } else if constexpr (std::is_same_v<T, Class>) {
           mark_values(data.methods | std::ranges::views::values);
         } else if constexpr (std::is_same_v<T, Function>) {
           mark_values(data.chunk.constants);

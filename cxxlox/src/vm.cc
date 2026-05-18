@@ -70,6 +70,7 @@ private:
   bool call(ObjHandle closure, std::size_t arg_count);
   bool call_value(Value const &callee, std::size_t arg_count);
   bool call_native(Native const &native, std::size_t arg_count);
+  bool bind_method(ObjHandle klass, std::string const &name);
   ObjHandle capture_upvalue(StackPointer local);
   void close_upvalues(StackPointer last);
   void define_method(std::string name);
@@ -239,7 +240,10 @@ bool LoxVM::call_native(Native const &native, std::size_t arg_count) {
 }
 
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
-  if (is_class(callee)) {
+  if (is_bound_method(callee)) {
+    auto const &bound = as_bound_method(callee);
+    return call(bound.method, arg_count);
+  } else if (is_class(callee)) {
     auto slot = std::prev(vm.stack_top, arg_count + 1);
     *slot = new_instance(gc, as_obj(callee));
     return true;
@@ -251,6 +255,21 @@ bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
 
   runtime_error("Can only call functions and classes.");
   return false;
+}
+
+bool LoxVM::bind_method(ObjHandle klass, std::string const &name) {
+  auto const &methods = as_class(klass).methods;
+  auto const method = methods.find(name);
+  if (method == methods.end()) {
+    runtime_error("Undefined property '{}'.", name);
+    return false;
+  }
+
+  auto const bound = new_bound_method(gc, peek(0), as_obj(method->second));
+
+  pop();
+  push(obj_value(bound));
+  return true;
 }
 
 ObjHandle LoxVM::capture_upvalue(StackPointer local) {
@@ -444,14 +463,16 @@ InterpretResult LoxVM::run() {
       auto const &instance = as_instance(peek(0));
       auto const name = read_string(*frame);
 
-      if (not instance.fields.contains(name)) {
-        runtime_error("Undefined property '{}'.", name);
-        return InterpretResult::RUNTIME_ERROR;
+      const auto value = instance.fields.find(name);
+      if (value != instance.fields.end()) {
+        pop();
+        push(value->second);
+        break;
       }
 
-      auto const value = instance.fields.at(name);
-      pop();
-      push(value);
+      if (not bind_method(instance.klass, name)) {
+        return InterpretResult::RUNTIME_ERROR;
+      }
       break;
     }
 

@@ -45,12 +45,14 @@ inline ObjRef as_obj(Value const &value) {
   return std::get<ObjHandle>(value).lock();
 }
 
+bool is_bound_method(Value const &value);
 bool is_class(Value const &value);
 bool is_closure(Value const &value);
 bool is_function(Value const &value);
 bool is_instance(Value const &value);
 bool is_native(Value const &value);
 
+BoundMethod &as_bound_method(Value const &value);
 Class &as_class(Value const &value);
 Closure &as_closure(Value const &value);
 Function &as_function(Value const &value);

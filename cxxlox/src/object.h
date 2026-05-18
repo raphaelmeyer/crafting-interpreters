@@ -42,6 +42,11 @@ struct Instance {
   std::unordered_map<std::string, Value> fields;
 };
 
+struct BoundMethod {
+  Value receiver;
+  ObjHandle method;
+};
+
 struct StackSlot {
   std::size_t from_start;
 };
@@ -55,8 +60,8 @@ struct UpValue {
 };
 
 struct Obj {
-  using Data =
-      std::variant<Function, Native, Closure, Class, Instance, UpValue>;
+  using Data = std::variant<Function, Native, Closure, Class, Instance, UpValue,
+                            BoundMethod>;
 
   explicit Obj(Data &&data_) : is_marked{}, data{std::move(data_)} {}
 
@@ -71,6 +76,8 @@ struct Obj {
 
 std::string_view obj_type_string(Obj const &obj);
 
+ObjHandle new_bound_method(GarbageCollector &gc, Value const &receiver,
+                           ObjHandle method);
 ObjHandle new_class(GarbageCollector &gc, std::string const &name);
 ObjHandle new_closure(GarbageCollector &gc, ObjHandle function);
 ObjHandle new_function(GarbageCollector &gc);
