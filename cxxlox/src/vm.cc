@@ -72,6 +72,9 @@ private:
   bool call(ObjHandle closure, std::size_t arg_count);
   bool call_value(Value const callee, std::size_t arg_count);
   bool call_native(Native const &native, std::size_t arg_count);
+  bool invoke(std::string const &name, std::size_t arg_count);
+  bool invoke_from_class(ObjHandle klass, std::string const &name,
+                         std::size_t arg_count);
   bool bind_method(ObjHandle klass, std::string const &name);
   ObjHandle capture_upvalue(StackPointer local);
   void close_upvalues(StackPointer last);
@@ -267,6 +270,37 @@ bool LoxVM::call_value(Value const callee, std::size_t arg_count) {
 
   runtime_error("Can only call functions and classes.");
   return false;
+}
+
+bool LoxVM::invoke(std::string const &name, std::size_t arg_count) {
+  auto const receiver = peek(arg_count);
+
+  if (not is_instance(receiver)) {
+    runtime_error("Only instances have methods.");
+    return false;
+  }
+
+  auto const &instance = as_instance(receiver);
+
+  auto const value = instance.fields.find(name);
+  if (value != instance.fields.end()) {
+    auto slot = std::prev(vm.stack_top, arg_count + 1);
+    *slot = value->second;
+    return call_value(value->second, arg_count);
+  }
+
+  return invoke_from_class(instance.klass, name, arg_count);
+}
+
+bool LoxVM::invoke_from_class(ObjHandle klass, std::string const &name,
+                              std::size_t arg_count) {
+  auto const &methods = as_class(klass).methods;
+  auto const method = methods.find(name);
+  if (method == methods.end()) {
+    runtime_error("Undefined property '{}'.", name);
+    return false;
+  }
+  return call(as_obj(method->second), arg_count);
 }
 
 bool LoxVM::bind_method(ObjHandle klass, std::string const &name) {
@@ -601,6 +635,16 @@ InterpretResult LoxVM::run() {
     case OpCode::CALL: {
       auto const arg_count = read_byte(*frame);
       if (not call_value(peek(arg_count), arg_count)) {
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      frame = vm.frames.begin() + vm.frame_count - 1;
+      break;
+    }
+
+    case OpCode::INVOKE: {
+      auto const method = read_string(*frame);
+      auto const arg_count = read_byte(*frame);
+      if (not invoke(method, arg_count)) {
         return InterpretResult::RUNTIME_ERROR;
       }
       frame = vm.frames.begin() + vm.frame_count - 1;

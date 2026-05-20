@@ -33,6 +33,17 @@ std::size_t constant_instruction(std::string name, Chunk const &chunk,
   return offset + 2;
 }
 
+std::size_t invoke_instruction(std::string name, Chunk const &chunk,
+                               std::size_t offset) {
+  auto const constant = chunk.code.at(offset + 1);
+  auto const arg_count = chunk.code.at(offset + 2);
+  std::cout << std::format("{:16} {:4} '", name, constant);
+  print_value(std::cout, chunk.constants.at(constant));
+  std::cout << std::format("' ({} args)\n", arg_count);
+
+  return offset + 3;
+}
+
 std::size_t destination(Direction direction, std::size_t start,
                         std::size_t jump) {
   switch (direction) {
@@ -159,6 +170,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return jump_instruction("OP_LOOP", Direction::Backward, chunk, offset);
   case OpCode::CALL:
     return byte_instruction("OP_CALL", chunk, offset);
+  case OpCode::INVOKE:
+    return invoke_instruction("OP_INVOKE", chunk, offset);
   case OpCode::CLOSURE:
     return closure_instruction("OP_CLOSURE", chunk, offset);
   case OpCode::CLOSE_UPVALUE:
