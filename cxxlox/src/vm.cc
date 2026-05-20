@@ -19,6 +19,8 @@ namespace views = std::ranges::views;
 
 namespace {
 
+constexpr std::string init_string{"init"};
+
 class LoxVM final : public VM {
 public:
   LoxVM(std::ostream &out_, std::ostream &err_)
@@ -68,7 +70,7 @@ private:
   static Function &frame_function(CallFrame const &frame);
 
   bool call(ObjHandle closure, std::size_t arg_count);
-  bool call_value(Value const &callee, std::size_t arg_count);
+  bool call_value(Value const callee, std::size_t arg_count);
   bool call_native(Native const &native, std::size_t arg_count);
   bool bind_method(ObjHandle klass, std::string const &name);
   ObjHandle capture_upvalue(StackPointer local);
@@ -239,7 +241,7 @@ bool LoxVM::call_native(Native const &native, std::size_t arg_count) {
   return true;
 }
 
-bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
+bool LoxVM::call_value(Value const callee, std::size_t arg_count) {
   if (is_bound_method(callee)) {
     auto const &bound = as_bound_method(callee);
     auto slot = std::prev(vm.stack_top, arg_count + 1);
@@ -248,6 +250,14 @@ bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   } else if (is_class(callee)) {
     auto slot = std::prev(vm.stack_top, arg_count + 1);
     *slot = new_instance(gc, as_obj(callee));
+    auto const &methods = as_class(callee).methods;
+    auto const initializer = methods.find(init_string);
+    if (initializer != methods.end()) {
+      return call(as_obj(initializer->second), arg_count);
+    } else if (arg_count != 0) {
+      runtime_error("Expected 0 arguments but got {}.", arg_count);
+      return false;
+    }
     return true;
   } else if (is_closure(callee)) {
     return call(as_obj(callee), arg_count);

@@ -149,6 +149,7 @@ private:
 
   enum class FunctionType {
     FUNCTION,
+    INITIALIZER,
     METHOD,
     SCRIPT,
   };
@@ -294,7 +295,12 @@ std::size_t LoxCompiler::emit_jump(OpCode instruction) {
 }
 
 void LoxCompiler::emit_return() {
-  emit_byte(OpCode::NIL);
+  if (current->type == FunctionType::INITIALIZER) {
+    emit_bytes(OpCode::GET_LOCAL, 0);
+  } else {
+    emit_byte(OpCode::NIL);
+  }
+
   emit_byte(OpCode::RETURN);
 }
 
@@ -340,7 +346,7 @@ void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
   Local &local = current->locals.at(current->local_count++);
   local.depth = 0;
   local.is_captured = false;
-  if (type == FunctionType::METHOD) {
+  if ((type == FunctionType::METHOD) or (type == FunctionType::INITIALIZER)) {
     local.name.start = this_string.data();
     local.name.length = this_string.size();
   } else {
@@ -878,6 +884,10 @@ void LoxCompiler::return_statement() {
   if (match(TokenType::SEMICOLON)) {
     emit_return();
   } else {
+    if (current->type == FunctionType::INITIALIZER) {
+      error("Can't return a value from an initializer.");
+    }
+
     expression();
     consume(TokenType ::SEMICOLON, "Expect ';' after return value.");
     emit_byte(OpCode::RETURN);
@@ -903,7 +913,12 @@ void LoxCompiler::method() {
   consume(TokenType::IDENTIFIER, "Expect method name.");
   auto const constant = identifier_constant(parser.previous);
 
-  auto const type = FunctionType::METHOD;
+  auto type = FunctionType::METHOD;
+  if (std::string_view{parser.previous.start, parser.previous.length} ==
+      "init") {
+    type = FunctionType::INITIALIZER;
+  }
+
   function(type);
   emit_bytes(OpCode::METHOD, constant);
 }
