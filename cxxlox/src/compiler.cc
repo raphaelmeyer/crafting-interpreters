@@ -33,6 +33,8 @@ enum class Precedence {
   PRIMARY
 };
 
+constexpr std::string_view this_string{"this"};
+
 class LoxCompiler final : public Compiler {
 public:
   LoxCompiler(GarbageCollector &gc_, std::unique_ptr<Scanner> &&scanner_,
@@ -50,6 +52,7 @@ public:
   void number(bool can_assign);
   void string(bool can_assign);
   void variable(bool can_assign);
+  void this_expression(bool can_assign);
   void unary(bool can_assign);
   void logical_and(bool can_assign);
   void logical_or(bool can_assign);
@@ -146,6 +149,7 @@ private:
 
   enum class FunctionType {
     FUNCTION,
+    METHOD,
     SCRIPT,
   };
 
@@ -163,8 +167,13 @@ private:
     std::size_t scope_depth;
   };
 
+  struct ClassContext {
+    ClassContext *enclosing;
+  };
+
   Parser parser{};
   Context *current{nullptr};
+  ClassContext *current_class{nullptr};
 
   GarbageCollector &gc;
   std::unique_ptr<Scanner> scanner{};
@@ -331,8 +340,13 @@ void LoxCompiler::init_compiler(Context *compiler, FunctionType type) {
   Local &local = current->locals.at(current->local_count++);
   local.depth = 0;
   local.is_captured = false;
-  local.name.start = "";
-  local.name.length = 0;
+  if (type == FunctionType::METHOD) {
+    local.name.start = this_string.data();
+    local.name.length = this_string.size();
+  } else {
+    local.name.start = "";
+    local.name.length = 0;
+  }
 }
 
 ObjHandle LoxCompiler::end_compiler() {
@@ -471,6 +485,15 @@ void LoxCompiler::variable(bool can_assign) {
   named_variable(parser.previous, can_assign);
 }
 
+void LoxCompiler::this_expression(bool) {
+  if (current_class == nullptr) {
+    error("Can't use 'this' outside of a class.");
+    return;
+  }
+
+  variable(false);
+}
+
 void LoxCompiler::unary(bool) {
   auto const operator_type = parser.previous.type;
 
@@ -515,46 +538,46 @@ using L = LoxCompiler;
 
 // clang-format off
 std::map<TokenType, ParseRule> const rules{
-  {TokenType::LEFT_PAREN,    {&L::grouping, &L::call,         Precedence::CALL}},
-  {TokenType::RIGHT_PAREN,   {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::LEFT_BRACE,    {nullptr,      nullptr,          Precedence::NONE}}, 
-  {TokenType::RIGHT_BRACE,   {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::COMMA,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::DOT,           {nullptr,      &L::dot,          Precedence::CALL}},
-  {TokenType::MINUS,         {&L::unary,    &L::binary,       Precedence::TERM}},
-  {TokenType::PLUS,          {nullptr,      &L::binary,       Precedence::TERM}},
-  {TokenType::SEMICOLON,     {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::SLASH,         {nullptr,      &L::binary,       Precedence::FACTOR}},
-  {TokenType::STAR,          {nullptr,      &L::binary,       Precedence::FACTOR}},
-  {TokenType::BANG,          {&L::unary,    nullptr,          Precedence::NONE}},
-  {TokenType::BANG_EQUAL,    {nullptr,      &L::binary,       Precedence::EQUALITY}},
-  {TokenType::EQUAL,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::EQUAL_EQUAL,   {nullptr,      &L::binary,       Precedence::EQUALITY}},
-  {TokenType::GREATER,       {nullptr,      &L::binary,       Precedence::COMPARISON}},
-  {TokenType::GREATER_EQUAL, {nullptr,      &L::binary,       Precedence::COMPARISON}},
-  {TokenType::LESS,          {nullptr,      &L::binary,       Precedence::COMPARISON}},
-  {TokenType::LESS_EQUAL,    {nullptr,      &L::binary,       Precedence::COMPARISON}},
-  {TokenType::IDENTIFIER,    {&L::variable, nullptr,          Precedence::NONE}},
-  {TokenType::STRING,        {&L::string,   nullptr,          Precedence::NONE}},
-  {TokenType::NUMBER,        {&L::number,   nullptr,          Precedence::NONE}},
-  {TokenType::AND,           {nullptr,      &L::logical_and,  Precedence::AND}},
-  {TokenType::CLASS,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::ELSE,          {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::FALSE,         {&L::literal,  nullptr,          Precedence::NONE}},
-  {TokenType::FOR,           {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::FUN,           {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::IF,            {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::NIL,           {&L::literal,  nullptr,          Precedence::NONE}},
-  {TokenType::OR,            {nullptr,      &L::logical_or,   Precedence::OR}},
-  {TokenType::PRINT,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::RETURN,        {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::SUPER,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::THIS,          {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::TRUE,          {&L::literal,  nullptr,          Precedence::NONE}},
-  {TokenType::VAR,           {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::WHILE,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::ERROR,         {nullptr,      nullptr,          Precedence::NONE}},
-  {TokenType::END,           {nullptr,      nullptr,          Precedence::NONE}}
+  {TokenType::LEFT_PAREN,    {&L::grouping,         &L::call,         Precedence::CALL}},
+  {TokenType::RIGHT_PAREN,   {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::LEFT_BRACE,    {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::RIGHT_BRACE,   {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::COMMA,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::DOT,           {nullptr,              &L::dot,          Precedence::CALL}},
+  {TokenType::MINUS,         {&L::unary,            &L::binary,       Precedence::TERM}},
+  {TokenType::PLUS,          {nullptr,              &L::binary,       Precedence::TERM}},
+  {TokenType::SEMICOLON,     {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::SLASH,         {nullptr,              &L::binary,       Precedence::FACTOR}},
+  {TokenType::STAR,          {nullptr,              &L::binary,       Precedence::FACTOR}},
+  {TokenType::BANG,          {&L::unary,            nullptr,          Precedence::NONE}},
+  {TokenType::BANG_EQUAL,    {nullptr,              &L::binary,       Precedence::EQUALITY}},
+  {TokenType::EQUAL,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::EQUAL_EQUAL,   {nullptr,              &L::binary,       Precedence::EQUALITY}},
+  {TokenType::GREATER,       {nullptr,              &L::binary,       Precedence::COMPARISON}},
+  {TokenType::GREATER_EQUAL, {nullptr,              &L::binary,       Precedence::COMPARISON}},
+  {TokenType::LESS,          {nullptr,              &L::binary,       Precedence::COMPARISON}},
+  {TokenType::LESS_EQUAL,    {nullptr,              &L::binary,       Precedence::COMPARISON}},
+  {TokenType::IDENTIFIER,    {&L::variable,         nullptr,          Precedence::NONE}},
+  {TokenType::STRING,        {&L::string,           nullptr,          Precedence::NONE}},
+  {TokenType::NUMBER,        {&L::number,           nullptr,          Precedence::NONE}},
+  {TokenType::AND,           {nullptr,              &L::logical_and,  Precedence::AND}},
+  {TokenType::CLASS,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::ELSE,          {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::FALSE,         {&L::literal,          nullptr,          Precedence::NONE}},
+  {TokenType::FOR,           {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::FUN,           {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::IF,            {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::NIL,           {&L::literal,          nullptr,          Precedence::NONE}},
+  {TokenType::OR,            {nullptr,              &L::logical_or,   Precedence::OR}},
+  {TokenType::PRINT,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::RETURN,        {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::SUPER,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::THIS,          {&L::this_expression,  nullptr,          Precedence::NONE}},
+  {TokenType::TRUE,          {&L::literal,          nullptr,          Precedence::NONE}},
+  {TokenType::VAR,           {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::WHILE,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::ERROR,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::END,           {nullptr,              nullptr,          Precedence::NONE}}
 };
 // clang-format on
 
@@ -880,7 +903,7 @@ void LoxCompiler::method() {
   consume(TokenType::IDENTIFIER, "Expect method name.");
   auto const constant = identifier_constant(parser.previous);
 
-  auto const type = FunctionType::FUNCTION;
+  auto const type = FunctionType::METHOD;
   function(type);
   emit_bytes(OpCode::METHOD, constant);
 }
@@ -894,6 +917,10 @@ void LoxCompiler::class_declaration() {
   emit_bytes(OpCode::CLASS, name_constant);
   define_variable(name_constant);
 
+  ClassContext class_context{};
+  class_context.enclosing = current_class;
+  current_class = &class_context;
+
   named_variable(class_name, false);
   consume(TokenType::LEFT_BRACE, "Expect '{' before class body.");
   while (not check(TokenType::RIGHT_BRACE) && not check(TokenType::END)) {
@@ -901,6 +928,8 @@ void LoxCompiler::class_declaration() {
   }
   consume(TokenType::RIGHT_BRACE, "Expect '}' after class body.");
   emit_byte(OpCode::POP);
+
+  current_class = current_class->enclosing;
 }
 
 void LoxCompiler::declaration() {

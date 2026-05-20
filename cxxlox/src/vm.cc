@@ -242,6 +242,8 @@ bool LoxVM::call_native(Native const &native, std::size_t arg_count) {
 bool LoxVM::call_value(Value const &callee, std::size_t arg_count) {
   if (is_bound_method(callee)) {
     auto const &bound = as_bound_method(callee);
+    auto slot = std::prev(vm.stack_top, arg_count + 1);
+    *slot = bound.receiver;
     return call(bound.method, arg_count);
   } else if (is_class(callee)) {
     auto slot = std::prev(vm.stack_top, arg_count + 1);
