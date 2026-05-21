@@ -23,7 +23,8 @@ package body Lox_Object is
              (Kind       => OBJ_KIND_CLASS,
               Is_Marked  => <>,
               Next       => <>,
-              Class_Name => Unbounded.To_Unbounded_String (Name));
+              Class_Name => Unbounded.To_Unbounded_String (Name),
+              Methods    => <>);
          Manage_Object (Objs, Klass);
 
       end return;
@@ -253,7 +254,7 @@ package body Lox_Object is
    begin
       case Obj.Kind is
          when OBJ_KIND_CLASS    =>
-            null;
+            Mark_Table (Obj.Methods);
 
          when OBJ_KIND_INSTANCE =>
             Mark_Object (Obj.Class);

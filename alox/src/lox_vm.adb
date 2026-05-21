@@ -265,6 +265,19 @@ package body Lox_VM is
 
    end Close_Upvalues;
 
+   procedure Define_Method (Name : Unbounded.Unbounded_String) is
+      Method : constant Lox_Value.Value := Peek (0);
+      Klass  : constant Lox_Object.Object_Access := Peek (1).Object_Value;
+      Unused : Lox_Value.Value;
+   begin
+      if Klass.Methods.Contains (Name) then
+         Klass.Methods.Replace (Name, Method);
+      else
+         Klass.Methods.Insert (Name, Method);
+      end if;
+      Unused := Pop;
+   end Define_Method;
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean is
    begin
       return
@@ -788,6 +801,9 @@ package body Lox_VM is
                   begin
                      Push (Lox_Value.Make_Class (Klass));
                   end;
+
+               when Lox_Chunk.OP_METHOD'Enum_Rep        =>
+                  Define_Method (Read_String (Frame));
 
                when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
                   declare

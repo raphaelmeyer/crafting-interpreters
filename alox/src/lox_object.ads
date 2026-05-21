@@ -43,6 +43,7 @@ package Lox_Object is
       case Kind is
          when OBJ_KIND_CLASS =>
             Class_Name : Unbounded_String;
+            Methods    : Lox_Table.Table;
 
          when OBJ_KIND_INSTANCE =>
             Class  : Object_Access;

@@ -157,6 +157,7 @@ private
    procedure Block;
    procedure Function_Declaration;
    procedure Function_Definition (Kind : Function_Kind);
+   procedure Method_Definition;
    procedure Class_Declaration;
    procedure Variable_Declaration;
    procedure Expression_Statement;

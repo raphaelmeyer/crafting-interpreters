@@ -71,6 +71,8 @@ private
      (Local : Stack_Index) return Lox_Object.Object_Access;
    procedure Close_Upvalues (Last : Stack_Index);
 
+   procedure Define_Method (Name : Lox_Value.Unbounded_String);
+
    function Is_Falsey (Value : Lox_Value.Value) return Boolean;
    procedure Concatenate;
 

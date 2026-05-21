@@ -645,18 +645,37 @@ package body Lox_Compiler is
       end if;
    end Function_Definition;
 
+   procedure Method_Definition is
+      Name_Constant : Byte;
+   begin
+      Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect method name.");
+      Name_Constant := Identifier_Constant (Context.Parser.Previous);
+
+      Function_Definition (TYPE_FUNCTION);
+      Emit_Bytes (Lox_Chunk.OP_METHOD, Name_Constant);
+   end Method_Definition;
+
    procedure Class_Declaration is
+      Class_Name    : Lox_Scanner.Token;
       Name_Constant : Byte;
    begin
       Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect class name.");
+      Class_Name := Context.Parser.Previous;
       Name_Constant := Identifier_Constant (Context.Parser.Previous);
       Declare_Variable;
 
       Emit_Bytes (Lox_Chunk.OP_CLASS, Name_Constant);
       Define_Variable (Name_Constant);
 
+      Named_Variable (Class_Name, False);
       Consume (Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{' before class body.");
+      while not Check (Lox_Scanner.TOKEN_RIGHT_BRACE)
+        and then not Check (Lox_Scanner.TOKEN_EOF)
+      loop
+         Method_Definition;
+      end loop;
       Consume (Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
+      Emit_Byte (Lox_Chunk.OP_POP);
    end Class_Declaration;
 
    procedure Variable_Declaration is
