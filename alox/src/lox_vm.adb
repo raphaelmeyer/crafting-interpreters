@@ -190,10 +190,38 @@ package body Lox_VM is
       return True;
    end Call_Constructor;
 
+   function Bind_Method
+     (Klass : Lox_Object.Object_Access; Name : Lox_Value.Unbounded_String)
+      return Boolean
+   is
+      Method : constant Lox_Table.Cursor := Klass.Methods.Find (Name);
+      use type Lox_Table.Cursor;
+   begin
+      if Method = Lox_Table.No_Element then
+         Runtime_Error
+           ("Undefined property '" & Unbounded.To_String (Name) & "'.");
+         return False;
+      end if;
+
+      declare
+         Bound  : constant Lox_Object.Object_Access :=
+           Lox_Object.New_Bound_Method
+             (VM.Objects, Peek (0), Lox_Table.Element (Method).Object_Value);
+         Unused : Lox_Value.Value;
+      begin
+         Unused := Pop;
+         Push (Lox_Value.Make_Bound_Method (Bound));
+      end;
+      return True;
+   end Bind_Method;
+
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
-      if Lox_Value.Is_Class (Callee) then
+      if Lox_Value.Is_Bound_Method (Callee) then
+         return Call (Callee.Object_Value.Method, Arg_Count);
+
+      elsif Lox_Value.Is_Class (Callee) then
          return Call_Constructor (Callee.Object_Value, Arg_Count);
 
       elsif Lox_Value.Is_Closure (Callee) then
@@ -265,7 +293,7 @@ package body Lox_VM is
 
    end Close_Upvalues;
 
-   procedure Define_Method (Name : Unbounded.Unbounded_String) is
+   procedure Define_Method (Name : Lox_Value.Unbounded_String) is
       Method : constant Lox_Value.Value := Peek (0);
       Klass  : constant Lox_Object.Object_Access := Peek (1).Object_Value;
       Unused : Lox_Value.Value;
@@ -629,15 +657,11 @@ package body Lox_VM is
                      Unused   : Lox_Value.Value;
                      use type Lox_Table.Cursor;
                   begin
-                     if Value = Lox_Table.No_Element then
-                        Runtime_Error
-                          ("Undefined property '"
-                           & Unbounded.To_String (Name)
-                           & "'.");
-                        return INTERPRET_RUNTIME_ERROR;
-                     else
+                     if Value /= Lox_Table.No_Element then
                         Unused := Pop;
                         Push (Lox_Table.Element (Value));
+                     elsif not Bind_Method (Instance.Class, Name) then
+                        return INTERPRET_RUNTIME_ERROR;
                      end if;
                   end;
 

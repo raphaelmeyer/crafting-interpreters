@@ -12,6 +12,26 @@ package body Lox_Object is
    Next_GC_Run_Threshold : Natural := 10;
    GC_Grow_Factor        : constant Natural := 2;
 
+   function New_Bound_Method
+     (Objs     : in out Object_Access;
+      Receiver : Lox_Value.Value;
+      Method   : Object_Access) return Object_Access is
+   begin
+      Trigger_Garbage_Collection_On_Threshold (Objs);
+
+      return Bound : Object_Access do
+         Bound :=
+           new Object'
+             (Kind      => OBJ_KIND_BOUND_METHOD,
+              Is_Marked => <>,
+              Next      => <>,
+              Receiver  => Receiver,
+              Method    => Method);
+         Manage_Object (Objs, Bound);
+
+      end return;
+   end New_Bound_Method;
+
    function New_Class
      (Objs : in out Object_Access; Name : String) return Object_Access is
    begin
@@ -125,22 +145,25 @@ package body Lox_Object is
       use type Unbounded.Unbounded_String;
    begin
       case Obj.Kind is
-         when OBJ_KIND_CLASS    =>
+         when OBJ_KIND_BOUND_METHOD =>
+            return To_String (Obj.Method);
+
+         when OBJ_KIND_CLASS        =>
             return Unbounded.To_String (Obj.Class_Name);
 
-         when OBJ_KIND_INSTANCE =>
+         when OBJ_KIND_INSTANCE     =>
             return Unbounded.To_String (Obj.Class.Class_Name) & " instance";
 
-         when OBJ_KIND_FUNCTION =>
+         when OBJ_KIND_FUNCTION     =>
             if Obj.Name = Unbounded.Null_Unbounded_String then
                return "<script>";
             end if;
             return "<fn " & Unbounded.To_String (Obj.Name) & ">";
 
-         when OBJ_KIND_CLOSURE  =>
+         when OBJ_KIND_CLOSURE      =>
             return To_String (Obj.Func);
 
-         when OBJ_KIND_UPVALUE  =>
+         when OBJ_KIND_UPVALUE      =>
             return "<upvalue>";
       end case;
    end To_String;
@@ -253,24 +276,28 @@ package body Lox_Object is
    procedure Trace_References (Obj : Object_Access) is
    begin
       case Obj.Kind is
-         when OBJ_KIND_CLASS    =>
+         when OBJ_KIND_BOUND_METHOD =>
+            Mark_Value (Obj.Receiver);
+            Mark_Object (Obj.Method);
+
+         when OBJ_KIND_CLASS        =>
             Mark_Table (Obj.Methods);
 
-         when OBJ_KIND_INSTANCE =>
+         when OBJ_KIND_INSTANCE     =>
             Mark_Object (Obj.Class);
             Mark_Table (Obj.Fields);
 
-         when OBJ_KIND_UPVALUE  =>
+         when OBJ_KIND_UPVALUE      =>
             if Obj.Instance.Closed then
                Mark_Value (Obj.Instance.Value);
             end if;
 
-         when OBJ_KIND_FUNCTION =>
+         when OBJ_KIND_FUNCTION     =>
             for Value of Obj.Chunk.Constants loop
                Mark_Value (Value);
             end loop;
 
-         when OBJ_KIND_CLOSURE  =>
+         when OBJ_KIND_CLOSURE      =>
             Mark_Object (Obj.Func);
             for Upvalue of Obj.Upvalues loop
                Mark_Object (Upvalue);

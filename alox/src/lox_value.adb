@@ -125,6 +125,20 @@ package body Lox_Value is
       return V.Kind = VAL_OBJECT;
    end Is_Object;
 
+   function Make_Bound_Method (Bound : Lox_Object.Object_Access) return Value
+   is
+   begin
+      return (VAL_OBJECT, Object_Value => Bound);
+   end Make_Bound_Method;
+
+   function Is_Bound_Method (V : Value) return Boolean is
+      use type Lox_Object.Object_Kind;
+   begin
+      return
+        V.Kind = VAL_OBJECT
+        and then V.Object_Value.Kind = Lox_Object.OBJ_KIND_BOUND_METHOD;
+   end Is_Bound_Method;
+
    function Make_Class (Klass : Lox_Object.Object_Access) return Value is
    begin
       return (VAL_OBJECT, Object_Value => Klass);

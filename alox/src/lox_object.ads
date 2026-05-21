@@ -11,7 +11,8 @@ package Lox_Object is
    subtype Unbounded_String is Unbounded.Unbounded_String;
 
    type Object_Kind is
-     (OBJ_KIND_CLASS,
+     (OBJ_KIND_BOUND_METHOD,
+      OBJ_KIND_CLASS,
       OBJ_KIND_FUNCTION,
       OBJ_KIND_CLOSURE,
       OBJ_KIND_INSTANCE,
@@ -41,6 +42,10 @@ package Lox_Object is
 
       Next : Object_Access;
       case Kind is
+         when OBJ_KIND_BOUND_METHOD =>
+            Receiver : Lox_Value.Value;
+            Method   : Object_Access;
+
          when OBJ_KIND_CLASS =>
             Class_Name : Unbounded_String;
             Methods    : Lox_Table.Table;
@@ -64,6 +69,10 @@ package Lox_Object is
       end case;
    end record;
 
+   function New_Bound_Method
+     (Objs     : in out Object_Access;
+      Receiver : Lox_Value.Value;
+      Method   : Object_Access) return Object_Access;
    function New_Class
      (Objs : in out Object_Access; Name : String) return Object_Access;
    function New_Function (Objs : in out Object_Access) return Object_Access;
