@@ -67,6 +67,8 @@ private
    function Bind_Method
      (Klass : Lox_Object.Object_Access; Name : Lox_Value.Unbounded_String)
       return Boolean;
+   function Invoke
+     (Name : Lox_Value.Unbounded_String; Arg_Count : Natural) return Boolean;
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean;
 

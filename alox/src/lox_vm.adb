@@ -226,6 +226,42 @@ package body Lox_VM is
       return True;
    end Bind_Method;
 
+   function Invoke
+     (Name : Lox_Value.Unbounded_String; Arg_Count : Natural) return Boolean
+   is
+      Receiver : constant Lox_Value.Value := Peek (Integer (Arg_Count));
+      use type Lox_Table.Cursor;
+   begin
+      if not Lox_Value.Is_Instance (Receiver) then
+         Runtime_Error ("Only instances have methods.");
+         return False;
+      end if;
+
+      declare
+         Instance : constant Lox_Object.Object_Access := Receiver.Object_Value;
+         Field    : constant Lox_Table.Cursor := Instance.Fields.Find (Name);
+      begin
+         if Field /= Lox_Table.No_Element then
+            VM.Stack (VM.Stack_Top - Stack_Index (Arg_Count) - 1) :=
+              Lox_Table.Element (Field);
+            return Call_Value (Lox_Table.Element (Field), Arg_Count);
+         end if;
+
+         declare
+            Method : constant Lox_Table.Cursor :=
+              Instance.Class.Methods.Find (Name);
+         begin
+            if Method = Lox_Table.No_Element then
+               Runtime_Error
+                 ("Undefined property '" & Unbounded.To_String (Name) & "'.");
+               return False;
+            end if;
+
+            return Call (Lox_Table.Element (Method).Object_Value, Arg_Count);
+         end;
+      end;
+   end Invoke;
+
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
@@ -823,6 +859,19 @@ package body Lox_VM is
                      if not Call_Value
                               (Peek (Integer (Arg_Count)), Natural (Arg_Count))
                      then
+                        return INTERPRET_RUNTIME_ERROR;
+                     end if;
+                     Frame_Index :=
+                       Call_Frame_Index (Natural'Pred (VM.Frame_Count));
+                  end;
+
+               when Lox_Chunk.OP_INVOKE'Enum_Rep        =>
+                  declare
+                     Method    : constant Lox_Value.Unbounded_String :=
+                       Read_String (Frame);
+                     Arg_Count : constant Byte := Read_Byte (Frame);
+                  begin
+                     if not Invoke (Method, Natural (Arg_Count)) then
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
                      Frame_Index :=

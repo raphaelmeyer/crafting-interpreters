@@ -37,6 +37,8 @@ private
       Offset         : Natural) return Natural;
    function Closure_Instruction
      (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
+   function Invoke_Instruction
+     (Name : String; Chunk : Lox_Chunk.Chunk; Offset : Natural) return Natural;
 
    procedure Put_Natural (Item : Natural; Width : Natural; Fill : Character);
 end Debug;

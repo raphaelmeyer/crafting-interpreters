@@ -478,6 +478,13 @@ package body Lox_Compiler is
       if Can_Assign and then Match (Lox_Scanner.TOKEN_EQUAL) then
          Expression;
          Emit_Bytes (Lox_Chunk.OP_SET_PROPERTY, Name);
+      elsif Match (Lox_Scanner.TOKEN_LEFT_PAREN) then
+         declare
+            Arg_Count : constant Byte := Argument_List;
+         begin
+            Emit_Bytes (Lox_Chunk.OP_INVOKE, Name);
+            Emit_Byte (Arg_Count);
+         end;
       else
          Emit_Bytes (Lox_Chunk.OP_GET_PROPERTY, Name);
       end if;
