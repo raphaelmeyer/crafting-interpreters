@@ -182,11 +182,22 @@ package body Lox_VM is
    function Call_Constructor
      (Class : Lox_Object.Object_Access; Arg_Count : Natural) return Boolean
    is
-      Slot : constant Stack_Index :=
+      Slot        : constant Stack_Index :=
         VM.Stack_Top - Stack_Index (Arg_Count) - 1;
+      Initializer : constant Lox_Table.Cursor :=
+        Class.Methods.Find (Lox_Compiler.Init_String);
+      use type Lox_Table.Cursor;
    begin
       VM.Stack (Slot) :=
         Lox_Value.Make_Instance (Lox_Object.New_Instance (VM.Objects, Class));
+
+      if Initializer /= Lox_Table.No_Element then
+         return Call (Lox_Table.Element (Initializer).Object_Value, Arg_Count);
+      elsif Arg_Count /= 0 then
+         Runtime_Error (Arity_Error_Message (0, Arg_Count));
+         return False;
+      end if;
+
       return True;
    end Call_Constructor;
 

@@ -8,6 +8,9 @@ with Ada.Finalization;
 with Ada.Unchecked_Deallocation;
 
 package Lox_Compiler is
+   Init_String : constant Lox_Value.Unbounded_String :=
+     Lox_Value.Unbounded.To_Unbounded_String ("init");
+
    function Compile
      (Source : Lox_Scanner.Source_Code) return Lox_Object.Object_Access;
 
@@ -69,7 +72,8 @@ private
    type Upvalue_Index is range 0 .. 255;
    type Upvalue_Array is array (Upvalue_Index) of Upvalue_Type;
 
-   type Function_Kind is (TYPE_FUNCTION, TYPE_METHOD, TYPE_SCRIPT);
+   type Function_Kind is
+     (TYPE_FUNCTION, TYPE_INITIALIZER, TYPE_METHOD, TYPE_SCRIPT);
 
    type Compiler_Type is limited record
       Enclosing : access Compiler_Type;

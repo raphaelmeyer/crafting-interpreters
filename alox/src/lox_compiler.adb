@@ -257,7 +257,11 @@ package body Lox_Compiler is
 
    procedure Emit_Return is
    begin
-      Emit_Byte (Lox_Chunk.OP_NIL);
+      if Context.Current.Kind = TYPE_INITIALIZER then
+         Emit_Bytes (Lox_Chunk.OP_GET_LOCAL, 0);
+      else
+         Emit_Byte (Lox_Chunk.OP_NIL);
+      end if;
       Emit_Byte (Lox_Chunk.OP_RETURN);
    end Emit_Return;
 
@@ -325,7 +329,7 @@ package body Lox_Compiler is
          Local.Depth := Just (0);
          Local.Is_Captured := False;
          Local.Name.Lexeme :=
-           (if Kind = TYPE_METHOD
+           (if Kind in TYPE_METHOD | TYPE_INITIALIZER
             then Unbounded.To_Unbounded_String ("this")
             else Unbounded.Null_Unbounded_String);
       end;
@@ -660,11 +664,17 @@ package body Lox_Compiler is
 
    procedure Method_Definition is
       Name_Constant : Byte;
+      Kind          : Function_Kind;
+      use type Lox_Value.Unbounded_String;
    begin
       Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect method name.");
       Name_Constant := Identifier_Constant (Context.Parser.Previous);
+      Kind :=
+        (if Context.Parser.Previous.Lexeme = Init_String
+         then TYPE_INITIALIZER
+         else TYPE_METHOD);
 
-      Function_Definition (TYPE_METHOD);
+      Function_Definition (Kind);
       Emit_Bytes (Lox_Chunk.OP_METHOD, Name_Constant);
    end Method_Definition;
 
@@ -791,6 +801,9 @@ package body Lox_Compiler is
       if Match (Lox_Scanner.TOKEN_SEMICOLON) then
          Emit_Return;
       else
+         if Context.Current.Kind = TYPE_INITIALIZER then
+            Error ("Can't return a value from an initializer.");
+         end if;
          Expression;
          Consume
            (Lox_Scanner.TOKEN_SEMICOLON, "Expect ';' after return value.");
