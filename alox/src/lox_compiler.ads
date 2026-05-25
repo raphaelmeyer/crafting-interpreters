@@ -69,7 +69,7 @@ private
    type Upvalue_Index is range 0 .. 255;
    type Upvalue_Array is array (Upvalue_Index) of Upvalue_Type;
 
-   type Function_Kind is (TYPE_FUNCTION, TYPE_SCRIPT);
+   type Function_Kind is (TYPE_FUNCTION, TYPE_METHOD, TYPE_SCRIPT);
 
    type Compiler_Type is limited record
       Enclosing : access Compiler_Type;
@@ -89,10 +89,17 @@ private
       Instance : Compiler_Access;
    end record;
 
+   type Class_Compiler_Type is limited record
+      Enclosing : access Class_Compiler_Type;
+   end record;
+
+   type Class_Compiler_Access is access all Class_Compiler_Type;
+
    type Compiler_Context is limited record
-      Scanner : Lox_Scanner.Scanner;
-      Parser  : Parser_Context;
-      Current : Compiler_Access;
+      Scanner       : Lox_Scanner.Scanner;
+      Parser        : Parser_Context;
+      Current       : Compiler_Access;
+      Current_Class : Class_Compiler_Access;
    end record;
 
    type Parse_Fn is access procedure (Can_Assign : Boolean);
@@ -152,6 +159,7 @@ private
 
    procedure Named_Variable (Name : Lox_Scanner.Token; Can_Assign : Boolean);
    procedure Variable (Can_Assign : Boolean);
+   procedure This (Can_Assign : Boolean);
    procedure Unary (Can_Assign : Boolean);
    procedure Expression;
    procedure Block;

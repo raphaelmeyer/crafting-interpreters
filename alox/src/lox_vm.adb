@@ -219,6 +219,8 @@ package body Lox_VM is
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
    begin
       if Lox_Value.Is_Bound_Method (Callee) then
+         VM.Stack (VM.Stack_Top - Stack_Index (Arg_Count) - 1) :=
+           Callee.Object_Value.Receiver;
          return Call (Callee.Object_Value.Method, Arg_Count);
 
       elsif Lox_Value.Is_Class (Callee) then

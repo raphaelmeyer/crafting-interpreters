@@ -55,7 +55,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_PRINT         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RETURN        => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_SUPER         => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_THIS          => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_THIS          => (This'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_TRUE          => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_VAR           => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_WHILE         => (null, null, PREC_NONE),
@@ -324,7 +324,10 @@ package body Lox_Compiler is
            Natural'Succ (Context.Current.Local_Count);
          Local.Depth := Just (0);
          Local.Is_Captured := False;
-         Local.Name.Lexeme := Unbounded.Null_Unbounded_String;
+         Local.Name.Lexeme :=
+           (if Kind = TYPE_METHOD
+            then Unbounded.To_Unbounded_String ("this")
+            else Unbounded.Null_Unbounded_String);
       end;
    end Init_Compiler;
 
@@ -555,6 +558,16 @@ package body Lox_Compiler is
       Named_Variable (Context.Parser.Previous, Can_Assign);
    end Variable;
 
+   procedure This (Can_Assign : Boolean with Unreferenced) is
+   begin
+      if Context.Current_Class = null then
+         Error ("Can't use 'this' outside of a class.");
+         return;
+      end if;
+
+      Variable (False);
+   end This;
+
    procedure Unary (Can_Assign : Boolean with Unreferenced) is
       Kind : constant Lox_Scanner.TokenType := Context.Parser.Previous.Kind;
    begin
@@ -651,13 +664,14 @@ package body Lox_Compiler is
       Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect method name.");
       Name_Constant := Identifier_Constant (Context.Parser.Previous);
 
-      Function_Definition (TYPE_FUNCTION);
+      Function_Definition (TYPE_METHOD);
       Emit_Bytes (Lox_Chunk.OP_METHOD, Name_Constant);
    end Method_Definition;
 
    procedure Class_Declaration is
-      Class_Name    : Lox_Scanner.Token;
-      Name_Constant : Byte;
+      Class_Name     : Lox_Scanner.Token;
+      Name_Constant  : Byte;
+      Class_Compiler : aliased Class_Compiler_Type;
    begin
       Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect class name.");
       Class_Name := Context.Parser.Previous;
@@ -666,6 +680,9 @@ package body Lox_Compiler is
 
       Emit_Bytes (Lox_Chunk.OP_CLASS, Name_Constant);
       Define_Variable (Name_Constant);
+
+      Class_Compiler.Enclosing := Context.Current_Class;
+      Context.Current_Class := Class_Compiler'Unchecked_Access;
 
       Named_Variable (Class_Name, False);
       Consume (Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{' before class body.");
@@ -676,6 +693,8 @@ package body Lox_Compiler is
       end loop;
       Consume (Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
       Emit_Byte (Lox_Chunk.OP_POP);
+
+      Context.Current_Class := Context.Current_Class.Enclosing;
    end Class_Declaration;
 
    procedure Variable_Declaration is
