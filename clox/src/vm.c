@@ -578,6 +578,19 @@ static InterpretResult run() {
       push(obj_value(new_class(read_string(frame))));
       break;
 
+    case OP_INHERIT: {
+      Value superclass = peek(1);
+      if (!is_class(superclass)) {
+        runtime_error("Superclass must be a class.");
+        return INTERPRET_RUNTIME_ERROR;
+      }
+
+      ObjClass *subclass = as_class(peek(0));
+      table_add_all(&as_class(superclass)->methods, &subclass->methods);
+      pop();
+      break;
+    }
+
     case OP_METHOD:
       define_method(read_string(frame));
       break;
