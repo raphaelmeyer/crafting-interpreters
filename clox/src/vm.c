@@ -422,6 +422,16 @@ static InterpretResult run() {
       break;
     }
 
+    case OP_GET_SUPER: {
+      ObjString const *name = read_string(frame);
+      ObjClass const *superclass = as_class(pop());
+
+      if (!bind_method(superclass, name)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      break;
+    }
+
     case OP_EQUAL: {
       Value b = pop();
       Value a = pop();

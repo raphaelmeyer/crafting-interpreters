@@ -557,6 +557,22 @@ static Token synthetic_token(char const *text) {
   return token;
 }
 
+static void super(bool) {
+  if (current_class == NULL) {
+    error("Can't use 'super' outside of a class.");
+  } else if (!current_class->has_superclass) {
+    error("Can't use 'super' in a class with no superclass.");
+  }
+
+  consume(TOKEN_DOT, "Expect '.' after 'super'.");
+  consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+  uint8_t const name = identifier_constant(&parser.previous);
+
+  named_variable(synthetic_token("this"), false);
+  named_variable(synthetic_token("super"), false);
+  emit_bytes(OP_GET_SUPER, name);
+}
+
 static void this(bool) {
   if (current_class == NULL) {
     error("Can't use 'this' outside of a class.");
@@ -618,7 +634,7 @@ static ParseRule rules[] = {
     [TOKEN_OR]            = {NULL,      logical_or,   PREC_OR},
     [TOKEN_PRINT]         = {NULL,      NULL,         PREC_NONE},
     [TOKEN_RETURN]        = {NULL,      NULL,         PREC_NONE},
-    [TOKEN_SUPER]         = {NULL,      NULL,         PREC_NONE},
+    [TOKEN_SUPER]         = {super,     NULL,         PREC_NONE},
     [TOKEN_THIS]          = {this,      NULL,         PREC_NONE},
     [TOKEN_TRUE]          = {literal,   NULL,         PREC_NONE},
     [TOKEN_VAR]           = {NULL,      NULL,         PREC_NONE},

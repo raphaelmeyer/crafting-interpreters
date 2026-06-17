@@ -112,6 +112,8 @@ int32_t disassemble_instruction(Chunk const *chunk, int32_t offset) {
     return constant_instruction("OP_GET_PROPERTY", chunk, offset);
   case OP_SET_PROPERTY:
     return constant_instruction("OP_SET_PROPERTY", chunk, offset);
+  case OP_GET_SUPER:
+    return constant_instruction("OP_GET_SUPER", chunk, offset);
   case OP_EQUAL:
     return simple_instruction("OP_EQUAL", offset);
   case OP_GREATER:
