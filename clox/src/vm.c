@@ -547,6 +547,17 @@ static InterpretResult run() {
       break;
     }
 
+    case OP_SUPER_INVOKE: {
+      ObjString const *method = read_string(frame);
+      int const arg_count = read_byte(frame);
+      ObjClass *superclass = as_class(pop());
+      if (!invoke_from_class(superclass, method, arg_count)) {
+        return INTERPRET_RUNTIME_ERROR;
+      }
+      frame = &vm.frames[vm.frame_count - 1];
+      break;
+    }
+
     case OP_CLOSURE: {
       ObjFunction *function = as_function(read_constant(frame));
       ObjClosure *closure = new_closure(function);
