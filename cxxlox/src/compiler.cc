@@ -34,6 +34,7 @@ enum class Precedence {
 };
 
 constexpr std::string_view this_string{"this"};
+constexpr std::string_view super_string("super");
 
 class LoxCompiler final : public Compiler {
 public:
@@ -129,6 +130,8 @@ private:
   void synchronize();
 
 private:
+  static Token const synthetic_super_token;
+
   struct Parser {
     Token current;
     Token previous;
@@ -170,6 +173,7 @@ private:
 
   struct ClassContext {
     ClassContext *enclosing;
+    bool has_superclass;
   };
 
   Parser parser{};
@@ -188,6 +192,11 @@ struct ParseRule {
   ParseFn infix;
   Precedence precedence;
 };
+
+Token const LoxCompiler::synthetic_super_token{.type = TokenType::IDENTIFIER,
+                                               .start = super_string.begin(),
+                                               .length = super_string.length(),
+                                               .line = {}};
 
 Chunk &LoxCompiler::current_chunk() { return current_function().chunk; }
 
@@ -937,6 +946,7 @@ void LoxCompiler::class_declaration() {
   define_variable(name_constant);
 
   ClassContext class_context{};
+  class_context.has_superclass = false;
   class_context.enclosing = current_class;
   current_class = &class_context;
 
@@ -948,8 +958,13 @@ void LoxCompiler::class_declaration() {
       error("A class can't inherit from itself.");
     }
 
+    begin_scope();
+    add_local(synthetic_super_token);
+    define_variable(0);
+
     named_variable(class_name, false);
     emit_byte(OpCode::INHERIT);
+    class_context.has_superclass = true;
   }
 
   named_variable(class_name, false);
@@ -959,6 +974,10 @@ void LoxCompiler::class_declaration() {
   }
   consume(TokenType::RIGHT_BRACE, "Expect '}' after class body.");
   emit_byte(OpCode::POP);
+
+  if (class_context.has_superclass) {
+    end_scope();
+  }
 
   current_class = current_class->enclosing;
 }
