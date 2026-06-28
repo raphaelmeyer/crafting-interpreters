@@ -39,6 +39,7 @@ enum class OpCode : std::uint8_t {
   CLOSE_UPVALUE,
   RETURN,
   CLASS,
+  INHERIT,
   METHOD,
 };
 

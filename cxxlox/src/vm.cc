@@ -696,6 +696,21 @@ InterpretResult LoxVM::run() {
       push(new_class(gc, read_string(*frame)));
       break;
 
+    case OpCode::INHERIT: {
+      auto const superclass = peek(1);
+      if (not is_class(superclass)) {
+        runtime_error("Superclass must be a class.");
+        return InterpretResult::RUNTIME_ERROR;
+      }
+
+      auto &subclass = as_class(peek(0));
+      for (auto const &method : as_class(superclass).methods) {
+        subclass.methods.insert_or_assign(method.first, method.second);
+      }
+      pop();
+      break;
+    }
+
     case OpCode::METHOD:
       define_method(read_string(*frame));
       break;

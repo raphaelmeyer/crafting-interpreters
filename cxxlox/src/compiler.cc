@@ -929,7 +929,7 @@ void LoxCompiler::method() {
 
 void LoxCompiler::class_declaration() {
   consume(TokenType::IDENTIFIER, "Expect class name.");
-  auto const &class_name = parser.previous;
+  auto const class_name = parser.previous;
   auto const name_constant = identifier_constant(parser.previous);
   declare_variable();
 
@@ -939,6 +939,18 @@ void LoxCompiler::class_declaration() {
   ClassContext class_context{};
   class_context.enclosing = current_class;
   current_class = &class_context;
+
+  if (match(TokenType::LESS)) {
+    consume(TokenType::IDENTIFIER, "Expect superclass name.");
+    variable(false);
+
+    if (identifier_equals(class_name, parser.previous)) {
+      error("A class can't inherit from itself.");
+    }
+
+    named_variable(class_name, false);
+    emit_byte(OpCode::INHERIT);
+  }
 
   named_variable(class_name, false);
   consume(TokenType::LEFT_BRACE, "Expect '{' before class body.");

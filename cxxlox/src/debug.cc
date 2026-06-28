@@ -180,6 +180,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return simple_instruction("OP_RETURN", offset);
   case OpCode::CLASS:
     return constant_instruction("OP_CLASS", chunk, offset);
+  case OpCode::INHERIT:
+    return simple_instruction("OP_INHERIT", offset);
   case OpCode::METHOD:
     return constant_instruction("OP_METHOD", chunk, offset);
   default:
