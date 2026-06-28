@@ -53,6 +53,7 @@ public:
   void number(bool can_assign);
   void string(bool can_assign);
   void variable(bool can_assign);
+  void super(bool can_assign);
   void this_expression(bool can_assign);
   void unary(bool can_assign);
   void logical_and(bool can_assign);
@@ -130,6 +131,7 @@ private:
   void synchronize();
 
 private:
+  static Token const synthetic_this_token;
   static Token const synthetic_super_token;
 
   struct Parser {
@@ -192,6 +194,11 @@ struct ParseRule {
   ParseFn infix;
   Precedence precedence;
 };
+
+Token const LoxCompiler::synthetic_this_token{.type = TokenType::IDENTIFIER,
+                                              .start = this_string.begin(),
+                                              .length = this_string.length(),
+                                              .line = {}};
 
 Token const LoxCompiler::synthetic_super_token{.type = TokenType::IDENTIFIER,
                                                .start = super_string.begin(),
@@ -504,6 +511,22 @@ void LoxCompiler::variable(bool can_assign) {
   named_variable(parser.previous, can_assign);
 }
 
+void LoxCompiler::super(bool) {
+  if (current_class == nullptr) {
+    error("Can't use 'super' outside of a class.");
+  } else if (not current_class->has_superclass) {
+    error("Can't use 'super' in a class with no superclass.");
+  }
+
+  consume(TokenType::DOT, "Expect '.' after 'super'.");
+  consume(TokenType::IDENTIFIER, "Expect superclass method name.");
+  auto const name = identifier_constant(parser.previous);
+
+  named_variable(synthetic_this_token, false);
+  named_variable(synthetic_super_token, false);
+  emit_bytes(OpCode::GET_SUPER, name);
+}
+
 void LoxCompiler::this_expression(bool) {
   if (current_class == nullptr) {
     error("Can't use 'this' outside of a class.");
@@ -590,7 +613,7 @@ std::map<TokenType, ParseRule> const rules{
   {TokenType::OR,            {nullptr,              &L::logical_or,   Precedence::OR}},
   {TokenType::PRINT,         {nullptr,              nullptr,          Precedence::NONE}},
   {TokenType::RETURN,        {nullptr,              nullptr,          Precedence::NONE}},
-  {TokenType::SUPER,         {nullptr,              nullptr,          Precedence::NONE}},
+  {TokenType::SUPER,         {&L::super,            nullptr,          Precedence::NONE}},
   {TokenType::THIS,          {&L::this_expression,  nullptr,          Precedence::NONE}},
   {TokenType::TRUE,          {&L::literal,          nullptr,          Precedence::NONE}},
   {TokenType::VAR,           {nullptr,              nullptr,          Precedence::NONE}},

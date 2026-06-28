@@ -536,6 +536,16 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::GET_SUPER: {
+      auto const &name = read_string(*frame);
+      auto const &superclass = as_obj(pop());
+
+      if (not bind_method(superclass, name)) {
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      break;
+    }
+
     case OpCode::EQUAL: {
       auto const b = pop();
       auto const a = pop();
