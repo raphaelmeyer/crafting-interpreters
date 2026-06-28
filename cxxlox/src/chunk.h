@@ -36,6 +36,7 @@ enum class OpCode : std::uint8_t {
   LOOP,
   CALL,
   INVOKE,
+  SUPER_INVOKE,
   CLOSURE,
   CLOSE_UPVALUE,
   RETURN,

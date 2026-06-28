@@ -174,6 +174,8 @@ std::size_t disassemble_instruction(Chunk const &chunk, std::size_t offset) {
     return byte_instruction("OP_CALL", chunk, offset);
   case OpCode::INVOKE:
     return invoke_instruction("OP_INVOKE", chunk, offset);
+  case OpCode::SUPER_INVOKE:
+    return invoke_instruction("OP_SUPER_INVOKE", chunk, offset);
   case OpCode::CLOSURE:
     return closure_instruction("OP_CLOSURE", chunk, offset);
   case OpCode::CLOSE_UPVALUE:

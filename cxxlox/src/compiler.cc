@@ -523,8 +523,15 @@ void LoxCompiler::super(bool) {
   auto const name = identifier_constant(parser.previous);
 
   named_variable(synthetic_this_token, false);
-  named_variable(synthetic_super_token, false);
-  emit_bytes(OpCode::GET_SUPER, name);
+  if (match(TokenType::LEFT_PAREN)) {
+    auto const arg_count = argument_list();
+    named_variable(synthetic_super_token, false);
+    emit_bytes(OpCode::SUPER_INVOKE, name);
+    emit_byte(arg_count);
+  } else {
+    named_variable(synthetic_super_token, false);
+    emit_bytes(OpCode::GET_SUPER, name);
+  }
 }
 
 void LoxCompiler::this_expression(bool) {

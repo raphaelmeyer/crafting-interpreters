@@ -661,6 +661,17 @@ InterpretResult LoxVM::run() {
       break;
     }
 
+    case OpCode::SUPER_INVOKE: {
+      auto const &method = read_string(*frame);
+      auto const arg_count = read_byte(*frame);
+      auto const &superclass = as_obj(pop());
+      if (not invoke_from_class(superclass, method, arg_count)) {
+        return InterpretResult::RUNTIME_ERROR;
+      }
+      frame = vm.frames.begin() + vm.frame_count - 1;
+      break;
+    }
+
     case OpCode::CLOSURE: {
       auto const function_handle = as_obj(read_constant(*frame));
       auto closure = new_closure(gc, function_handle);
