@@ -94,7 +94,8 @@ private
    end record;
 
    type Class_Compiler_Type is limited record
-      Enclosing : access Class_Compiler_Type;
+      Enclosing      : access Class_Compiler_Type;
+      Has_Superclass : Boolean;
    end record;
 
    type Class_Compiler_Access is access all Class_Compiler_Type;
@@ -203,6 +204,7 @@ private
    function Parse_Variable (Error_Message : String) return Byte;
    procedure Mark_Initialized;
    procedure Define_Variable (Global : Byte);
+   function Synthetic_Token (Text : String) return Lox_Scanner.Token;
    function Argument_List return Byte;
    function Get_Rule (Kind : Lox_Scanner.TokenType) return Parse_Rule;
 

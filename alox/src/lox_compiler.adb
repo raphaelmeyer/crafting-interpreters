@@ -698,6 +698,7 @@ package body Lox_Compiler is
       Emit_Bytes (Lox_Chunk.OP_CLASS, Name_Constant);
       Define_Variable (Name_Constant);
 
+      Class_Compiler.Has_Superclass := False;
       Class_Compiler.Enclosing := Context.Current_Class;
       Context.Current_Class := Class_Compiler'Unchecked_Access;
 
@@ -709,8 +710,13 @@ package body Lox_Compiler is
             Error ("A class can't inherit from itself.");
          end if;
 
+         Begin_Scope;
+         Add_Local (Synthetic_Token ("super"));
+         Define_Variable (0);
+
          Named_Variable (Class_Name, False);
          Emit_Byte (Lox_Chunk.OP_INHERIT);
+         Class_Compiler.Has_Superclass := True;
       end if;
 
       Named_Variable (Class_Name, False);
@@ -722,6 +728,10 @@ package body Lox_Compiler is
       end loop;
       Consume (Lox_Scanner.TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
       Emit_Byte (Lox_Chunk.OP_POP);
+
+      if Class_Compiler.Has_Superclass then
+         End_Scope;
+      end if;
 
       Context.Current_Class := Context.Current_Class.Enclosing;
    end Class_Declaration;
@@ -1200,6 +1210,14 @@ package body Lox_Compiler is
 
       Emit_Bytes (Lox_Chunk.OP_DEFINE_GLOBAL, Global);
    end Define_Variable;
+
+   function Synthetic_Token (Text : String) return Lox_Scanner.Token is
+   begin
+      return
+        (Kind   => Lox_Scanner.TOKEN_IDENTIFIER,
+         Lexeme => Lox_Scanner.Unbounded.To_Unbounded_String (Text),
+         Line   => 0);
+   end Synthetic_Token;
 
    function Argument_List return Byte is
       Arg_Count : Byte := 0;
