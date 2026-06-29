@@ -54,7 +54,7 @@ package body Lox_Compiler is
       Lox_Scanner.TOKEN_OR            => (null, Logical_Or'Access, PREC_OR),
       Lox_Scanner.TOKEN_PRINT         => (null, null, PREC_NONE),
       Lox_Scanner.TOKEN_RETURN        => (null, null, PREC_NONE),
-      Lox_Scanner.TOKEN_SUPER         => (null, null, PREC_NONE),
+      Lox_Scanner.TOKEN_SUPER         => (Super'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_THIS          => (This'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_TRUE          => (Literal'Access, null, PREC_NONE),
       Lox_Scanner.TOKEN_VAR           => (null, null, PREC_NONE),
@@ -568,6 +568,24 @@ package body Lox_Compiler is
    begin
       Named_Variable (Context.Parser.Previous, Can_Assign);
    end Variable;
+
+   procedure Super (Can_Assign : Boolean with Unreferenced) is
+      Name : Byte;
+   begin
+      if Context.Current_Class = null then
+         Error ("Can't use 'super' outside of a class.");
+      elsif not Context.Current_Class.Has_Superclass then
+         Error ("Can't use 'super' in a class with no superclass.");
+      end if;
+
+      Consume (Lox_Scanner.TOKEN_DOT, "Expect '.' after 'super'.");
+      Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect superclass method name.");
+      Name := Identifier_Constant (Context.Parser.Previous);
+
+      Named_Variable (Synthetic_Token ("this"), False);
+      Named_Variable (Synthetic_Token ("super"), False);
+      Emit_Bytes (Lox_Chunk.OP_GET_SUPER, Name);
+   end Super;
 
    procedure This (Can_Assign : Boolean with Unreferenced) is
    begin

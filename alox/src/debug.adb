@@ -85,6 +85,9 @@ package body Debug is
          when Lox_Chunk.OP_SET_PROPERTY'Enum_Rep  =>
             return Constant_Instruction ("OP_SET_PROPERTY", Chunk, Offset);
 
+         when Lox_Chunk.OP_GET_SUPER'Enum_Rep     =>
+            return Constant_Instruction ("OP_GET_SUPER", Chunk, Offset);
+
          when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
             return Simple_Instruction ("OP_EQUAL", Offset);
 

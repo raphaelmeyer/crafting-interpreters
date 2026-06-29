@@ -734,6 +734,18 @@ package body Lox_VM is
                      end;
                   end;
 
+               when Lox_Chunk.OP_GET_SUPER'Enum_Rep     =>
+                  declare
+                     Name       : constant Unbounded.Unbounded_String :=
+                       Read_String (Frame);
+                     Superclass : constant Lox_Object.Object_Access :=
+                       Pop.Object_Value;
+                  begin
+                     if not Bind_Method (Superclass, Name) then
+                        return INTERPRET_RUNTIME_ERROR;
+                     end if;
+                  end;
+
                when Lox_Chunk.OP_EQUAL'Enum_Rep         =>
                   declare
                      B : constant Lox_Value.Value := Pop;

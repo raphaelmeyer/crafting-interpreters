@@ -164,6 +164,7 @@ private
 
    procedure Named_Variable (Name : Lox_Scanner.Token; Can_Assign : Boolean);
    procedure Variable (Can_Assign : Boolean);
+   procedure Super (Can_Assign : Boolean);
    procedure This (Can_Assign : Boolean);
    procedure Unary (Can_Assign : Boolean);
    procedure Expression;
