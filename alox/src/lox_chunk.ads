@@ -35,6 +35,7 @@ package Lox_Chunk is
       OP_LOOP,
       OP_CALL,
       OP_CLASS,
+      OP_INHERIT,
       OP_METHOD,
       OP_INVOKE,
       OP_CLOSURE,

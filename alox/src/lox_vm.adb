@@ -347,11 +347,7 @@ package body Lox_VM is
       Klass  : constant Lox_Object.Object_Access := Peek (1).Object_Value;
       Unused : Lox_Value.Value;
    begin
-      if Klass.Methods.Contains (Name) then
-         Klass.Methods.Replace (Name, Method);
-      else
-         Klass.Methods.Insert (Name, Method);
-      end if;
+      Klass.Methods.Include (Name, Method);
       Unused := Pop;
    end Define_Method;
 
@@ -646,11 +642,7 @@ package body Lox_VM is
                        Read_String (Frame);
                      Unused : Lox_Value.Value;
                   begin
-                     if VM.Globals.Contains (Name) then
-                        VM.Globals.Replace (Name, Peek (0));
-                     else
-                        VM.Globals.Insert (Name, Peek (0));
-                     end if;
+                     VM.Globals.Include (Name, Peek (0));
                      Unused := Pop;
                   end;
 
@@ -886,6 +878,27 @@ package body Lox_VM is
                        Lox_Object.New_Class (VM.Objects, Name);
                   begin
                      Push (Lox_Value.Make_Class (Klass));
+                  end;
+
+               when Lox_Chunk.OP_INHERIT'Enum_Rep       =>
+                  declare
+                     Superclass        : constant Lox_Value.Value := Peek (1);
+                     Subclass          : Lox_Object.Object_Access;
+                     Superclass_Object : Lox_Object.Object_Access;
+                     Unused            : Lox_Value.Value;
+                  begin
+                     if not Lox_Value.Is_Class (Superclass) then
+                        Runtime_Error ("Superclass must be a class.");
+                        return INTERPRET_RUNTIME_ERROR;
+                     end if;
+                     Superclass_Object := Superclass.Object_Value;
+                     Subclass := Peek (0).Object_Value;
+                     for Method in Superclass_Object.Methods.Iterate loop
+                        Subclass.Methods.Include
+                          (Lox_Table.Maps.Key (Method),
+                           Lox_Table.Maps.Element (Method));
+                     end loop;
+                     Unused := Pop;
                   end;
 
                when Lox_Chunk.OP_METHOD'Enum_Rep        =>

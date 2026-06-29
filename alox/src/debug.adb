@@ -131,6 +131,9 @@ package body Debug is
          when Lox_Chunk.OP_CLASS'Enum_Rep         =>
             return Constant_Instruction ("OP_CLASS", Chunk, Offset);
 
+         when Lox_Chunk.OP_INHERIT'Enum_Rep       =>
+            return Simple_Instruction ("OP_INHERIT", Offset);
+
          when Lox_Chunk.OP_METHOD'Enum_Rep        =>
             return Constant_Instruction ("OP_METHOD", Chunk, Offset);
 

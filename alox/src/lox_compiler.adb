@@ -701,6 +701,18 @@ package body Lox_Compiler is
       Class_Compiler.Enclosing := Context.Current_Class;
       Context.Current_Class := Class_Compiler'Unchecked_Access;
 
+      if Match (Lox_Scanner.TOKEN_LESS) then
+         Consume (Lox_Scanner.TOKEN_IDENTIFIER, "Expect superclass name.");
+         Variable (False);
+
+         if Identifiers_Equal (Class_Name, Context.Parser.Previous) then
+            Error ("A class can't inherit from itself.");
+         end if;
+
+         Named_Variable (Class_Name, False);
+         Emit_Byte (Lox_Chunk.OP_INHERIT);
+      end if;
+
       Named_Variable (Class_Name, False);
       Consume (Lox_Scanner.TOKEN_LEFT_BRACE, "Expect '{' before class body.");
       while not Check (Lox_Scanner.TOKEN_RIGHT_BRACE)
