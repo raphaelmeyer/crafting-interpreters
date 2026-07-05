@@ -583,8 +583,18 @@ package body Lox_Compiler is
       Name := Identifier_Constant (Context.Parser.Previous);
 
       Named_Variable (Synthetic_Token ("this"), False);
-      Named_Variable (Synthetic_Token ("super"), False);
-      Emit_Bytes (Lox_Chunk.OP_GET_SUPER, Name);
+      if Match (Lox_Scanner.TOKEN_LEFT_PAREN) then
+         declare
+            Arg_Count : constant Byte := Argument_List;
+         begin
+            Named_Variable (Synthetic_Token ("super"), False);
+            Emit_Bytes (Lox_Chunk.OP_SUPER_INVOKE, Name);
+            Emit_Byte (Arg_Count);
+         end;
+      else
+         Named_Variable (Synthetic_Token ("super"), False);
+         Emit_Bytes (Lox_Chunk.OP_GET_SUPER, Name);
+      end if;
    end Super;
 
    procedure This (Can_Assign : Boolean with Unreferenced) is

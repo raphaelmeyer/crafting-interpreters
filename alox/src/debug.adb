@@ -143,6 +143,9 @@ package body Debug is
          when Lox_Chunk.OP_INVOKE'Enum_Rep        =>
             return Invoke_Instruction ("OP_INVOKE", Chunk, Offset);
 
+         when Lox_Chunk.OP_SUPER_INVOKE'Enum_Rep  =>
+            return Invoke_Instruction ("OP_SUPER_INVOKE", Chunk, Offset);
+
          when Lox_Chunk.OP_CLOSURE'Enum_Rep       =>
             return Closure_Instruction ("OP_CLOSURE", Chunk, Offset);
 

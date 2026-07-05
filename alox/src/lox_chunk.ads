@@ -39,6 +39,7 @@ package Lox_Chunk is
       OP_INHERIT,
       OP_METHOD,
       OP_INVOKE,
+      OP_SUPER_INVOKE,
       OP_CLOSURE,
       OP_CLOSE_UPVALUE,
       OP_RETURN)

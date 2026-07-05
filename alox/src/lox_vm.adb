@@ -247,20 +247,26 @@ package body Lox_VM is
             return Call_Value (Lox_Table.Element (Field), Arg_Count);
          end if;
 
-         declare
-            Method : constant Lox_Table.Cursor :=
-              Instance.Class.Methods.Find (Name);
-         begin
-            if Method = Lox_Table.No_Element then
-               Runtime_Error
-                 ("Undefined property '" & Unbounded.To_String (Name) & "'.");
-               return False;
-            end if;
-
-            return Call (Lox_Table.Element (Method).Object_Value, Arg_Count);
-         end;
+         return Invoke_From_Class (Instance.Class, Name, Arg_Count);
       end;
    end Invoke;
+
+   function Invoke_From_Class
+     (Klass     : Lox_Object.Object_Access;
+      Name      : Lox_Value.Unbounded_String;
+      Arg_Count : Natural) return Boolean
+   is
+      use type Lox_Table.Cursor;
+      Method : constant Lox_Table.Cursor := Klass.Methods.Find (Name);
+   begin
+      if Method = Lox_Table.No_Element then
+         Runtime_Error
+           ("Undefined property '" & Unbounded.To_String (Name) & "'.");
+         return False;
+      end if;
+
+      return Call (Lox_Table.Element (Method).Object_Value, Arg_Count);
+   end Invoke_From_Class;
 
    function Call_Value
      (Callee : Lox_Value.Value; Arg_Count : Natural) return Boolean is
@@ -876,6 +882,24 @@ package body Lox_VM is
                      Arg_Count : constant Byte := Read_Byte (Frame);
                   begin
                      if not Invoke (Method, Natural (Arg_Count)) then
+                        return INTERPRET_RUNTIME_ERROR;
+                     end if;
+                     Frame_Index :=
+                       Call_Frame_Index (Natural'Pred (VM.Frame_Count));
+                  end;
+
+               when Lox_Chunk.OP_SUPER_INVOKE'Enum_Rep  =>
+                  declare
+                     Method     : constant Lox_Value.Unbounded_String :=
+                       Read_String (Frame);
+                     Arg_Count  : constant Byte := Read_Byte (Frame);
+                     Superclass : constant Lox_Value.Value := Pop;
+                  begin
+                     if not Invoke_From_Class
+                              (Superclass.Object_Value,
+                               Method,
+                               Natural (Arg_Count))
+                     then
                         return INTERPRET_RUNTIME_ERROR;
                      end if;
                      Frame_Index :=
