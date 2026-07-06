@@ -38,6 +38,29 @@ void write_value_array(ValueArray *array, Value value) {
   array->count++;
 }
 
+#ifdef NAN_BOXING
+
+void print_value(Value value) {
+  if (is_bool(value)) {
+    printf(as_bool(value) ? "true" : "false");
+  } else if (is_nil(value)) {
+    printf("nil");
+  } else if (is_number(value)) {
+    printf("%g", as_number(value));
+  } else if (is_obj(value)) {
+    print_object(value);
+  }
+}
+
+bool values_equal(Value a, Value b) {
+  if (is_number(a) && is_number(b)) {
+    return as_number(a) == as_number(b);
+  }
+  return a == b;
+}
+
+#else
+
 void print_value(Value value) {
   switch (value.type) {
   case VAL_BOOL:
@@ -74,3 +97,5 @@ bool values_equal(Value a, Value b) {
     return false;
   }
 }
+
+#endif
