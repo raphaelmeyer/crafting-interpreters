@@ -14,11 +14,7 @@ TEST_CASE("object") {
     auto const string = obj_value(copy_string("asdf", 4));
 
     REQUIRE(is_obj(string));
-    REQUIRE(string.type == VAL_OBJ);
-
     REQUIRE(is_obj_type(string, OBJ_STRING));
-    REQUIRE(string.as.obj->type == OBJ_STRING);
-
     REQUIRE(as_string(string)->obj.type == OBJ_STRING);
   }
 

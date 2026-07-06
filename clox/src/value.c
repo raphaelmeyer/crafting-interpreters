@@ -41,13 +41,13 @@ void write_value_array(ValueArray *array, Value value) {
 void print_value(Value value) {
   switch (value.type) {
   case VAL_BOOL:
-    printf(value.as.boolean ? "true" : "false");
+    printf(as_bool(value) ? "true" : "false");
     break;
   case VAL_NIL:
     printf("nil");
     break;
   case VAL_NUMBER:
-    printf("%g", value.as.number);
+    printf("%g", as_number(value));
     break;
   case VAL_OBJ:
     print_object(value);
@@ -61,13 +61,13 @@ bool values_equal(Value a, Value b) {
   }
   switch (a.type) {
   case VAL_BOOL:
-    return a.as.boolean == b.as.boolean;
+    return as_bool(a) == as_bool(b);
   case VAL_NIL:
     return true;
   case VAL_NUMBER:
-    return a.as.number == b.as.number;
+    return as_number(a) == as_number(b);
   case VAL_OBJ: {
-    return a.as.obj == b.as.obj;
+    return as_obj(a) == as_obj(b);
   }
 
   default:

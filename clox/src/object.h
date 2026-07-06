@@ -95,10 +95,12 @@ ObjUpvalue *new_upvalue(Value *slot);
 void print_object(Value const value);
 void init_object_allocation(VM *vm_instance);
 
-static inline ObjType obj_type(Value const value) { return value.as.obj->type; }
+static inline ObjType obj_type(Value const value) {
+  return as_obj(value)->type;
+}
 
 static inline bool is_obj_type(Value const value, ObjType type) {
-  return is_obj(value) && value.as.obj->type == type;
+  return is_obj(value) && as_obj(value)->type == type;
 }
 
 static inline bool is_bound_method(Value const value) {
@@ -130,35 +132,35 @@ static inline bool is_string(Value const value) {
 }
 
 static inline ObjBoundMethod *as_bound_method(Value const value) {
-  return (ObjBoundMethod *)value.as.obj;
+  return (ObjBoundMethod *)as_obj(value);
 }
 
 static inline ObjClass *as_class(Value const value) {
-  return (ObjClass *)value.as.obj;
+  return (ObjClass *)as_obj(value);
 }
 
 static inline ObjClosure *as_closure(Value const value) {
-  return (ObjClosure *)value.as.obj;
+  return (ObjClosure *)as_obj(value);
 }
 
 static inline ObjFunction *as_function(Value const value) {
-  return (ObjFunction *)value.as.obj;
+  return (ObjFunction *)as_obj(value);
 }
 
 static inline ObjInstance *as_instance(Value const value) {
-  return (ObjInstance *)value.as.obj;
+  return (ObjInstance *)as_obj(value);
 }
 
 static inline NativeFn as_native(Value const value) {
-  return ((ObjNative *)value.as.obj)->function;
+  return ((ObjNative *)as_obj(value))->function;
 }
 
 static inline ObjString *as_string(Value const value) {
-  return (ObjString *)value.as.obj;
+  return (ObjString *)as_obj(value);
 }
 
 static inline char const *as_cstring(Value const value) {
-  return ((ObjString *)value.as.obj)->chars;
+  return ((ObjString *)as_obj(value))->chars;
 }
 
 #ifdef __cplusplus

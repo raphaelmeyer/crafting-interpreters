@@ -45,6 +45,10 @@ inline Value obj_value(void *object) {
   return (Value){VAL_OBJ, {.obj = (Obj *)object}};
 }
 
+static inline bool as_bool(Value value) { return value.as.boolean; }
+static inline double as_number(Value value) { return value.as.number; }
+static inline Obj *as_obj(Value value) { return value.as.obj; }
+
 bool values_equal(Value a, Value b);
 void init_value_array(ValueArray *array);
 void write_value_array(ValueArray *array, Value value);

@@ -215,7 +215,7 @@ static void define_method(ObjString *name) {
 }
 
 static bool is_falsey(Value value) {
-  return is_nil(value) || (is_bool(value) && !value.as.boolean);
+  return is_nil(value) || (is_bool(value) && !as_bool(value));
 }
 
 static void concatenate() {
@@ -289,8 +289,8 @@ static inline InterpretResult binary_op(Value (*op)(double, double)) {
     runtime_error("Operands must be numbers.");
     return INTERPRET_RUNTIME_ERROR;
   }
-  double b = pop().as.number;
-  double a = pop().as.number;
+  double b = as_number(pop());
+  double a = as_number(pop());
   push(op(a, b));
 
   return INTERPRET_OK;
@@ -457,8 +457,8 @@ static InterpretResult run() {
       if (is_string(peek(0)) && is_string(peek(1))) {
         concatenate();
       } else if (is_number(peek(0)) && is_number(peek(1))) {
-        const double b = pop().as.number;
-        const double a = pop().as.number;
+        const double b = as_number(pop());
+        const double a = as_number(pop());
         push(number_value(a + b));
       } else {
         runtime_error("Operands must be two numbers or two strings.");
@@ -498,7 +498,7 @@ static InterpretResult run() {
         runtime_error("Operand must be a number.");
         return INTERPRET_RUNTIME_ERROR;
       }
-      push(number_value(-pop().as.number));
+      push(number_value(-as_number(pop())));
       break;
     }
 

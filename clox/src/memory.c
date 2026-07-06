@@ -261,7 +261,7 @@ void mark_object(Obj *object) {
 
 void mark_value(Value value) {
   if (is_obj(value)) {
-    mark_object(value.as.obj);
+    mark_object(as_obj(value));
   }
 }
 

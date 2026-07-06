@@ -47,7 +47,7 @@ TEST_SUITE("hash table") {
     Value number = {};
     REQUIRE(table_get(&table, pi, &number));
     REQUIRE(is_number(number));
-    REQUIRE(number.as.number == 3.14);
+    REQUIRE(as_number(number) == 3.14);
 
     free_table(&table);
     free_vm();

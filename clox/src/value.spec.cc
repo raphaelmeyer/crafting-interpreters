@@ -6,24 +6,21 @@ TEST_SUITE("value type") {
   TEST_CASE("boolean") {
     Value yes = bool_value(true);
     REQUIRE(is_bool(yes));
-    REQUIRE_EQ(yes.type, VAL_BOOL);
-    REQUIRE_EQ(yes.as.boolean, true);
+    REQUIRE_EQ(as_bool(yes), true);
 
     Value no = bool_value(false);
-    REQUIRE_EQ(no.as.boolean, false);
+    REQUIRE_EQ(as_bool(no), false);
   }
 
   TEST_CASE("nil") {
     Value nil = nil_value();
     REQUIRE(is_nil(nil));
-    REQUIRE_EQ(nil.type, VAL_NIL);
   }
 
   TEST_CASE("number") {
     Value n = number_value(123);
     REQUIRE(is_number(n));
-    REQUIRE_EQ(n.type, VAL_NUMBER);
-    REQUIRE_EQ(n.as.number, 123);
+    REQUIRE_EQ(as_number(n), 123);
   }
 }
 
@@ -40,7 +37,7 @@ TEST_SUITE("value array") {
 
       REQUIRE(values.count == 1);
       REQUIRE(values.capacity >= 1);
-      REQUIRE_EQ(values.values[0].as.number, 42);
+      REQUIRE_EQ(as_number(values.values[0]), 42);
     }
 
     SUBCASE("contains all added elements") {
@@ -49,8 +46,8 @@ TEST_SUITE("value array") {
 
       REQUIRE(values.count == 2);
       REQUIRE(values.capacity >= 2);
-      REQUIRE_EQ(values.values[0].as.number, 17);
-      REQUIRE_EQ(values.values[1].as.number, 21);
+      REQUIRE_EQ(as_number(values.values[0]), 17);
+      REQUIRE_EQ(as_number(values.values[1]), 21);
     }
 
     SUBCASE("grows capicity") {
@@ -79,8 +76,8 @@ TEST_SUITE("value array") {
       REQUIRE(is_nil(values.values[1]));
       REQUIRE(is_number(values.values[2]));
 
-      REQUIRE_EQ(values.values[0].as.boolean, true);
-      REQUIRE_EQ(values.values[2].as.number, 3.14);
+      REQUIRE_EQ(as_bool(values.values[0]), true);
+      REQUIRE_EQ(as_number(values.values[2]), 3.14);
     }
 
     free_value_array(&values);
